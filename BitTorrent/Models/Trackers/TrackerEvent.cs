@@ -4,5 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
-public readonly record struct PieceRequest(int Index, int Begin, int Length);
+namespace BitTorrent.Models.Tracker;
+public enum TrackerEvent
+{
+    Started,
+    Stopped,
+    Completed,
+}

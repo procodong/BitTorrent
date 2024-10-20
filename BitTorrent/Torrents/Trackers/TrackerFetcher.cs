@@ -1,7 +1,8 @@
 ﻿using BencodeNET.Objects;
 using BencodeNET.Parsing;
 using BitTorrent.Errors;
-using BitTorrent.Models;
+using BitTorrent.Models.Peers;
+using BitTorrent.Models.Tracker;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace BitTorrent.Torrents;
+namespace BitTorrent.Torrents.Trackers;
 public static class TrackerFetcher
 {
     public async static Task<TrackerResponse> Fetch(HttpClient client, string url, TrackerRequest request)
@@ -45,11 +46,11 @@ public static class TrackerFetcher
             Complete: content.Get<BNumber>("complete"),
             Incomplete: content.Get<BNumber>("incomplete"),
             Peers: content.Get<BList<BDictionary>>("peers").Value
-            .Select(obj => (BDictionary) obj)
-            .Select(value => new Models.Peer(
+            .Select(obj => (BDictionary)obj)
+            .Select(value => new Peer(
                 Id: value.Get<BString>("peer id").ToString(),
                 Ip: value.Get<BString>("ip").ToString(),
-                Port: value.Get<BNumber>("port")      
+                Port: value.Get<BNumber>("port")
                 )).ToList(),
             Warning: content.Get<BString?>("warning message")?.ToString()
             );
@@ -65,5 +66,5 @@ public static class TrackerFetcher
             TrackerEvent.Completed => "completed",
             _ => throw new ArgumentException("Invalid tracker event")
         };
-    } 
+    }
 }

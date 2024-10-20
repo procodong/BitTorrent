@@ -4,10 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
-public enum TrackerEvent
-{
-    Started,
-    Stopped,
-    Completed,
-}
+namespace BitTorrent.Files;
+public readonly record struct FilePart(FileData FileData, int Length, long Position);

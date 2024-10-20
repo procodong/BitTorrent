@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents;
+namespace BitTorrent.Torrents.Peers;
 public class PeerIdGenerator
 {
     private readonly Random _random = new();

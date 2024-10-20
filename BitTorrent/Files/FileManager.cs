@@ -1,7 +1,8 @@
 ﻿using BencodeNET.Torrents;
+using BitTorrent.Utils;
 
 namespace BitTorrent.Files;
-public class FileManager(int pieceSize)
+public class FileManager(int pieceSize) : IDisposable, IAsyncDisposable
 {
     private readonly int PieceSize = pieceSize;
     private readonly List<FileData> Files = [];
@@ -9,7 +10,7 @@ public class FileManager(int pieceSize)
     public void Create(string path, MultiFileInfoList files)
     {
         var createdDirectories = new HashSet<string>();
-        ulong createdBytes = 0;
+        long createdBytes = 0;
         foreach (var file in files)
         {
             var directoryPath = string.Join(Path.PathSeparator, file.Path);
@@ -21,47 +22,59 @@ public class FileManager(int pieceSize)
             var filePath = Path.Combine(path, file.FullPath);
             var createdFile = File.Create(filePath);
             createdFile.SetLength(file.FileSize);
-            Files.Add(new(createdFile, createdBytes));
-            createdBytes += (ulong)file.FileSize;
+            Files.Add(new(createdFile, createdBytes, new(1, 1)));
+            createdBytes += file.FileSize;
         }
     }
 
-    public async Task Read(Stream stream, int length, int pieceIndex, int offset)
+    public void Dispose()
     {
-        await Operate(
-            async (file, _, len) => await file.CopyToAsync(stream, len),
-            length,
-            pieceIndex,
-            offset
-            );
+        foreach (FileData fileData in Files)
+        {
+            fileData.File.Close();
+        }
     }
 
-    public async Task Write(ReadOnlyMemory<byte> buffer, int pieceIndex, int offset)
+    public async ValueTask DisposeAsync()
     {
-        await Operate(
-            async (file, offset, len) => await file.WriteAsync(buffer[offset..(offset + len)]),
-            buffer.Length,
-            pieceIndex,
-            offset
-            );
+        foreach (FileData fileData in Files)
+        {
+            await fileData.File.DisposeAsync();
+        }
     }
 
-    private async Task Operate(Func<FileStream, int, int, Task> op, int length, int pieceIndex, int offset)
+    public PartStream Read(int index) => Read(PieceSize, index, 0);
+
+    public PartStream Read(int length, int pieceIndex, int offset) => new(GetParts(length, pieceIndex, offset), length);
+
+    public async Task WriteAsync(Stream stream, int pieceIndex)
     {
-        ulong byteOffset = (ulong)pieceIndex * (ulong)PieceSize + (ulong)offset;
+        foreach (var part in GetParts((int)stream.Length, pieceIndex, 0))
+        {
+            var limitedStream = new LimitedStream(stream, part.Length);
+            await part.FileData.Lock.WaitAsync();
+            part.FileData.File.Position = part.Position;
+            await limitedStream.CopyToAsync(part.FileData.File);
+            part.FileData.Lock.Release();
+        }
+    }
+
+    private IEnumerable<FilePart> GetParts(int length, int pieceIndex, int offset)
+    {
+        long byteOffset = pieceIndex * PieceSize + offset;
         int bytesRead = 0;
         int start = Search(byteOffset);
         for (int i = start; bytesRead <= length; i++)
         {
-            var file = Files[i];
-            file.File.Position = i == start ? (long)(byteOffset - file.ByteOffset) : 0;
-            var readLen = (int)long.Min(length - bytesRead, file.File.Length - file.File.Position);
-            await op(file.File, bytesRead, readLen);
+            FileData file = Files[i];
+            long position = i == start ? byteOffset - file.ByteOffset : 0;
+            int readLen = (int)long.Min(length - bytesRead, file.File.Length - position);
+            yield return new(file, readLen, position);
             bytesRead += readLen;
         }
     }
 
-    private int Search(ulong byteOffset)
+    private int Search(long byteOffset)
     {
         int low = 0;
         int high = Files.Count - 1;

@@ -4,28 +4,28 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
+namespace BitTorrent.Models.Peers;
 public class PeerStatistics
 {
-    private ulong _downloaded = 0;
-    private ulong _uploaded = 0;
+    private long _downloaded = 0;
+    private long _uploaded = 0;
 
-    public void IncrementDownloaded(ulong download)
+    public void IncrementDownloaded(long download)
     {
         Interlocked.Add(ref _downloaded, download);
     }
 
-    public ulong Downloaded
+    public long Downloaded
     {
         get => Interlocked.Read(ref _downloaded);
     }
 
-    public void IncrementUploaded(ulong upload)
+    public void IncrementUploaded(long upload)
     {
         Interlocked.Add(ref _uploaded, upload);
     }
 
-    public ulong Uploaded
+    public long Uploaded
     {
         get => Interlocked.Read(ref _uploaded);
     }

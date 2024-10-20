@@ -4,5 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
-public readonly record struct HandShake(string Protocol, byte[] InfoHash, string PeerId);
+namespace BitTorrent.Models.Messages;
+public readonly record struct MessageHeader(int Length, MessageType Type);

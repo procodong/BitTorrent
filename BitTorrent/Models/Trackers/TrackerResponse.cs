@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
+namespace BitTorrent.Models.Tracker;
 public record class TrackerResponse(
     int Interval,
     int? MinInterval,
     string TrackerId,
     int Complete,
     int Incomplete,
-    List<Peer> Peers,
+    List<Peers.Peer> Peers,
     string? Warning
     );

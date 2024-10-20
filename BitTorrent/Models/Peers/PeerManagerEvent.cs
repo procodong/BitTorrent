@@ -4,5 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
-public readonly record struct MessageHeader(int Length, MessageType Type);
+namespace BitTorrent.Models.Peer.Peers;
+public enum PeerManagerEvent
+{
+    Choked,
+    Unchoked,
+}

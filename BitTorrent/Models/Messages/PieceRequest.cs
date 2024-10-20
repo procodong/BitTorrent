@@ -4,8 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models;
-public record class Config(
-    ulong MaxDownload,
-    ulong MaxUpload
-    );
+namespace BitTorrent.Models.Messages;
+public readonly record struct PieceRequest(int Index, int Begin, int Length);

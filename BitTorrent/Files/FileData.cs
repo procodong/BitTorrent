@@ -5,4 +5,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Files;
-public readonly record struct FileData(FileStream File, ulong ByteOffset);
+public readonly record struct FileData(FileStream File, long ByteOffset, SemaphoreSlim Lock);
