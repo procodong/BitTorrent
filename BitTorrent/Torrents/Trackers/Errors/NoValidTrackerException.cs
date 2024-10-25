@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Errors;
-public class BadPeerException : Exception
+namespace BitTorrent.Torrents.Trackers.Errors;
+internal class NoValidTrackerException : Exception
 {
 }

@@ -4,5 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Files;
+namespace BitTorrent.Files.DownloadFiles;
 public readonly record struct FileData(FileStream File, long ByteOffset, SemaphoreSlim Lock);

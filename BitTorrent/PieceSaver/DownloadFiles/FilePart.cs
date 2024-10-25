@@ -4,5 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Files;
+namespace BitTorrent.Files.DownloadFiles;
 public readonly record struct FilePart(FileData FileData, int Length, long Position);

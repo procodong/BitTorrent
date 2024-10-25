@@ -1,6 +1,7 @@
 ﻿using BitTorrent.Errors;
 using BitTorrent.Models.Messages;
 using BitTorrent.Torrents.Encoding;
+using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Utils;
 using System;
 using System.Buffers.Binary;
@@ -17,30 +18,11 @@ public class PeerConnection : IDisposable, IAsyncDisposable
     private readonly BufferedStream _stream;
     private readonly TcpClient _client;
 
-    public static async Task<(PeerConnection, HandShake)> ConnectAsync(TcpClient connection, HandShake handShake)
+    public PeerConnection(TcpClient connection)
     {
-        var stream = new BufferedStream(connection.GetStream());
-        var peerConn = new PeerConnection(stream, connection);
-        MessageEncoder.EncodeHandShake(peerConn.Writer, handShake);
-        await stream.FlushAsync();
-        HandShake receivedHandshake = await MessageDecoder.DecodeHandShakeAsync(peerConn.Reader);
-        if (receivedHandshake.Protocol != handShake.Protocol)
-        {
-            throw new InvalidProtocolException(receivedHandshake.Protocol);
-        }
-        return (peerConn, receivedHandshake);
-    }
-
-    public static async Task<(PeerConnection, HandShake)> ConnectAsync(TcpClient connection, HandShake handShake, BitArray bitfield)
-    {
-        var (conn, handshake) = await ConnectAsync(connection, handShake);
-        int len = bitfield.Length * 8;
-        var buf = new byte[len];
-        bitfield.CopyTo(buf, 0);
-        MessageEncoder.EncodeHeader(conn.Writer, new(len + 1, MessageType.Bitfield));
-        await conn._stream.WriteAsync(buf);
-        await conn._stream.FlushAsync();
-        return (conn, handshake);
+        _stream = new BufferedStream(connection.GetStream());
+        connection.ReceiveTimeout = 2 * 60 * 1000;
+        _client = connection;
     }
 
     private PeerConnection(BufferedStream stream, TcpClient client)
@@ -58,10 +40,34 @@ public class PeerConnection : IDisposable, IAsyncDisposable
         get => new(_stream);
     }
 
-    public async Task UpdateRelationAsync(Relation relation)
+    public async Task<HandShake> HandShakeAsync(HandShake handShake)
+    {
+        WriteHandshake(handShake);
+        HandShake receivedHandshake = await MessageDecoder.DecodeHandShakeAsync(Reader);
+        if (receivedHandshake.Protocol != handShake.Protocol)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidProtocol);
+        }
+        return receivedHandshake;
+    }
+
+    public void WriteHandshake(HandShake handShake)
+    {
+        MessageEncoder.EncodeHandShake(Writer, handShake);
+    }
+
+    public async Task WriteBitFieldAsync(BitArray bitfield)
+    {
+        int len = bitfield.Length * 8;
+        var buf = new byte[len];
+        bitfield.CopyTo(buf, 0);
+        MessageEncoder.EncodeHeader(Writer, new(len + 1, MessageType.Bitfield));
+        await _stream.WriteAsync(buf);
+    }
+
+    public void WriteUpdateRelation(Relation relation)
     {
         MessageEncoder.EncodeHeader(Writer, new(1, (MessageType)relation));
-        await _stream.FlushAsync();
     }
 
     public async Task KeepAliveAsync()
@@ -70,41 +76,43 @@ public class PeerConnection : IDisposable, IAsyncDisposable
         await _stream.FlushAsync();
     }
 
-    public async Task NotifyHaveAsync(int piece)
+    public void WriteHaveMessage(int piece)
     {
         MessageEncoder.EncodeHeader(Writer, new(5, MessageType.Have));
         Writer.Write(piece);
-        await _stream.FlushAsync();
     }
 
-    public async Task RequestAsync(PieceRequest request)
+    public void WritePieceRequest(PieceRequest request)
     {
         MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Request));
         MessageEncoder.EncodePieceRequest(Writer, request);
-        await _stream.FlushAsync();
     }
 
-    public async Task SendPieceAsync(PieceShareHeader requestedPiece, Stream piece)
+    public async Task WritePieceAsync(PieceShareHeader requestedPiece, Stream piece)
     {
         MessageEncoder.EncodeHeader(Writer, new((int)piece.Length + 9, MessageType.Piece));
         MessageEncoder.EncodePieceHeader(Writer, requestedPiece);
         await piece.CopyToAsync(_stream);
-        await _stream.FlushAsync();
     }
 
     public async Task<Message> ReceiveAsync()
     {
-        int len = 0;
-        while (len == 0)  // messages with length 0 are keep alive messages and are ignored
+        int len =  await Reader.ReadInt32Async();
+        if (len == 0)
         {
-            len = await Reader.ReadInt32Async();
+            return new(MessageType.KeepAlive, new(_stream, 0));
         }
         byte type = Reader.ReadByte();
         if (type > (byte)MessageType.Port)
         {
-            throw new BadPeerException();
+            throw new BadPeerException(PeerErrorReason.InvalidProtocol);
         }
         return new((MessageType)type, new(_stream, len - 1));
+    }
+
+    public async Task FlushAsync()
+    {
+        await _stream.FlushAsync();
     }
 
     public void Dispose()
@@ -113,8 +121,9 @@ public class PeerConnection : IDisposable, IAsyncDisposable
         _client.Dispose();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return ((IAsyncDisposable)_stream).DisposeAsync();
+        _client.Dispose();
+        await _stream.DisposeAsync();
     }
 }

@@ -4,8 +4,9 @@ using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrent.Files.DownloadFiles;
 
-namespace BitTorrent.Files;
+namespace BitTorrent.PieceSaver.DownloadFiles;
 public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
 {
     private readonly IEnumerable<FilePart> _parts = parts;

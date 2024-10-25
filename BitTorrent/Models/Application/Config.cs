@@ -9,5 +9,6 @@ public readonly record struct Config(
     ulong MaxDownload,
     ulong MaxUpload,
     int ConcurrentPieceDownloads,
-    int RequestSize
+    int RequestSize,
+    int RequestQueueSize
     );

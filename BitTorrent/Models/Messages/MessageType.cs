@@ -17,4 +17,5 @@ public enum MessageType
     Piece,
     Cancel,
     Port,
+    KeepAlive,
 }

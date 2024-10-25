@@ -1,8 +1,9 @@
 ﻿using BencodeNET.Torrents;
+using BitTorrent.PieceSaver.DownloadFiles;
 using BitTorrent.Utils;
 
-namespace BitTorrent.Files;
-public class FileManager(int pieceSize) : IDisposable, IAsyncDisposable
+namespace BitTorrent.Files.DownloadFiles;
+public class DownloadFileManager(int pieceSize) : IDisposable, IAsyncDisposable
 {
     private readonly int PieceSize = pieceSize;
     private readonly List<FileData> Files = [];
@@ -43,21 +44,9 @@ public class FileManager(int pieceSize) : IDisposable, IAsyncDisposable
         }
     }
 
-    public PartStream Read(int index) => Read(PieceSize, index, 0);
+    public PartStream Read(int index) => GetStream(index, 0, PieceSize);
 
-    public PartStream Read(int length, int pieceIndex, int offset) => new(GetParts(length, pieceIndex, offset), length);
-
-    public async Task WriteAsync(Stream stream, int pieceIndex)
-    {
-        foreach (var part in GetParts((int)stream.Length, pieceIndex, 0))
-        {
-            var limitedStream = new LimitedStream(stream, part.Length);
-            await part.FileData.Lock.WaitAsync();
-            part.FileData.File.Position = part.Position;
-            await limitedStream.CopyToAsync(part.FileData.File);
-            part.FileData.Lock.Release();
-        }
-    }
+    public PartStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
 
     private IEnumerable<FilePart> GetParts(int length, int pieceIndex, int offset)
     {
@@ -84,12 +73,12 @@ public class FileManager(int pieceSize) : IDisposable, IAsyncDisposable
             int mid = (low + high) / 2;
             if (mid < Files.Count - 1 && byteOffset >= Files[mid].ByteOffset && byteOffset < Files[mid + 1].ByteOffset)
             {
-                return mid;  
+                return mid;
             }
 
             if (byteOffset < Files[mid].ByteOffset)
             {
-                high = mid - 1; 
+                high = mid - 1;
             }
             else
             {

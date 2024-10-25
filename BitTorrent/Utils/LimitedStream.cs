@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrent.Files.Streams;
 public class LimitedStream : Stream
 {
     private readonly Stream _stream;
@@ -25,16 +25,16 @@ public class LimitedStream : Stream
 
     public override long Length => _length;
 
-    public override long Position 
-    { 
-        get => _position;  
+    public override long Position
+    {
+        get => _position;
         set
         {
             if (value > _length)
             {
                 throw new ArgumentOutOfRangeException("Position", message: "Position can't be out of the range of the stream");
             }
-            _position = (int) value;
+            _position = (int)value;
         }
     }
 
@@ -45,7 +45,7 @@ public class LimitedStream : Stream
 
     private int CapReadCount(int count)
     {
-        return (int) long.Min(_length - _position, count);
+        return (int)long.Min(_length - _position, count);
     }
 
     public override int Read(Span<byte> buffer)
