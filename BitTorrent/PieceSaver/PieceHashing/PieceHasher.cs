@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -33,8 +34,20 @@ public class PieceHasher(int blockSize)
         MoveBackBlocks(offsetAdd);
     }
 
+    public byte[] Finish()
+    {
+        _hasher.TransformFinalBlock([], 0, 0);
+        return _hasher.Hash!;
+    }
+
     private void MoveBackBlocks(int offset)
     {
+        int clearAfter = _blocks.Count - 1 - offset;
+        if (clearAfter == 0)
+        {
+            _blocks.Clear();
+            return;
+        }
         foreach (var (i, block) in _blocks.Select((block, i) => (i, block)))
         {
             int newIndex = i - offset;
@@ -44,5 +57,6 @@ public class PieceHasher(int blockSize)
             }
             _blocks[newIndex] = block;
         }
+        _blocks.RemoveRange(clearAfter, offset);
     }
 }

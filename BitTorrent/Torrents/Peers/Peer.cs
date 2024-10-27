@@ -84,7 +84,7 @@ public class Peer : IDisposable, IAsyncDisposable
                 break;
             case MessageType.Have:
                 var index = new BigEndianBinaryReader(message.Stream).ReadInt32();
-                _ownedPieces[index] = true;
+                HandleHave(index);
                 break;
             case MessageType.Bitfield:
                 var bitfield = new byte[message.Stream.Length];
@@ -128,7 +128,7 @@ public class Peer : IDisposable, IAsyncDisposable
     {
         QueuedPieceRequest download = FindDownload(piece.Index);
         await _download.SaveBlockAsync(stream, download.Download, piece.Begin);
-        long blockLength = stream.Length - 8;
+        long blockLength = stream.Length - stream.Position;
         
         _stats.IncrementDownloaded(blockLength);
     }
@@ -136,10 +136,7 @@ public class Peer : IDisposable, IAsyncDisposable
     private void HandleHave(int pieceIndex)
     {
         _ownedPieces[pieceIndex] = true;
-        if (_downloadedPiecesOffset + 1 == pieceIndex)
-        {
-            _downloadedPiecesOffset++;
-        }
+        UpdateFinishedOffset();
     }
 
     private async Task HandleRequestAsync(PieceRequest request)
@@ -152,12 +149,15 @@ public class Peer : IDisposable, IAsyncDisposable
     private void HandleBitfield(BitArray bitfield)
     {
         _ownedPieces = bitfield;
-        int finishedOffset = 0;
-        while (_ownedPieces[finishedOffset])
+        UpdateFinishedOffset();
+    }
+
+    private void UpdateFinishedOffset()
+    {
+        while (_ownedPieces[_downloadedPiecesOffset])
         {
-            finishedOffset++;
+            _downloadedPiecesOffset++;
         }
-        _downloadedPiecesOffset = finishedOffset;
     }
 
     public void UpdateRelation(Relation relation)

@@ -11,6 +11,6 @@ public record class TrackerResponse(
     string TrackerId,
     int Complete,
     int Incomplete,
-    List<Peers.Peer> Peers,
+    List<Peers.PeerAddress> Peers,
     string? Warning
     );

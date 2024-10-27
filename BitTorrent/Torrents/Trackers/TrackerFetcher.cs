@@ -47,7 +47,7 @@ public static class TrackerFetcher
             Incomplete: content.Get<BNumber>("incomplete"),
             Peers: content.Get<BList<BDictionary>>("peers").Value
             .Select(obj => (BDictionary)obj)
-            .Select(value => new Peer(
+            .Select(value => new PeerAddress(
                 Id: value.Get<BString>("peer id").ToString(),
                 Ip: value.Get<BString>("ip").ToString(),
                 Port: value.Get<BNumber>("port")

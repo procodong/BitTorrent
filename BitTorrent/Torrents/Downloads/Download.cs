@@ -40,40 +40,31 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
     public int DownloadedPiecesCount => _downloadedPieces;
 
 
-    public Stream RequestBlock(PieceRequest request)
-    {
-        int size = PieceSize(request.Index);
-        if (request.Begin >= size || request.Length > size)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidRequest);
-        }
-        return _files.GetStream(request.Index, request.Begin, request.Length);
-    }
-
     public async Task SaveBlockAsync(Stream stream, PieceDownload download, int offset)
     {
         int length = (int)(stream.Length - stream.Position);
         var files = _files.GetStream(download.PieceIndex, offset, length);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(1 << 12);
+        byte[] buffer = new byte[length];
         int readBytes;
-        await download.HashLock.WaitAsync();
+        int readOffset = 0;
         while ((readBytes = await stream.ReadAsync(buffer)) != 0)
         {
-            download.Hasher.TransformBlock(buffer, 0, readBytes, null, 0);
-            await files.WriteAsync(buffer.AsMemory(..readBytes));
+            await files.WriteAsync(buffer.AsMemory(readOffset, readBytes));
+            readOffset += readBytes;
         }
-        download.HashLock.Release();
-        ArrayPool<byte>.Shared.Return(buffer);
+        lock (download.Hasher)
+        {
+            download.Hasher.Hash(buffer, offset);
+        }
         int newDownloaded = Interlocked.Add(ref download.Downloaded, length);
         if (newDownloaded < download.Size || download.Size != PieceSize(download.PieceIndex))
         {
             return;
         }
-        download.Hasher.TransformFinalBlock([], 0, 0);
         Interlocked.Increment(ref _downloadedPieces);
         Memory<byte> correctHash = Torrent.Pieces.AsMemory(download.PieceIndex * 20, 20);
         IEnumerable<byte> correctHashIter = MemoryMarshal.ToEnumerable<byte>(correctHash);
-        if (!download.Hasher.Hash!.SequenceEqual(correctHashIter))
+        if (!download.Hasher.Finish().SequenceEqual(correctHashIter))
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
@@ -84,10 +75,26 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
         }
     }
 
+    public Stream RequestBlock(PieceRequest request)
+    {
+        ValidateRequest(request);
+        return _files.GetStream(request.Index, request.Begin, request.Length);
+    }
+
     public void Cancel(PieceRequest cancel, PieceDownload download)
     {
-        var queued = new PieceDownload(cancel.Length, download.PieceIndex, cancel.Begin);
+        ValidateRequest(cancel);
+        var queued = new PieceDownload(cancel.Length, download.PieceIndex, new(Config.RequestSize), cancel.Begin);
         _pieceRegisters.Add(queued);
+    }
+
+    private void ValidateRequest(PieceRequest request)
+    {
+        int size = PieceSize(request.Index);
+        if (request.Begin >= size || request.Length > size)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidRequest);
+        }
     }
 
     public PieceRequest AllocateDownload(PieceDownload download, int index)
@@ -158,12 +165,10 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
 
     private (int index, PieceDownload download)? FindNextPiece(IEnumerable<int> downloads, BitArray ownedPieces)
     {
-        return downloads.Where(piece => CanBeRequested(piece, ownedPieces)).Select((piece, index) => (index, new PieceDownload(PieceSize(piece), piece))).First();
-    }
-
-    private (int index, PieceDownload download)? FindNextPiece(IEnumerable<PieceDownload> downloads, BitArray ownedPieces)
-    {
-        return downloads.Where(piece => CanBeRequested(piece.PieceIndex, ownedPieces)).Select((piece, index) => (index, piece)).First();
+        return downloads
+            .Where(piece => CanBeRequested(piece, ownedPieces))
+            .Select((piece, index) => (index, new PieceDownload(PieceSize(piece), piece, new(Config.RequestSize))))
+            .First();
     }
 
     private int PieceSize(int piece)
