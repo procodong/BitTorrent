@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using BitTorrent.Files.DownloadFiles;
 
 namespace BitTorrent.PieceSaver.DownloadFiles;
-public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
+public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stream
+    where S : Stream
 {
-    private readonly IEnumerable<FilePart> _parts = parts;
-    private FilePart _currentpart = parts.First();
+    private readonly IEnumerable<StreamPart<S>> _parts = parts;
+    private StreamPart<S> _currentpart = parts.First();
     private int _position = 0;
     private readonly int _length = length;
 
@@ -32,7 +33,7 @@ public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
     private void Next()
     {
         var part = _parts.FirstOrDefault();
-        if (part.FileData.File is null)
+        if (part.StreamData.Stream is null)
         {
             return;
         }
@@ -56,9 +57,9 @@ public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         UpdateCurrentFile();
-        await _currentpart.FileData.Lock.WaitAsync(cancellationToken);
+        await _currentpart.StreamData.Lock.WaitAsync(cancellationToken);
         UpdatePosition();
-        int readCount = await _currentpart.FileData.File.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
+        int readCount = await _currentpart.StreamData.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
         FinalizeRead(readCount);
         return readCount;
     }
@@ -66,21 +67,21 @@ public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
     public override int Read(Span<byte> buffer)
     {
         UpdateCurrentFile();
-        _currentpart.FileData.Lock.Wait();
+        _currentpart.StreamData.Lock.Wait();
         UpdatePosition();
-        int readCount = _currentpart.FileData.File.Read(buffer[..CapReadCount(buffer.Length)]);
+        int readCount = _currentpart.StreamData.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
         FinalizeRead(readCount);
         return readCount;
     }
 
     private void UpdatePosition()
     {
-        _currentpart.FileData.File.Position = _currentpart.Position + _position;
+        _currentpart.StreamData.Stream.Position = _currentpart.Position + _position;
     }
 
     public void FinalizeRead(int readCount)
     {
-        _currentpart.FileData.Lock.Release();
+        _currentpart.StreamData.Lock.Release();
         _position += readCount;
     }
 
@@ -106,10 +107,10 @@ public class PartStream(IEnumerable<FilePart> parts, int length) : Stream
         {
             UpdateCurrentFile();
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
-            await _currentpart.FileData.Lock.WaitAsync(cancellationToken);
+            await _currentpart.StreamData.Lock.WaitAsync(cancellationToken);
             UpdatePosition();
-            await _currentpart.FileData.File.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
-            _currentpart.FileData.Lock.Release();
+            await _currentpart.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
+            _currentpart.StreamData.Lock.Release();
             _position += writeLen;
             writtenBytes += writeLen;
         }

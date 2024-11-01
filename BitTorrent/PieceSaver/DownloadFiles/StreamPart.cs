@@ -5,4 +5,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Files.DownloadFiles;
-public readonly record struct FilePart(FileData FileData, int Length, long Position);
+public readonly record struct StreamPart<S>(StreamData<S> StreamData, int Length, long Position) where S : Stream;

@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace BitTorrent.Models.Application;
 public readonly record struct Config(
-    ulong MaxDownload,
-    ulong MaxUpload,
+    long TargetDownload,
+    long TargetUpload,
     int ConcurrentPieceDownloads,
     int RequestSize,
-    int RequestQueueSize
+    int RequestQueueSize,
+    int MaxRarePieceCount
     );

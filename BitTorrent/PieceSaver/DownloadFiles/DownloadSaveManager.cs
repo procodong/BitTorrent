@@ -3,13 +3,15 @@ using BitTorrent.PieceSaver.DownloadFiles;
 using BitTorrent.Utils;
 
 namespace BitTorrent.Files.DownloadFiles;
-public class DownloadFileManager(int pieceSize) : IDisposable, IAsyncDisposable
+public class DownloadSaveManager<S>(int pieceSize, List<StreamData<S>> saves) : IDisposable, IAsyncDisposable
+    where S : Stream
 {
-    private readonly int PieceSize = pieceSize;
-    private readonly List<FileData> Files = [];
+    private readonly int _pieceSize = pieceSize;
+    private readonly List<StreamData<S>> _saves = saves;
 
-    public void Create(string path, MultiFileInfoList files)
+    public DownloadSaveManager<FileStream> CreateFiles(string path, MultiFileInfoList files, int pieceSize)
     {
+        var createdFiles = new List<StreamData<FileStream>>();
         var createdDirectories = new HashSet<string>();
         long createdBytes = 0;
         foreach (var file in files)
@@ -23,41 +25,42 @@ public class DownloadFileManager(int pieceSize) : IDisposable, IAsyncDisposable
             var filePath = Path.Combine(path, file.FullPath);
             var createdFile = File.Create(filePath);
             createdFile.SetLength(file.FileSize);
-            Files.Add(new(createdFile, createdBytes, new(1, 1)));
+            createdFiles.Add(new(createdFile, createdBytes, new(1, 1)));
             createdBytes += file.FileSize;
         }
+        return new(pieceSize, createdFiles);
     }
 
     public void Dispose()
     {
-        foreach (FileData fileData in Files)
+        foreach (var fileData in _saves)
         {
-            fileData.File.Close();
+            fileData.Stream.Close();
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        foreach (FileData fileData in Files)
+        foreach (var fileData in _saves)
         {
-            await fileData.File.DisposeAsync();
+            await fileData.Stream.DisposeAsync();
         }
     }
 
-    public PartStream Read(int index) => GetStream(index, 0, PieceSize);
+    public PieceStream<S> Read(int index) => GetStream(index, 0, _pieceSize);
 
-    public PartStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
+    public PieceStream<S> GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
 
-    private IEnumerable<FilePart> GetParts(int length, int pieceIndex, int offset)
+    private IEnumerable<StreamPart<S>> GetParts(int length, int pieceIndex, int offset)
     {
-        long byteOffset = pieceIndex * PieceSize + offset;
+        long byteOffset = pieceIndex * _pieceSize + offset;
         int bytesRead = 0;
         int start = Search(byteOffset);
         for (int i = start; bytesRead <= length; i++)
         {
-            FileData file = Files[i];
+            StreamData<S> file = _saves[i];
             long position = i == start ? byteOffset - file.ByteOffset : 0;
-            int readLen = (int)long.Min(length - bytesRead, file.File.Length - position);
+            int readLen = (int)long.Min(length - bytesRead, file.Stream.Length - position);
             yield return new(file, readLen, position);
             bytesRead += readLen;
         }
@@ -66,17 +69,17 @@ public class DownloadFileManager(int pieceSize) : IDisposable, IAsyncDisposable
     private int Search(long byteOffset)
     {
         int low = 0;
-        int high = Files.Count - 1;
+        int high = _saves.Count - 1;
 
         while (low <= high)
         {
             int mid = (low + high) / 2;
-            if (mid < Files.Count - 1 && byteOffset >= Files[mid].ByteOffset && byteOffset < Files[mid + 1].ByteOffset)
+            if (mid < _saves.Count - 1 && byteOffset >= _saves[mid].ByteOffset && byteOffset < _saves[mid + 1].ByteOffset)
             {
                 return mid;
             }
 
-            if (byteOffset < Files[mid].ByteOffset)
+            if (byteOffset < _saves[mid].ByteOffset)
             {
                 high = mid - 1;
             }

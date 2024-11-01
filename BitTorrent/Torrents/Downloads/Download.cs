@@ -5,6 +5,7 @@ using BitTorrent.Files.DownloadFiles;
 using BitTorrent.Models.Application;
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
+using BitTorrent.PieceSaver.DownloadFiles;
 using BitTorrent.Torrents.Downloads.Errors;
 using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Utils;
@@ -22,14 +23,15 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Torrents.Downloads;
-public class Download(Torrent torrent, DownloadFileManager files, Config config)
+public class Download<S>(Torrent torrent, DownloadSaveManager<S> files, Config config)
+    where S : Stream
 {
     public readonly Torrent Torrent = torrent;
     public readonly Config Config = config;
     public readonly BitArray DownloadedPieces = new(torrent.NumberOfPieces);
     public readonly int MaxMessageLength = int.Max(config.RequestSize + 13, torrent.NumberOfPieces / 8 + 1);
     private readonly PeerStatistics _statistics = new();
-    private readonly DownloadFileManager _files = files;
+    private readonly DownloadSaveManager<S> _files = files;
     private readonly List<PieceDownload> _pieceRegisters = [];
     private readonly List<int> _rarestPieces = [];
     private readonly BitArray _requestedPieces = new(torrent.NumberOfPieces);
@@ -38,6 +40,11 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
 
     public bool FinishedDownloading => _downloadedPieces >= Torrent.NumberOfPieces;
     public int DownloadedPiecesCount => _downloadedPieces;
+
+    public void AddPeer(ChannelWriter<int> communicator)
+    {
+        _haveNotificationChannels.Add(communicator);
+    }
 
 
     public async Task SaveBlockAsync(Stream stream, PieceDownload download, int offset)
@@ -75,7 +82,7 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
         }
     }
 
-    public Stream RequestBlock(PieceRequest request)
+    public PieceStream<S> RequestBlock(PieceRequest request)
     {
         ValidateRequest(request);
         return _files.GetStream(request.Index, request.Begin, request.Length);
@@ -104,8 +111,7 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
         download.Downloading += downloadSize;
         if (download.Downloading == download.Size)
         {
-            _pieceRegisters[index] = _pieceRegisters[^1];
-            _pieceRegisters.RemoveAt(_pieceRegisters.Count - 1);
+            _pieceRegisters.SwapRemove(index);
             if (download.Size == PieceSize(download.PieceIndex)) 
             {
                 _requestedPieces[download.PieceIndex] = true;
@@ -114,9 +120,9 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
         return new(download.PieceIndex, downloadOffset, downloadSize);
     }
 
-    public PieceRequest? AssignBlockRequest(BitArray ownedPieces, int downloadedPiecesOffset)
+    public PieceRequest? AssignBlockRequest(BitArray ownedPieces)
     {
-        var slot = SeachPiece(ownedPieces, downloadedPiecesOffset);
+        var slot = SeachPiece(ownedPieces);
         if (slot is not null)
         {
             return AllocateDownload(slot.Value.Download, slot.Value.Index);
@@ -124,22 +130,22 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
         return null;
     }
 
-    private (int Index, PieceDownload Download)? SeachPiece(BitArray ownedPieces, int downloadedPiecesOffset)
+    private (int Index, PieceDownload Download)? SeachPiece(BitArray ownedPieces)
     {
-        foreach (var (index, pieceDownload) in _pieceRegisters.Select((v, i) => (i, v)))
+        foreach (var (index, pieceDownload) in _pieceRegisters.Indexed())
         {
             if (pieceDownload.Size > pieceDownload.Downloading && ownedPieces[pieceDownload.PieceIndex])
             {
                 return (index, pieceDownload);
             }
         }
-        var creation = CreateDownload(ownedPieces, downloadedPiecesOffset);
+        var creation = CreateDownload(ownedPieces);
         if (creation is null) return default;
         _pieceRegisters.Add(creation);
         return (_pieceRegisters.Count - 1, creation);
     }
 
-    private PieceDownload? CreateDownload(BitArray ownedPieces, int downloadedPiecesOffset)
+    private PieceDownload? CreateDownload(BitArray ownedPieces)
     {
         if (_rarestPieces.Count != 0)
         {
@@ -150,7 +156,7 @@ public class Download(Torrent torrent, DownloadFileManager files, Config config)
                 return rarePiece.Value.download;
             }
         }
-        var nextPiece = FindNextPiece(Enumerable.Range(downloadedPiecesOffset, Torrent.NumberOfPieces - downloadedPiecesOffset), ownedPieces);
+        var nextPiece = FindNextPiece(Enumerable.Range(0, Torrent.NumberOfPieces), ownedPieces);
         if (nextPiece is not null)
         {
             return nextPiece.Value.download;

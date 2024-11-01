@@ -23,40 +23,20 @@ public class PieceHasher(int blockSize)
             int addCount = index + 1 - _blocks.Count;
             _blocks.AddRange(Enumerable.Range(0, addCount).Select<int, byte[]?>(_ => null));
         }
-        int offsetAdd = 0;
+        int removeCount = 0;
         _blocks[index] = data;
         foreach (var block in _blocks.TakeWhile(v => v is not null))
         {
             _hasher.TransformBlock(block!, 0, block!.Length, null, 0);
-            offsetAdd++;
+            removeCount++;
         }
-        _offset += offsetAdd;
-        MoveBackBlocks(offsetAdd);
+        _offset += removeCount;
+        _blocks.RemoveRange(0, removeCount);
     }
 
     public byte[] Finish()
     {
         _hasher.TransformFinalBlock([], 0, 0);
         return _hasher.Hash!;
-    }
-
-    private void MoveBackBlocks(int offset)
-    {
-        int clearAfter = _blocks.Count - 1 - offset;
-        if (clearAfter == 0)
-        {
-            _blocks.Clear();
-            return;
-        }
-        foreach (var (i, block) in _blocks.Select((block, i) => (i, block)))
-        {
-            int newIndex = i - offset;
-            if (newIndex < 0)
-            {
-                continue;
-            }
-            _blocks[newIndex] = block;
-        }
-        _blocks.RemoveRange(clearAfter, offset);
     }
 }
