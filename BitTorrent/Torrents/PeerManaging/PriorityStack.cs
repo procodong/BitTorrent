@@ -23,11 +23,11 @@ public class PriorityStack<T>(int size, IComparer<T> comparer) : IEnumerable<T>
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable)_stack).GetEnumerator();
+        return _stack.GetEnumerator();
     }
 
     public IEnumerator<T> GetEnumerator()
     {
-        return ((IEnumerable<T>)_stack).GetEnumerator();
+        return _stack.GetEnumerator();
     }
 }

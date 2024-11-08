@@ -62,7 +62,7 @@ public class PeerManager<S>(string peerId, Download<S> download)
         }
         var interestingPeersLookup = new BitArray(_peers.Count);
         var unchokedPeersLookup = new BitArray(_peers.Count);
-        w
+        
         foreach (var interesting in interestingPeers)
         {
             interestingPeersLookup[interesting.Index] = true;

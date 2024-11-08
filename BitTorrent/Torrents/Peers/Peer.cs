@@ -100,8 +100,7 @@ public class Peer<S> : IDisposable, IAsyncDisposable
                 break;
             case MessageType.Cancel:
                 PieceRequest cancel = MessageDecoder.DecodeRequest(new(message.Stream));
-                _download.Cancel(cancel, FindDownload(cancel.Index).Download);
-                _pieceDownloads.RemoveAll(download => download.Download.PieceIndex == cancel.Index);
+                HandleCancel(cancel);
                 break;
             case MessageType.Port:
                 message.Stream.ReadByte();
@@ -114,16 +113,28 @@ public class Peer<S> : IDisposable, IAsyncDisposable
         }
     }
 
-    private QueuedPieceRequest FindDownload(int pieceIndex)
+    private QueuedPieceRequest FindDownload(PieceRequest request)
     {
-        return _pieceDownloads.Find(d => d.Download.PieceIndex == pieceIndex);
+        var piece = _pieceDownloads.Find(d => d.Request == request);
+        if (piece.Download is null)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidRequest);
+        }
+        return piece;
+    }
+
+    private void HandleCancel(PieceRequest cancel)
+    {
+        FindDownload(cancel);
+        _download.Cancel(cancel);
+        _pieceDownloads.RemoveAll(download => download.Request == cancel);
     }
 
     private async Task HandlePieceAsync(Stream stream, PieceShare piece)
     {
-        QueuedPieceRequest download = FindDownload(piece.Index);
-        await _download.SaveBlockAsync(stream, download.Download, piece.Begin);
         long blockLength = stream.Length - stream.Position;
+        QueuedPieceRequest download = FindDownload(new(piece.Index, piece.Begin, (int)blockLength));
+        await _download.SaveBlockAsync(stream, download.Download, piece.Begin);
         
         _stats.IncrementDownloaded(blockLength);
     }

@@ -110,8 +110,7 @@ public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stre
             await _currentpart.StreamData.Lock.WaitAsync(cancellationToken);
             UpdatePosition();
             await _currentpart.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
-            _currentpart.StreamData.Lock.Release();
-            _position += writeLen;
+            FinalizeRead(writeLen);
             writtenBytes += writeLen;
         }
     }

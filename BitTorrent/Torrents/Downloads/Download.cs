@@ -43,27 +43,24 @@ public class Download<S>(Torrent torrent, DownloadSaveManager<S> files, Config c
 
     public void AddPeer(ChannelWriter<int> communicator)
     {
-        _haveNotificationChannels.Add(communicator);
+        lock (_haveNotificationChannels)
+        {
+            _haveNotificationChannels.Add(communicator);
+        }
     }
 
 
     public async Task SaveBlockAsync(Stream stream, PieceDownload download, int offset)
     {
-        int length = (int)(stream.Length - stream.Position);
-        var files = _files.GetStream(download.PieceIndex, offset, length);
-        byte[] buffer = new byte[length];
-        int readBytes;
-        int readOffset = 0;
-        while ((readBytes = await stream.ReadAsync(buffer)) != 0)
-        {
-            await files.WriteAsync(buffer.AsMemory(readOffset, readBytes));
-            readOffset += readBytes;
-        }
+        var files = _files.GetStream(download.PieceIndex, offset, download.Size);
+        byte[] buffer = new byte[download.Size];
+        await stream.ReadExactlyAsync(buffer);
+        await files.WriteAsync(buffer);
         lock (download.Hasher)
         {
-            download.Hasher.Hash(buffer, offset);
+            download.Hasher.Hash(buffer, offset + download.DownloadOffset);
         }
-        int newDownloaded = Interlocked.Add(ref download.Downloaded, length);
+        int newDownloaded = Interlocked.Add(ref download.Downloaded, download.Size);
         if (newDownloaded < download.Size || download.Size != PieceSize(download.PieceIndex))
         {
             return;
@@ -76,9 +73,12 @@ public class Download<S>(Torrent torrent, DownloadSaveManager<S> files, Config c
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
         DownloadedPieces[download.PieceIndex] = true;
-        foreach (var peer in _haveNotificationChannels)
+        lock (_haveNotificationChannels)
         {
-            await peer.WriteAsync(download.PieceIndex);
+            foreach (var peer in _haveNotificationChannels)
+            {
+                peer.TryWrite(download.PieceIndex);
+            }
         }
     }
 
@@ -88,10 +88,10 @@ public class Download<S>(Torrent torrent, DownloadSaveManager<S> files, Config c
         return _files.GetStream(request.Index, request.Begin, request.Length);
     }
 
-    public void Cancel(PieceRequest cancel, PieceDownload download)
+    public void Cancel(PieceRequest cancel)
     {
         ValidateRequest(cancel);
-        var queued = new PieceDownload(cancel.Length, download.PieceIndex, new(Config.RequestSize), cancel.Begin);
+        var queued = new PieceDownload(cancel.Length, cancel.Index, new(Config.RequestSize), cancel.Begin);
         _pieceRegisters.Add(queued);
     }
 
