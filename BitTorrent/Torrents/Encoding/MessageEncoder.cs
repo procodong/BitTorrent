@@ -29,7 +29,7 @@ public static class MessageEncoder
         writer.Write(handShake.Protocol);
         writer.Write(new byte[8]);
         writer.Write(handShake.InfoHash);
-        writer.Write(Encoding.ASCII.GetBytes(handShake.PeerId));
+        writer.Write(System.Text.Encoding.ASCII.GetBytes(handShake.PeerId));
     }
 
     public static void EncodeHeader(BigEndianBinaryWriter writer, MessageHeader header)

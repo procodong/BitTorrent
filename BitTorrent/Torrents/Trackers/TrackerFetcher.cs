@@ -3,9 +3,12 @@ using BencodeNET.Parsing;
 using BitTorrent.Errors;
 using BitTorrent.Models.Peers;
 using BitTorrent.Models.Tracker;
+using BitTorrent.Torrents.Trackers.Errors;
 using System;
 using System.Collections.Generic;
+using System.IO.Pipelines;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -20,7 +23,7 @@ public static class TrackerFetcher
             Port = -1
         };
         var query = HttpUtility.ParseQueryString(builder.Query);
-        query["info_hash"] = request.InfoHash;
+        query["info_hash"] = Uri.EscapeDataString(Convert.ToBase64String(request.InfoHash));
         query["peer_id"] = request.ClientId;
         query["port"] = request.Port.ToString();
         query["uploaded"] = request.Uploaded.ToString();
@@ -28,7 +31,10 @@ public static class TrackerFetcher
         query["left"] = request.Left.ToString();
         query["compact"] = "0";
         query["no_peer_id"] = "0";
-        query["event"] = DisplayEvent(request.TrackerEvent);
+        if (request.TrackerEvent.HasValue)
+        {
+            query["event"] = DisplayEvent(request.TrackerEvent.Value);
+        }
         builder.Query = query.ToString();
 
         var response = await client.GetAsync(builder.ToString());
@@ -38,6 +44,10 @@ public static class TrackerFetcher
         if (error is not null)
         {
             throw new TrackerException(error.ToString());
+        }
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new TrackerHttpException((int)response.StatusCode);
         }
         var data = new TrackerResponse(
             Interval: content.Get<BNumber>("interval"),
@@ -49,7 +59,7 @@ public static class TrackerFetcher
             .Select(obj => (BDictionary)obj)
             .Select(value => new PeerAddress(
                 Id: value.Get<BString>("peer id").ToString(),
-                Ip: value.Get<BString>("ip").ToString(),
+                Ip: IPAddress.Parse(value.Get<BString>("ip").ToString()),
                 Port: value.Get<BNumber>("port")
                 )).ToList(),
             Warning: content.Get<BString?>("warning message")?.ToString()

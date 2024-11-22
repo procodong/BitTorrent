@@ -55,4 +55,10 @@ public class BigEndianBinaryReader : BinaryReader
         BaseStream.ReadExactly(buffer);
         return BinaryPrimitives.ReadUInt64BigEndian(buffer);
     }
+    public async Task<int> ReadInt32Async()
+    {
+        var buffer = new byte[4];
+        await BaseStream.ReadExactlyAsync(buffer);
+        return BinaryPrimitives.ReadInt32BigEndian(buffer);
+    }
 }

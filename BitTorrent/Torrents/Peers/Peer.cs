@@ -2,115 +2,31 @@
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Encoding;
+using BitTorrent.Torrents.PeerManaging;
 using BitTorrent.Torrents.Peers.Errors;
-using BitTorrent.Utils;
-using System.Buffers.Binary;
 using System.Collections;
-using System.IO.Pipelines;
 using System.Net.Sockets;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Peers;
 
-public class Peer<S> : IDisposable, IAsyncDisposable
-    where S : Stream
+public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 {
-    private readonly PeerConnection _connection;
-    private readonly Download<S> _download;
-    private readonly PeerStatistics _stats;
-    private readonly ChannelReader<int> _haveMessages;
-    private readonly ChannelReader<Relation> _relationReceiver;
+    private readonly PeerWireStream _connection;
+    private readonly Download _download;
+    private readonly SharedPeerData _stats;
+    private readonly ChannelReader<int> _haveMessageReceiver;
+    private readonly ChannelReader<PeerRelation> _relationReceiver;
     private readonly List<QueuedPieceRequest> _pieceDownloads = [];
-    private BitArray _ownedPieces;
-    private bool _choked = true;
-    private bool _interested = false;
-    private bool _amChoking = true;
-    private bool _amInterested = false;
+    private bool _writing = false;
 
-    public async static Task<Peer<S>> ConnectAsync(TcpClient connection, ChannelReader<int> haveMessages, ChannelReader<Relation> relationReceiver, Download<S> download, PeerStatistics stats, string clientId)
-    {
-        var client = new PeerConnection(connection);
-        var myHandshake = new HandShake("BitTorrent protocol", download.Torrent.OriginalInfoHashBytes, clientId);
-        HandShake handshake = await client.HandShakeAsync(myHandshake);
-        if (handshake.InfoHash != download.Torrent.OriginalInfoHashBytes)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidInfoHash);
-        }
-        if (download.DownloadedPiecesCount != 0)
-        {
-            await client.WriteBitFieldAsync(download.DownloadedPieces);
-        }
-        await client.FlushAsync();
-        return new(client, haveMessages, relationReceiver, download, stats);
-    }
-
-    private Peer(PeerConnection connection, ChannelReader<int> haveMessages, ChannelReader<Relation> relationReceiver, Download<S> download, PeerStatistics stats)
+    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerData stats)
     {
         _connection = connection;
-        _ownedPieces = new(download.Torrent.NumberOfPieces);
         _download = download;
         _stats = stats;
-        _haveMessages = haveMessages;
+        _haveMessageReceiver = haveMessages;
         _relationReceiver = relationReceiver;
-    }
-
-    private async Task HandleMessageAsync(Message message)
-    {
-        if (message.Stream.Length > _download.MaxMessageLength)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
-        }
-        switch (message.Type)
-        {
-            case MessageType.Choke:
-                _choked = true;
-                break;
-            case MessageType.Unchoke:
-                _choked = false;
-                break;
-            case MessageType.Interested:
-                _interested = true;
-                break;
-            case MessageType.NotInterested:
-                _interested = false;
-                break;
-            case MessageType.Have:
-                var index = new BigEndianBinaryReader(message.Stream).ReadInt32();
-                _ownedPieces[index] = true;
-                break;
-            case MessageType.Bitfield:
-                var bitfield = new byte[message.Stream.Length];
-                await message.Stream.ReadExactlyAsync(bitfield);
-                _ownedPieces = new BitArray(bitfield);
-                break;
-            case MessageType.Request:
-                if (_amChoking)
-                {
-                    return;
-                }
-                var request = MessageDecoder.DecodeRequest(new(message.Stream));
-                await HandleRequestAsync(request);
-                break;
-            case MessageType.Piece:
-                var piece = MessageDecoder.DecodePieceHeader(new(message.Stream));
-                await HandlePieceAsync(message.Stream, piece);
-                break;
-            case MessageType.Cancel:
-                PieceRequest cancel = MessageDecoder.DecodeRequest(new(message.Stream));
-                HandleCancel(cancel);
-                break;
-            case MessageType.Port:
-                message.Stream.ReadByte();
-                message.Stream.ReadByte();
-                break;
-        }
-        if (message.Stream.Position != message.Stream.Length)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
-        }
     }
 
     private QueuedPieceRequest FindDownload(PieceRequest request)
@@ -123,89 +39,158 @@ public class Peer<S> : IDisposable, IAsyncDisposable
         return piece;
     }
 
-    private void HandleCancel(PieceRequest cancel)
-    {
-        FindDownload(cancel);
-        _download.Cancel(cancel);
-        _pieceDownloads.RemoveAll(download => download.Request == cancel);
-    }
-
-    private async Task HandlePieceAsync(Stream stream, PieceShare piece)
-    {
-        long blockLength = stream.Length - stream.Position;
-        QueuedPieceRequest download = FindDownload(new(piece.Index, piece.Begin, (int)blockLength));
-        await _download.SaveBlockAsync(stream, download.Download, piece.Begin);
-        
-        _stats.IncrementDownloaded(blockLength);
-    }
-
-    private async Task HandleRequestAsync(PieceRequest request)
-    {
-        var block = _download.RequestBlock(request);
-        await _connection.WritePieceAsync(new(request.Index, request.Begin), block);
-        await _connection.FlushAsync();
-    }
-
-    public void UpdateRelation(Relation relation)
-    {
-        _ = relation switch
-        {
-            Relation.Choke => _amChoking = true,
-            Relation.Unchoke => _amChoking = false,
-            Relation.Interested => _amInterested = true,
-            Relation.NotInterested => _amInterested = false,
-            _ => throw new NotImplementedException()
-        };
-        _connection.WriteUpdateRelation(relation);
-    }
-
     private void RequestBlocks()
     {
-        if (_choked || !_amInterested)
+        if (_stats.RelationToMe.Choked || _download.FinishedDownloading)
         {
-            return;
         }
         while (_pieceDownloads.Count < _download.Config.RequestQueueSize)
         {
-            PieceRequest? request = default; 
+            QueuedPieceRequest? block; 
             lock (_download)
             {
-                request = _download.AssignBlockRequest(_ownedPieces);
+                block = _download.AssignBlockRequest(_stats.OwnedPieces);
             }
-            if (!request.HasValue)
+            if (!block.HasValue)
             {
                 break;
             }
-            _connection.WritePieceRequest(request.Value);
+            _pieceDownloads.Add(block.Value);
+            _connection.WritePieceRequest(block.Value.Request);
         }
     }
 
-    private void ReadRelationMessages()
+    private void UpdateRelation(PeerRelation relation)
     {
-        while (_relationReceiver.TryRead(out Relation relation))
+        if (relation.Interested != _stats.Relation.Interested)
         {
-            UpdateRelation(relation);
+            _connection.WriteUpdateRelation(relation.Interested ? Relation.Interested : Relation.NotInterested);
         }
-    }
-
-    private void ReadHaveMessages()
-    {
-        while (_haveMessages.TryRead(out var message))
+        if (relation.Choked != _stats.Relation.Choked)
         {
-            _connection.WriteHaveMessage(message);
+            _connection.WriteUpdateRelation(relation.Choked ? Relation.Choke : Relation.Unchoke);
         }
     }
 
     public async Task ListenAsync()
     {
+        Task receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength);
+        Task<PeerRelation> relationTask = _relationReceiver.ReadAsync().AsTask();
+        Task<int> haveTask = _haveMessageReceiver.ReadAsync().AsTask();
+        Task keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
         while (true)
         {
-            ReadRelationMessages();
-            ReadHaveMessages();
-            RequestBlocks();
+            var readyTask = await Task.WhenAny(receiveTask, relationTask, haveTask, keepAliveTask);
+            if (_writing)
+            {
+                await receiveTask;
+            }
+            if (readyTask == receiveTask)
+            {
+                receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength);
+            }
+            else if (readyTask == relationTask)
+            {
+                PeerRelation relation = relationTask.Result;
+                UpdateRelation(relation);
+                relationTask = _relationReceiver.ReadAsync().AsTask();
+            }
+            else if (readyTask == haveTask)
+            {
+                int have = haveTask.Result;
+                _connection.WriteHaveMessage(have);
+                haveTask = _haveMessageReceiver.ReadAsync().AsTask();
+            }
+            else if (readyTask == keepAliveTask)
+            {
+                _connection.WriteKeepAlive();
+                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
+            }
             await _connection.FlushAsync();
-            await HandleMessageAsync(await _connection.ReceiveAsync());
+            if (_relationReceiver.Completion.IsCompleted) break;
         }
+    }
+
+    public Task OnChokeAsync()
+    {
+        _stats.RelationToMe = _stats.RelationToMe with { Choked = true };
+        return Task.CompletedTask;
+    }
+
+    public Task OnUnchokedAsync()
+    {
+        _stats.RelationToMe = _stats.RelationToMe with { Choked = false };
+        RequestBlocks();
+        return Task.CompletedTask;
+    }
+
+    public Task OnInterestedAsync()
+    {
+        _stats.RelationToMe = _stats.RelationToMe with { Interested = true };
+        return Task.CompletedTask;
+    }
+
+    public Task OnNotInterestedAsync()
+    {
+        _stats.RelationToMe = _stats.RelationToMe with { Choked = false };
+        return Task.CompletedTask;
+    }
+
+    public Task OnHaveAsync(int piece)
+    {
+        _stats.OwnedPieces[piece] = true;
+        return Task.CompletedTask;
+    }
+
+    public Task OnBitfieldAsync(BitArray bitfield)
+    {
+        _stats.OwnedPieces = bitfield;
+        return Task.CompletedTask;
+    }
+
+    public async Task OnRequestAsync(PieceRequest request)
+    {
+        if (_stats.Relation.Choked) return;
+        if (request.Length > _download.Config.MaxRequestSize)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidRequest);
+        }
+        var block = _download.RequestBlock(request);
+        _writing = true;
+        try
+        {
+            await _connection.WritePieceAsync(new(request.Index, request.Begin), block);
+        }
+        finally
+        {
+            _writing = false;
+        }
+        _download.FinishUpload(request.Length);
+    }
+
+    public async Task OnPieceAsync(Piece piece)
+    {
+        long blockLength = piece.Stream.Length - piece.Stream.Position;
+        QueuedPieceRequest request = FindDownload(piece.Request);
+        await _download.SaveBlockAsync(piece.Stream, request);
+        Interlocked.Add(ref _stats.Stats.Downloaded, blockLength);
+        RequestBlocks();
+    }
+
+    public Task OnCancelAsync(PieceRequest request)
+    {
+        FindDownload(request);
+        lock (_download)
+        {
+            _download.Cancel(request);
+        }
+        _pieceDownloads.RemoveAll(download => download.Request == request);
+        return Task.CompletedTask;
+    }
+
+    public Task OnPortAsync(ushort port)
+    {
+        return Task.CompletedTask;
     }
 
     public void Dispose()

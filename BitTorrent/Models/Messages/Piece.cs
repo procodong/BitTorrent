@@ -5,16 +5,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Models.Messages;
-public enum MessageType
-{
-    Choke,
-    Unchoke,
-    Interested,
-    NotInterested,
-    Have,
-    Bitfield,
-    Request,
-    Piece,
-    Cancel,
-    Port,
-}
+public readonly record struct Piece(PieceRequest Request, Stream Stream);

@@ -1,2 +1,4 @@
-﻿namespace BitTorrent.Models.Peers;
-public readonly record struct PeerAddress(string Id, string Ip, int Port);
+﻿using System.Net;
+
+namespace BitTorrent.Models.Peers;
+public readonly record struct PeerAddress(string Id, IPAddress Ip, int Port);

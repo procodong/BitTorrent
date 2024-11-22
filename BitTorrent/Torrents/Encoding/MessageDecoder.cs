@@ -15,23 +15,23 @@ public static class MessageDecoder
     {
         var protocol = await reader.ReadStringAsync();
         reader.BaseStream.Position += 8;
-        var infoHash = reader.ReadBytes(20);
-        var peerId = Encoding.ASCII.GetString(reader.ReadBytes(20));
+        var infoHash = await reader.ReadBytesAsync(20);
+        var peerId = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(20));
         return new(protocol, infoHash, peerId);
     }
 
-    public static PieceRequest DecodeRequest(BigEndianBinaryReader reader)
+    public static async Task<PieceRequest> DecodeRequestAsync(BigEndianBinaryReader reader)
     {
-        var index = reader.ReadInt32();
-        var begin = reader.ReadInt32();
-        var length = reader.ReadInt32();
+        var index = await reader.ReadInt32Async();
+        var begin = await reader.ReadInt32Async();
+        var length = await reader.ReadInt32Async();
         return new(index, begin, length);
     }
 
-    public static PieceShare DecodePieceHeader(BigEndianBinaryReader reader)
+    public static async Task<PieceShareHeader> DecodePieceHeaderAsync(BigEndianBinaryReader reader)
     {
-        var index = reader.ReadInt32();
-        var begin = reader.ReadInt32();
+        var index = await reader.ReadInt32Async();
+        var begin = await reader.ReadInt32Async();
         return new(index, begin);
     }
 }

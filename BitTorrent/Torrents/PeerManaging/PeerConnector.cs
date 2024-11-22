@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.PeerManaging;
 public record class PeerConnector(
     SharedPeerData Data, 
-    ChannelWriter<Relation> RelationEventWriter,
-    PeerStatistics LastStatistics
-    );
+    ChannelWriter<PeerRelation> RelationEventWriter,
+    DataTransferVector LastStatistics,
+    DataTransferCounter LastUnchokedStats,
+    string PeerId
+    )
+{
+    public DataTransferVector LastStatistics = LastStatistics;
+}

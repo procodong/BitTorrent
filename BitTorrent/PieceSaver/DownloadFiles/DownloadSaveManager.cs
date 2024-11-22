@@ -3,15 +3,14 @@ using BitTorrent.PieceSaver.DownloadFiles;
 using BitTorrent.Utils;
 
 namespace BitTorrent.Files.DownloadFiles;
-public class DownloadSaveManager<S>(int pieceSize, List<StreamData<S>> saves) : IDisposable, IAsyncDisposable
-    where S : Stream
+public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDisposable, IAsyncDisposable
 {
     private readonly int _pieceSize = pieceSize;
-    private readonly List<StreamData<S>> _saves = saves;
+    private readonly List<StreamData> _saves = saves;
 
-    public DownloadSaveManager<FileStream> CreateFiles(string path, MultiFileInfoList files, int pieceSize)
+    public static DownloadSaveManager CreateFiles(string path, MultiFileInfoList files, int pieceSize)
     {
-        var createdFiles = new List<StreamData<FileStream>>();
+        var createdFiles = new List<StreamData>(files.Count);
         var createdDirectories = new HashSet<string>();
         long createdBytes = 0;
         foreach (var file in files)
@@ -23,7 +22,7 @@ public class DownloadSaveManager<S>(int pieceSize, List<StreamData<S>> saves) : 
                 createdDirectories.Add(directoryPath);
             }
             var filePath = Path.Combine(path, file.FullPath);
-            var createdFile = File.Create(filePath);
+            var createdFile = File.Create(filePath, 1 << 12, FileOptions.Asynchronous);
             createdFile.SetLength(file.FileSize);
             createdFiles.Add(new(createdFile, createdBytes, new(1, 1)));
             createdBytes += file.FileSize;
@@ -35,7 +34,7 @@ public class DownloadSaveManager<S>(int pieceSize, List<StreamData<S>> saves) : 
     {
         foreach (var fileData in _saves)
         {
-            fileData.Stream.Close();
+            fileData.Stream.Dispose();
         }
     }
 
@@ -47,18 +46,18 @@ public class DownloadSaveManager<S>(int pieceSize, List<StreamData<S>> saves) : 
         }
     }
 
-    public PieceStream<S> Read(int index) => GetStream(index, 0, _pieceSize);
+    public PieceStream Read(int index) => GetStream(index, 0, _pieceSize);
 
-    public PieceStream<S> GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
+    public PieceStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
 
-    private IEnumerable<StreamPart<S>> GetParts(int length, int pieceIndex, int offset)
+    private IEnumerable<StreamPart> GetParts(int length, int pieceIndex, int offset)
     {
         long byteOffset = pieceIndex * _pieceSize + offset;
         int bytesRead = 0;
         int start = Search(byteOffset);
         for (int i = start; bytesRead <= length; i++)
         {
-            StreamData<S> file = _saves[i];
+            StreamData file = _saves[i];
             long position = i == start ? byteOffset - file.ByteOffset : 0;
             int readLen = (int)long.Min(length - bytesRead, file.Stream.Length - position);
             yield return new(file, readLen, position);

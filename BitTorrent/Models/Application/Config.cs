@@ -6,10 +6,15 @@ using System.Threading.Tasks;
 
 namespace BitTorrent.Models.Application;
 public readonly record struct Config(
-    long TargetDownload,
-    long TargetUpload,
-    int ConcurrentPieceDownloads,
+    int TargetDownload,
+    int TargetUpload,
+    int TargetUploadSeeding,
     int RequestSize,
     int RequestQueueSize,
-    int MaxRarePieceCount
+    int MaxRarePieceCount,
+    int PeerUpdateInterval,
+    int MaxRequestSize,
+    int KeepAliveInterval,
+    int ReceivedTimeout,
+    int RarePiecesUpdateInterval
     );

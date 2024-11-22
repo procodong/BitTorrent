@@ -7,4 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Torrents.PeerManaging;
-public record class SharedPeerData(PeerStatistics Stats, BitArray OwnedPieces);
+public class SharedPeerData(BitArray ownedPieces)
+{
+    public PeerRelation RelationToMe = new();
+    public PeerRelation Relation = new();
+    public BitArray OwnedPieces = ownedPieces;
+    public DataTransferCounter Stats = new();
+}

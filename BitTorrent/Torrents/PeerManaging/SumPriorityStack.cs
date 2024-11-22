@@ -7,33 +7,37 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Torrents.PeerManaging;
-public class SumPriorityStack<T>(Func<T, long> priority, long capacity) : IEnumerable<T>
+public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Index)>
 {
-    private readonly Func<T, long> _priority = priority;
-    private readonly List<T> _stack = [];
-    private readonly long _capacity = capacity;
-    private long _sum = 0;
+    private readonly List<(T Item, int Priority)> _stack = [];
+    private readonly int _capacity = capacity;
+    private int _sum = 0;
 
-    public void Include(T item)
+    public void Include(T item, int priority, int addition)
     {
-        long itemPriority = _priority(item);
-        _sum += itemPriority;
+        _sum += addition;
+        if (_capacity >= _sum)
+        {
+            _stack.Sort(Comparer<(T, int Priority)>.Create((v1, v2) => v1.Priority - v2.Priority));
+        }
         while (_capacity >= _sum)
         {
-            var min = _stack.Indexed().MinBy(v => _priority(v.Value));
-            _stack.RemoveAt(min.Index);
-            _sum -= _priority(min.Value);
+            var (_, minPriority) = _stack.Pop();
+            _sum -= minPriority;
         }
-        _stack.Add(item);
+        _stack.Add((item, priority));
     }
+
+    public long Sum => _sum;
+    public long Capacity => _capacity;
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable)_stack).GetEnumerator();
+        return _stack.GetEnumerator();
     }
 
-    public IEnumerator<T> GetEnumerator()
+    public IEnumerator<(T Item, int Index)> GetEnumerator()
     {
-        return ((IEnumerable<T>)_stack).GetEnumerator();
+        return _stack.GetEnumerator();
     }
 }

@@ -4,5 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Messages;
-public readonly record struct PieceShareHeader(int Index, int Begin);
+namespace BitTorrent.Torrents.Trackers;
+public enum TrackerHandlerEventType
+{
+    Stream,
+    TrackerResponse
+}

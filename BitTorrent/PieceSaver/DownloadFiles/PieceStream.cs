@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 using BitTorrent.Files.DownloadFiles;
 
 namespace BitTorrent.PieceSaver.DownloadFiles;
-public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stream
-    where S : Stream
+public class PieceStream : Stream
 {
-    private readonly IEnumerable<StreamPart<S>> _parts = parts;
-    private StreamPart<S> _currentpart = parts.First();
+    private readonly IEnumerable<StreamPart> _parts;
     private int _position = 0;
-    private readonly int _length = length;
+    private readonly int _length;
 
     public override bool CanRead => true;
 
@@ -24,6 +22,14 @@ public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stre
     public override long Length => _length;
 
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
+    private StreamPart Current => _parts.GetEnumerator().Current;
+
+    public PieceStream(IEnumerable<StreamPart> parts, int length)
+    {
+        _parts = parts;
+        _length = length;
+        _parts.GetEnumerator().MoveNext();
+    }
 
     public override void Flush()
     {
@@ -32,18 +38,13 @@ public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stre
 
     private void Next()
     {
-        var part = _parts.FirstOrDefault();
-        if (part.StreamData.Stream is null)
-        {
-            return;
-        }
-        _currentpart = part;
+        _parts.GetEnumerator().MoveNext();
         _position = 0;
     }
 
     private void UpdateCurrentFile()
     {
-        if (_position >= _currentpart.Length)
+        if (_position >= Current.Length)
         {
             Next();
         }
@@ -51,38 +52,55 @@ public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stre
 
     private int CapReadCount(int count)
     {
-        return int.Min(count, _currentpart.Length - _position);
+        return int.Min(count, Current.Length - _position);
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         UpdateCurrentFile();
-        await _currentpart.StreamData.Lock.WaitAsync(cancellationToken);
+        await Current.StreamData.Lock.WaitAsync(cancellationToken);
         UpdatePosition();
-        int readCount = await _currentpart.StreamData.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
-        FinalizeRead(readCount);
+        int readCount = -1;
+        try
+        {
+            readCount = await Current.StreamData.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
+        }
+        finally
+        {
+            FinalizeRead(readCount);
+        }
         return readCount;
     }
 
     public override int Read(Span<byte> buffer)
     {
         UpdateCurrentFile();
-        _currentpart.StreamData.Lock.Wait();
+        Current.StreamData.Lock.Wait();
         UpdatePosition();
-        int readCount = _currentpart.StreamData.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
-        FinalizeRead(readCount);
+        int readCount = -1;
+        try
+        {
+            readCount = Current.StreamData.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
+        }
+        finally
+        {
+            FinalizeRead(readCount);
+        }
         return readCount;
     }
 
     private void UpdatePosition()
     {
-        _currentpart.StreamData.Stream.Position = _currentpart.Position + _position;
+        Current.StreamData.Stream.Position = Current.Position + _position;
     }
 
     public void FinalizeRead(int readCount)
     {
-        _currentpart.StreamData.Lock.Release();
-        _position += readCount;
+        Current.StreamData.Lock.Release();
+        if (readCount != -1)
+        {
+            _position += readCount;
+        }
     }
 
     public override long Seek(long offset, SeekOrigin origin)
@@ -107,10 +125,22 @@ public class PieceStream<S>(IEnumerable<StreamPart<S>> parts, int length) : Stre
         {
             UpdateCurrentFile();
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
-            await _currentpart.StreamData.Lock.WaitAsync(cancellationToken);
+            await Current.StreamData.Lock.WaitAsync(cancellationToken);
             UpdatePosition();
-            await _currentpart.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
-            FinalizeRead(writeLen);
+            bool success = false;
+            try
+            {
+                await Current.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
+                success = true;
+            }
+            finally
+            {
+                Current.StreamData.Lock.Release();
+                if (success)
+                {
+                    _position += writeLen;
+                }
+            }
             writtenBytes += writeLen;
         }
     }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BitTorrent.Models.Messages;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,5 +12,11 @@ public interface IPeerEventHandler
     Task OnChokeAsync();
     Task OnUnchokedAsync();
     Task OnInterestedAsync();
-    
+    Task OnNotInterestedAsync();
+    Task OnHaveAsync(int piece);
+    Task OnBitfieldAsync(BitArray bitfield);
+    Task OnRequestAsync(PieceRequest request);
+    Task OnPieceAsync(Piece piece);
+    Task OnCancelAsync(PieceRequest request);
+    Task OnPortAsync(ushort port);
 }
