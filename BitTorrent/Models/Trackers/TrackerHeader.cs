@@ -4,9 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Trackers;
-public enum TrackerHandlerEventType
-{
-    Stream,
-    TrackerResponse
-}
+namespace BitTorrent.Models.Trackers;
+public readonly record struct TrackerHeader(int Action, int TransactionId);

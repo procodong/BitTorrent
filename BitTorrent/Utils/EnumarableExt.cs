@@ -11,4 +11,13 @@ public static class EnumarableExt
     {
         return source.Select((v, i) => (i, v));
     }
+
+    public static T? Find<T>(this IEnumerable<T> source, Func<T, bool> condition)
+    {
+        foreach (var item in source)
+        {
+            if (condition(item)) return item;
+        }
+        return default;
+    } 
 }

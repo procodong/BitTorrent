@@ -4,10 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Tracker;
-public enum TrackerEvent
+namespace BitTorrent.Application.Input.Commands;
+public interface ICommand
 {
-    Completed = 1,
-    Started = 2,
-    Stopped = 3,
+    Task Run(ICommandContext context);
 }

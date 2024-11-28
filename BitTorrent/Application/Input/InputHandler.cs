@@ -1,0 +1,37 @@
+﻿using BitTorrent.Application.Input.Commands;
+using BitTorrent.Application.Input.Parsing;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+
+namespace BitTorrent.Application.Input;
+public class InputHandler
+{
+    private readonly ChannelWriter<ICommand> _commandWriter;
+
+    public InputHandler(ChannelWriter<ICommand> commandWriter)
+    {
+        _commandWriter = commandWriter;
+    }
+
+    public async Task ListenAsync(TextReader input, TextWriter writer)
+    {
+        while (true)
+        {
+            var line = await input.ReadLineAsync();
+            if (line is null) break;
+            try
+            {
+                var command = CommandParser.ParseCommand(line);
+                await _commandWriter.WriteAsync(command);
+            }
+            catch (Exception ex)
+            {
+                writer.WriteLine(ex.Message);
+            }
+        }
+    }
+}

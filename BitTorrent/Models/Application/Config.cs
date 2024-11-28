@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Models.Application;
-public readonly record struct Config(
+public record class Config(
     int TargetDownload,
     int TargetUpload,
     int TargetUploadSeeding,
@@ -15,6 +15,7 @@ public readonly record struct Config(
     int PeerUpdateInterval,
     int MaxRequestSize,
     int KeepAliveInterval,
-    int ReceivedTimeout,
-    int RarePiecesUpdateInterval
+    int ReceiveTimeout,
+    int RarePiecesUpdateInterval,
+    int UiUpdateInterval
     );

@@ -15,13 +15,15 @@ public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDispo
         long createdBytes = 0;
         foreach (var file in files)
         {
-            var directoryPath = string.Join(Path.PathSeparator, file.Path);
+            if (file is null) continue;
+            var directoryPath = string.Join(Path.PathSeparator, file.Path.Take(file.Path.Count - 1));
+            Console.WriteLine(directoryPath);
             if (!createdDirectories.Contains(directoryPath))
             {
                 Directory.CreateDirectory(Path.Combine(path, directoryPath));
                 createdDirectories.Add(directoryPath);
             }
-            var filePath = Path.Combine(path, file.FullPath);
+            var filePath = Path.Combine(path, file.FullPath);;
             var createdFile = File.Create(filePath, 1 << 12, FileOptions.Asynchronous);
             createdFile.SetLength(file.FileSize);
             createdFiles.Add(new(createdFile, createdBytes, new(1, 1)));
@@ -29,24 +31,6 @@ public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDispo
         }
         return new(pieceSize, createdFiles);
     }
-
-    public void Dispose()
-    {
-        foreach (var fileData in _saves)
-        {
-            fileData.Stream.Dispose();
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        foreach (var fileData in _saves)
-        {
-            await fileData.Stream.DisposeAsync();
-        }
-    }
-
-    public PieceStream Read(int index) => GetStream(index, 0, _pieceSize);
 
     public PieceStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
 
@@ -89,5 +73,21 @@ public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDispo
         }
 
         throw new Exception("Invalid piece index");
+    }
+
+    public void Dispose()
+    {
+        foreach (var fileData in _saves)
+        {
+            fileData.Stream.Dispose();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var fileData in _saves)
+        {
+            await fileData.Stream.DisposeAsync();
+        }
     }
 }

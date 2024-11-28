@@ -8,7 +8,6 @@ namespace BitTorrent.Models.Tracker;
 public record class TrackerResponse(
     int Interval,
     int? MinInterval,
-    string TrackerId,
     int Complete,
     int Incomplete,
     List<Peers.PeerAddress> Peers,

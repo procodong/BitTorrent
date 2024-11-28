@@ -12,7 +12,5 @@ public record struct TrackerUpdate(
     string ClientId,
     DataTransferVector DataTransfer,
     long Left,
-    TrackerEvent? TrackerEvent,
-    string TrackerUrl,
-    int DownloadId
+    TrackerEvent? TrackerEvent
     );

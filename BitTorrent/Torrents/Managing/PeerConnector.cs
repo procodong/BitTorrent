@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.PeerManaging;
+namespace BitTorrent.Torrents.Managing;
 public record class PeerConnector(
     SharedPeerData Data, 
     ChannelWriter<PeerRelation> RelationEventWriter,

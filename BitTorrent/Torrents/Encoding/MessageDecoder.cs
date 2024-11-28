@@ -14,9 +14,16 @@ public static class MessageDecoder
     public static async Task<HandShake> DecodeHandShakeAsync(BigEndianBinaryReader reader)
     {
         var protocol = await reader.ReadStringAsync();
-        reader.BaseStream.Position += 8;
+        if (reader.BaseStream.CanSeek)
+        {
+            reader.BaseStream.Position += 8;
+        }
+        else
+        {
+            await reader.ReadBytesAsync(8);
+        }
         var infoHash = await reader.ReadBytesAsync(20);
-        var peerId = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(20));
+        var peerId = System.Text.Encoding.ASCII.GetString(await reader.ReadBytesAsync(20));
         return new(protocol, infoHash, peerId);
     }
 

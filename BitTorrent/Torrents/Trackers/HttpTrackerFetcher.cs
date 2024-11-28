@@ -3,7 +3,9 @@ using BencodeNET.Parsing;
 using BitTorrent.Errors;
 using BitTorrent.Models.Peers;
 using BitTorrent.Models.Tracker;
+using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Trackers.Errors;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -14,11 +16,37 @@ using System.Threading.Tasks;
 using System.Web;
 
 namespace BitTorrent.Torrents.Trackers;
-public static class TrackerFetcher
+public class HttpTrackerFetcher : ITrackerFetcher
 {
-    public async static Task<TrackerResponse> Fetch(HttpClient client, string url, TrackerRequest request)
+    private readonly HttpClient _httpClient;
+    private readonly string _url;
+    private readonly int _listenPort;
+
+    public HttpTrackerFetcher(HttpClient httpClient, string url, int listenPort)
     {
-        var builder = new UriBuilder(url)
+        _httpClient = httpClient;
+        _listenPort = listenPort;
+        _url = url;
+    }
+
+    private static string DisplayEvent(TrackerEvent trackerEvent)
+    {
+        return trackerEvent switch
+        {
+            TrackerEvent.Started => "started",
+            TrackerEvent.Stopped => "stopped",
+            TrackerEvent.Completed => "completed",
+            _ => throw new ArgumentException("Invalid tracker event")
+        };
+    }
+
+    private TrackerRequest GetRequest(TrackerUpdate update) =>
+        new(update.InfoHash, update.ClientId, _listenPort, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
+
+    public async Task<TrackerResponse> FetchAsync(TrackerUpdate update)
+    {
+        var request = GetRequest(update);
+        var builder = new UriBuilder(_url)
         {
             Port = -1
         };
@@ -37,7 +65,7 @@ public static class TrackerFetcher
         }
         builder.Query = query.ToString();
 
-        var response = await client.GetAsync(builder.ToString());
+        var response = await _httpClient.GetAsync(builder.ToString());
         var parser = new BencodeParser();
         var content = await parser.ParseAsync<BDictionary>(response.Content.ReadAsStream());
         var error = content.Get<BString?>("failure reason");
@@ -49,32 +77,18 @@ public static class TrackerFetcher
         {
             throw new TrackerHttpException((int)response.StatusCode);
         }
-        var data = new TrackerResponse(
+        return new(
             Interval: content.Get<BNumber>("interval"),
             MinInterval: content.Get<BNumber>("min interval"),
-            TrackerId: content.Get<BString>("tracker id").ToString(),
             Complete: content.Get<BNumber>("complete"),
             Incomplete: content.Get<BNumber>("incomplete"),
             Peers: content.Get<BList<BDictionary>>("peers").Value
             .Select(obj => (BDictionary)obj)
             .Select(value => new PeerAddress(
-                Id: value.Get<BString>("peer id").ToString(),
                 Ip: IPAddress.Parse(value.Get<BString>("ip").ToString()),
                 Port: value.Get<BNumber>("port")
                 )).ToList(),
             Warning: content.Get<BString?>("warning message")?.ToString()
             );
-        return data;
-    }
-
-    private static string DisplayEvent(TrackerEvent trackerEvent)
-    {
-        return trackerEvent switch
-        {
-            TrackerEvent.Started => "started",
-            TrackerEvent.Stopped => "stopped",
-            TrackerEvent.Completed => "completed",
-            _ => throw new ArgumentException("Invalid tracker event")
-        };
     }
 }

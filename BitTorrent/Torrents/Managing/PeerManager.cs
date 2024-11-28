@@ -8,6 +8,7 @@ using BitTorrent.Torrents.Peers;
 using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Torrents.Trackers;
 using BitTorrent.Utils;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,27 +21,31 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.PeerManaging;
-public class PeerManager(int id, string peerId, string trackerUrl, Download download) : IDisposable, IAsyncDisposable
+namespace BitTorrent.Torrents.Managing;
+public class PeerManager(string peerId, Download download, ILogger logger) : IDisposable, IAsyncDisposable
 {
     private readonly SlotMap<PeerConnector> _peers = [];
     private readonly HashSet<string> _peerIds = [];
     private readonly string _peerId = peerId;
-    private readonly string _trackerUrl = trackerUrl;
-    private readonly int _id = id;
     private readonly Download _download = download;
-    private readonly Stopwatch _updateWatch = new();
+    private readonly DataTransferCounter _transfered = new();
+    private readonly ILogger _logger = logger;
     private readonly Channel<int> _peerDeleter = Channel.CreateBounded<int>(new BoundedChannelOptions(8)
     {
         SingleWriter = false
     });
+
+    public DataTransferVector Transfered => _transfered.Fetch() + _download.RecentlyTransfered;
+    public DataTransferVector TransferRate => new(_download.DownloadRate, _download.UploadRate);
+    public long Size => _download.Torrent.TotalSize;
+    public byte[] InfoHash => _download.Torrent.OriginalInfoHashBytes;
 
     public void AddPeer(string peerId, PeerWireStream stream)
     {
         var eventChannel = Channel.CreateBounded<PeerRelation>(8);
         var haveChannel = Channel.CreateUnbounded<int>();
         var stats = new SharedPeerData(new(_download.Torrent.NumberOfPieces));
-        _download.AddPeer(haveChannel.Writer);
+        int downloadWriterIndex = _download.AddPeer(haveChannel.Writer);
         var peer = new PeerConnector(stats, eventChannel.Writer, new(), new(), peerId);
         _peerIds.Add(peerId);
         int index = _peers.Add(peer);
@@ -48,7 +53,7 @@ public class PeerManager(int id, string peerId, string trackerUrl, Download down
         {
             try
             {
-                var handshake = new HandShake("BitTorrent protocol", _download.Torrent.OriginalInfoHashBytes, _peerId);
+                var handshake = new HandShake(PeerWireStream.PROTOCOL, _download.Torrent.OriginalInfoHashBytes, _peerId);
                 await stream.InitializeConnectionAsync(_download.DownloadedPiecesCount != 0 ? _download.DownloadedPieces : null, handshake);
                 await using var peer = new Peer(stream, haveChannel.Reader, eventChannel.Reader, _download, stats);
                 await peer.ListenAsync();
@@ -56,79 +61,67 @@ public class PeerManager(int id, string peerId, string trackerUrl, Download down
             finally
             {
                 await _peerDeleter.Writer.WriteAsync(index);
+                _download.RemovePeer(downloadWriterIndex);
             }
         });
     }
 
     private void RemovePeer(int index)
     {
-        _download.RemovePeer(index);
-        var peer = _peers[index]!;
+        var peer = _peers[index];
         peer.RelationEventWriter.Complete();
         _peerIds.Remove(peer.PeerId);
         _peers.Remove(index);
     }
 
-    private async Task UpdatePeers(List<PeerAddress> peers)
+    public async Task UpdatePeers(List<PeerAddress> peers)
     {
         foreach (PeerAddress peer in peers)
         {
-            if (_peerIds.Contains(peer.Id)) continue;
-            var connection = new TcpClient
+            try
             {
-                ReceiveTimeout = _download.Config.ReceivedTimeout
-            };
-            await connection.ConnectAsync(peer.Ip, peer.Port);
-            var stream = new NetworkStream(connection.Client, true);
-            var peerStream = new PeerWireStream(stream);
-            var handshake = await peerStream.ReadHandShakeAsync();
-            if (!handshake.InfoHash.SequenceEqual(_download.Torrent.OriginalInfoHashBytes))
-            {
-                throw new BadPeerException(PeerErrorReason.InvalidInfoHash);
+                var connection = new TcpClient
+                {
+                    ReceiveTimeout = _download.Config.ReceiveTimeout,
+                };
+                await connection.ConnectAsync(peer.Ip, peer.Port);
+                var stream = new NetworkStream(connection.Client, true);
+                var peerStream = new PeerWireStream(stream);
+                HandShake handshake = await peerStream.ReadHandShakeAsync();
+                if (!handshake.InfoHash.SequenceEqual(_download.Torrent.OriginalInfoHashBytes))
+                {
+                    continue;
+                }
+                AddPeer(handshake.PeerId, peerStream);
             }
-            AddPeer(handshake.PeerId, peerStream);
-        }
-        var peerIds = peers.Select(peer => peer.Id).ToHashSet();
-        foreach (string id in _peerIds)
-        {
-            if (!_peerIds.Contains(id))
+            catch (Exception exc)
             {
-                var peer = _peers.Indexed().Where(p => p.Value.PeerId == id).First();
-                RemovePeer(peer.Index);
+                _logger.LogError("Error connecting to peer: {Error}", exc);
+                continue;
             }
         }
     }
 
-    public async Task ListenAsync(ChannelReader<TrackerHandlerEvent> trackerReceiver, ChannelWriter<TrackerUpdate> trackerUpdater)
+    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> trackerReceiver, ITrackerFetcher trackerFetcher)
     {
-        Task<TrackerHandlerEvent> trackerTask = trackerReceiver.ReadAsync().AsTask();
+        Task<IdentifiedPeerWireStream> trackerTask = trackerReceiver.ReadAsync().AsTask();
         Task updateIntervalTask = Task.Delay(_download.Config.PeerUpdateInterval);
         Task<int> peerDeletionTask = _peerDeleter.Reader.ReadAsync().AsTask();
-        Task trackerIntervalTask = Task.CompletedTask;
+        Task trackerUpdateTask = trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Started));
         var rarePieceUpdateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_download.Config.RarePiecesUpdateInterval));
         Task rarePieceUpdateTask = rarePieceUpdateInterval.WaitForNextTickAsync().AsTask();
         while (true)
         {
-            var ready = await Task.WhenAny(trackerTask, updateIntervalTask, peerDeletionTask, trackerIntervalTask, rarePieceUpdateTask);
+            var ready = await Task.WhenAny(trackerTask, updateIntervalTask, peerDeletionTask, trackerTask, rarePieceUpdateTask);
             if (ready == trackerTask)
             {
-                var result = trackerTask.Result;
-                switch (result.Type)
-                {
-                    case TrackerHandlerEventType.Stream:
-                        var (id, client) = result.Stream;
-                        AddPeer(id, client);
-                        break;
-                    case TrackerHandlerEventType.TrackerResponse:
-                        TrackerResponse response = result.Response;
-                        trackerIntervalTask = Task.Delay(response.Interval);
-                        await UpdatePeers(response.Peers);
-                        break;
-                }
+                var (id, stream) = trackerTask.Result;
+                AddPeer(id, stream);
                 trackerTask = trackerReceiver.ReadAsync().AsTask();
             }
             else if (ready == updateIntervalTask)
             {
+                await updateIntervalTask;
                 var (interesting, unChoked) = GetPeerRelations();
                 await UpdateRelations(interesting, unChoked);
                 updateIntervalTask = Task.Delay(_download.Config.PeerUpdateInterval);
@@ -139,29 +132,42 @@ public class PeerManager(int id, string peerId, string trackerUrl, Download down
                 RemovePeer(peerIndex);
                 peerDeletionTask = _peerDeleter.Reader.ReadAsync().AsTask();
             }
-            else if (ready == trackerIntervalTask)
+            else if (ready == trackerUpdateTask)
             {
-                TrackerEvent? trackerEvent = trackerIntervalTask == Task.CompletedTask ? TrackerEvent.Started : null;
-                await UpdateTracker(trackerEvent, trackerUpdater);
-                trackerIntervalTask = Task.Delay(Timeout.Infinite);
+                if (trackerUpdateTask is Task<TrackerResponse> responseTask)
+                {
+                    var response = await responseTask;
+                    trackerUpdateTask = Task.Delay(response.Interval);
+                    await UpdatePeers(response.Peers);
+                }
+                else
+                {
+                    trackerUpdateTask = trackerFetcher.FetchAsync(GetTrackerUpdate(null));
+                }
             }
             else if (ready == rarePieceUpdateTask)
             {
+                await rarePieceUpdateTask;
                 lock (_download)
                 {
-                    _download.RarestPieces = [..FindRaresPieces()];
+                    _download.RarestPieces.Clear();
+                    _download.RarestPieces.AddRange(FindRaresPieces());
                 }
                 rarePieceUpdateTask = rarePieceUpdateInterval.WaitForNextTickAsync().AsTask();
             }
         }
     }
 
-    private async Task UpdateTracker(TrackerEvent? trackerEvent, ChannelWriter<TrackerUpdate> trackerUpdater)
+    private async Task Update()
     {
-        var transfer = _download.DataTransfered;
-        var update = new TrackerUpdate(_download.Torrent.OriginalInfoHashBytes, _peerId, transfer, _download.Torrent.TotalSize - transfer.Downloaded, trackerEvent, _trackerUrl, _id);
-        await trackerUpdater.WriteAsync(update);
+        var (interesting, unChoked) = GetPeerRelations();
+        await UpdateRelations(interesting, unChoked);
+        var recent = _download.ResetRecentTransfer();
+        _transfered.FetchAdd(recent);
     }
+
+    private TrackerUpdate GetTrackerUpdate(TrackerEvent? trackerEvent)
+        => new(_download.Torrent.OriginalInfoHashBytes, _peerId, _transfered.AsVector(), _download.Torrent.TotalSize - _transfered.Downloaded, trackerEvent);
 
     private (BitArray Interesting, BitArray UnChoked) GetPeerRelations()
     {
@@ -170,16 +176,15 @@ public class PeerManager(int id, string peerId, string trackerUrl, Download down
 
         foreach (var (index, peer) in _peers.Indexed())
         {
-            if (peer is null) continue;
             bool interested = peer.Data.Relation.Interested;
             bool choked = peer.Data.Relation.Choked;
             var stats = new DataTransferVector(
                 choked ? peer.LastUnchokedStats.Downloaded : Interlocked.Read(ref peer.Data.Stats.Downloaded), 
                 !interested ? peer.LastUnchokedStats.Uploaded : Interlocked.Read(ref peer.Data.Stats.Uploaded)
                 );
-            var statChange = (stats - peer.LastStatistics) / _updateWatch.Elapsed.TotalSeconds;
-            unchokedPeers.Include(index, (int)statChange.Uploaded, (int)statChange.Uploaded);
-            interestingPeers.Include(index, (int)statChange.Downloaded, (int)statChange.Downloaded);
+            var statChange = (stats - peer.LastStatistics) / _download.SecondsSinceTimerReset;
+            unchokedPeers.Include(index, (int)statChange.Upload, (int)statChange.Upload);
+            interestingPeers.Include(index, (int)statChange.Download, (int)statChange.Download);
             peer.LastStatistics = stats;
         }
         var interestingPeersLookup = new BitArray(_peers.Count);
@@ -201,54 +206,58 @@ public class PeerManager(int id, string peerId, string trackerUrl, Download down
     {
         foreach (var (index, peer) in _peers.Indexed())
         {
-            if (peer is null) continue;
             bool interesting = interestingPeers[index];
             bool unChoked = unchokedPeers[index];
             if (!interesting)
             {
-                peer.LastUnchokedStats.Uploaded = peer.LastStatistics.Downloaded;
+                peer.LastUnchokedStats.Uploaded = peer.LastStatistics.Download;
             }
             if (!unChoked)
             {
-                peer.LastUnchokedStats.Downloaded = peer.LastStatistics.Downloaded;
+                peer.LastUnchokedStats.Downloaded = peer.LastStatistics.Download;
             }
             await peer.RelationEventWriter.WriteAsync(new(interesting, !unChoked));
         }
     }
 
-    private int[] FindRaresPieces()
+    private IEnumerable<int> FindRaresPieces()
     {
         int rareCount = int.Min(_download.Torrent.NumberOfPieces / 10, _download.Config.MaxRarePieceCount);
         var comparer = Comparer<(int Index, int Count)>.Create((v1, v2) => v1.Count - v2.Count);
         var rarestPieceStack = new PriorityStack<(int Index, int Count)>(rareCount, comparer);
-        foreach (var piece in PieceCounts())
+        foreach (var piece in PieceCounts().Indexed())
         {
             rarestPieceStack.Include(piece);
         }
-        int[] rarePieces = new int[rareCount];
-        foreach (var (index, piece) in rarestPieceStack)
-        {
-            rarePieces[index] = piece;
-        }
-        return rarePieces;
+        return rarestPieceStack.Select(v => v.Index);
     }
 
-    private IEnumerable<(int Index, int Count)> PieceCounts()
+    private IEnumerable<int> PieceCounts()
     {
         for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
         {
             int count = _peers.Where(peer => peer is not null).Select(peer => peer!.Data.OwnedPieces[i] ? 1 : 0).Sum();
-            yield return (i,count);
+            yield return count;
         }
     }
 
     public void Dispose()
     {
+        foreach (var peer in _peers)
+        {
+            peer.RelationEventWriter.Complete();
+            peer.Data.Completion.Task.GetAwaiter().GetResult();
+        }
         _download.Dispose();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return _download.DisposeAsync();
+        foreach (var peer in _peers)
+        {
+            peer.RelationEventWriter.Complete();
+            await peer.Data.Completion.Task;
+        }
+        await _download.DisposeAsync();
     }
 }

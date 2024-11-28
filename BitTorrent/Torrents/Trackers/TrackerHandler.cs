@@ -1,4 +1,5 @@
-﻿using BitTorrent.Models.Tracker;
+﻿using BitTorrent.Models.Peers;
+using BitTorrent.Models.Tracker;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Peers;
 using BitTorrent.Utils;
@@ -14,67 +15,53 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Trackers;
 public class TrackerHandler
 {
-    private readonly ChannelReader<TrackerUpdate> _requestReader;
-    private readonly SlotMap<ChannelWriter<TrackerHandlerEvent>> _eventSenders = [];
-    private readonly Dictionary<ReadOnlyMemory<byte>, int> _infoHashToIndex = new(new MemoryComparer<byte>());
+    private readonly ChannelReader<PeerReceivingSubscribe> _downloadReceiver;
+    private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());
     private readonly TcpListener _listener;
-    private readonly HttpClient _httpClient;
-    private readonly int _clientTimeout;
-    private readonly int _port;
+    private readonly int _clientReceiveTimeout;
 
-    public TrackerHandler(int port, int clientTimeout, HttpClient httpClient, ChannelReader<TrackerUpdate> requestReader)
+    public TrackerHandler(int port, int clientReceiveTimeout, ChannelReader<PeerReceivingSubscribe> downloadReceiver)
     {
-        _requestReader = requestReader;
         _listener = new(IPAddress.Any, port);
-        _port = port;
-        _clientTimeout = clientTimeout;
-        _httpClient = httpClient;
+        _clientReceiveTimeout = clientReceiveTimeout;
+        _downloadReceiver = downloadReceiver;
     }
 
     public async Task ListenAsync()
     {
-        Task<TrackerUpdate> requestTask = _requestReader.ReadAsync().AsTask();
         Task<TcpClient> clientTask = _listener.AcceptTcpClientAsync();
+        Task<PeerReceivingSubscribe> newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
         while (true)
         {
-            var ready = await Task.WhenAny(clientTask, requestTask);
-            if (ready == requestTask)
+            var ready = await Task.WhenAny(clientTask, newDownloadTask);
+            if (ready == clientTask)
             {
-                var update = requestTask.Result;
-                await UpdateTrackerAsync(update);
-                requestTask = _requestReader.ReadAsync().AsTask();
-            }
-            else if (ready == clientTask)
-            {
-                TcpClient client = clientTask.Result;
+                TcpClient client = await clientTask;
                 await CreateClient(client);
                 clientTask = _listener.AcceptTcpClientAsync();
+            }
+            else if (ready == newDownloadTask)
+            {
+                PeerReceivingSubscribe download = await newDownloadTask;
+                if (download.EventWriter is null)
+                {
+                    _eventSenders.Remove(download.InfoHash);
+                }
+                else
+                {
+                    _eventSenders[download.InfoHash] = download.EventWriter;
+                }
+                newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
             }
         }
     }
 
     private async Task CreateClient(TcpClient client)
     {
-        client.ReceiveTimeout = _clientTimeout;
+        client.ReceiveTimeout = _clientReceiveTimeout;
         var stream = new NetworkStream(client.Client, true);
         var peerStream = new PeerWireStream(stream);
         var handshake = await peerStream.ReadHandShakeAsync();
-        var index = _infoHashToIndex[handshake.InfoHash];
-        await _eventSenders[index].WriteAsync(new(handshake.PeerId, peerStream));
-    }
-
-    private async Task UpdateTrackerAsync(TrackerUpdate update)
-    {
-        var request = new TrackerRequest(
-            InfoHash: update.InfoHash,
-            ClientId: update.ClientId,
-            Port: _port,
-            Uploaded: update.DataTransfer.Uploaded,
-            Downloaded: update.DataTransfer.Downloaded,
-            Left: update.Left,
-            TrackerEvent: update.TrackerEvent
-            );
-        TrackerResponse response = await TrackerFetcher.Fetch(_httpClient, update.TrackerUrl, request);
-        await _eventSenders[update.DownloadId].WriteAsync(new(response));
+        await _eventSenders[handshake.InfoHash].WriteAsync(new(handshake.PeerId, peerStream));
     }
 }

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.PeerManaging;
+namespace BitTorrent.Torrents.Managing;
 public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Index)>
 {
     private readonly List<(T Item, int Priority)> _stack = [];
