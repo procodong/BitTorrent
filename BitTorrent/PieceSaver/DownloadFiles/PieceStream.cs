@@ -9,7 +9,7 @@ using BitTorrent.Files.DownloadFiles;
 namespace BitTorrent.PieceSaver.DownloadFiles;
 public class PieceStream : Stream
 {
-    private readonly IEnumerable<StreamPart> _parts;
+    private readonly IEnumerator<StreamPart> _parts;
     private int _position = 0;
     private readonly int _length;
 
@@ -22,13 +22,13 @@ public class PieceStream : Stream
     public override long Length => _length;
 
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
-    private StreamPart Current => _parts.GetEnumerator().Current;
+    private StreamPart Current => _parts.Current;
 
     public PieceStream(IEnumerable<StreamPart> parts, int length)
     {
-        _parts = parts;
+        _parts = parts.GetEnumerator();
         _length = length;
-        _parts.GetEnumerator().MoveNext();
+        _parts.MoveNext();
     }
 
     public override void Flush()
@@ -36,18 +36,19 @@ public class PieceStream : Stream
         throw new NotSupportedException();
     }
 
-    private void Next()
+    private bool Next()
     {
-        _parts.GetEnumerator().MoveNext();
         _position = 0;
+        return _parts.MoveNext();
     }
 
-    private void UpdateCurrentFile()
+    private bool UpdateCurrentFile()
     {
         if (_position >= Current.Length)
         {
-            Next();
+            return Next();
         }
+        return true;
     }
 
     private int CapReadCount(int count)
@@ -57,7 +58,7 @@ public class PieceStream : Stream
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        UpdateCurrentFile();
+        if (!UpdateCurrentFile()) return 0;
         await Current.StreamData.Lock.WaitAsync(cancellationToken);
         UpdatePosition();
         int readCount = -1;
@@ -74,7 +75,7 @@ public class PieceStream : Stream
 
     public override int Read(Span<byte> buffer)
     {
-        UpdateCurrentFile();
+        if (!UpdateCurrentFile()) return 0;
         Current.StreamData.Lock.Wait();
         UpdatePosition();
         int readCount = -1;
@@ -123,24 +124,19 @@ public class PieceStream : Stream
         int writtenBytes = 0;
         while (writtenBytes < buffer.Length)
         {
-            UpdateCurrentFile();
+            if (!UpdateCurrentFile()) return;
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
             await Current.StreamData.Lock.WaitAsync(cancellationToken);
             UpdatePosition();
-            bool success = false;
             try
             {
                 await Current.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
-                success = true;
             }
             finally
             {
                 Current.StreamData.Lock.Release();
-                if (success)
-                {
-                    _position += writeLen;
-                }
             }
+            _position += writeLen;
             writtenBytes += writeLen;
         }
     }

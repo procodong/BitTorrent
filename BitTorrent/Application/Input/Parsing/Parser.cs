@@ -11,6 +11,17 @@ public class Parser(string input)
     private readonly string _input = input;
     private int _index;
 
+    public int ParseInteger()
+    {
+        ClearWhiteSpace();
+        int start = _index;
+        while (_index < _input.Length && _input[_index] >= '0' && _input[_index] <= '9')
+        {
+            _index++;
+        }
+        return int.Parse(_input.AsSpan(start.._index));
+    }
+
     public ReadOnlySpan<char> ParseString()
     {
         ClearWhiteSpace();

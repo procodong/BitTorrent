@@ -20,6 +20,8 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     private bool _written;
     public const string PROTOCOL = "BitTorrent protocol";
 
+    public bool Written => _written;
+
     public PeerWireStream(Stream stream)
     {
         _stream = new BufferedStream(stream);

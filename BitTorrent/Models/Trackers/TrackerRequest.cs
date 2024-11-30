@@ -6,5 +6,5 @@ public record class TrackerRequest(
     long Uploaded,
     long Downloaded,
     long Left,
-    TrackerEvent? TrackerEvent
+    TrackerEvent TrackerEvent
     );

@@ -17,6 +17,10 @@ public static class CommandParser
         {
             return new CreateTorrentCommand(parser.ParseString().ToString(), parser.ParseString().ToString());
         }
+        else if (command.SequenceEqual("remove"))
+        {
+            return new StopTorrentCommand(parser.ParseInteger());
+        }
         throw new InvalidCommandException(parser.ParseIdentifier().ToString());
     }
 }

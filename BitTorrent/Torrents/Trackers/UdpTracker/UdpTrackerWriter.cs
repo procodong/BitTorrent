@@ -18,7 +18,7 @@ public struct UdpTrackerWriter
         _writer = new(stream);
     }
 
-    public void WriteConnect(int transactionId)
+    public readonly void WriteConnect(int transactionId)
     {
         _writer.Write(CONNECT_CONNECTION_ID);
         _writer.Write(0);
@@ -35,10 +35,10 @@ public struct UdpTrackerWriter
         _writer.Write(request.Downloaded);
         _writer.Write(request.Left);
         _writer.Write(request.Uploaded);
-        _writer.Write((int?)request.TrackerEvent ?? 0);
+        _writer.Write((int)request.TrackerEvent);
         _writer.Write(0);
         _writer.Write(Random.Shared.Next());
         _writer.Write(-1);
-        _writer.Write(request.Port);
+        _writer.Write((short)request.Port);
     }
 }

@@ -59,9 +59,9 @@ public class HttpTrackerFetcher : ITrackerFetcher
         query["left"] = request.Left.ToString();
         query["compact"] = "0";
         query["no_peer_id"] = "0";
-        if (request.TrackerEvent.HasValue)
+        if (request.TrackerEvent != TrackerEvent.None)
         {
-            query["event"] = DisplayEvent(request.TrackerEvent.Value);
+            query["event"] = DisplayEvent(request.TrackerEvent);
         }
         builder.Query = query.ToString();
 

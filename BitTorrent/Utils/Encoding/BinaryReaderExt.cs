@@ -13,7 +13,7 @@ public static class BinaryReaderExt
         var buffer = new byte[1];
         await reader.BaseStream.ReadExactlyAsync(buffer);
         int len = buffer[0];
-        byte[] stringBytes = new byte[len];
+        byte[] stringBytes = await reader.ReadBytesAsync(len);
         return Encoding.ASCII.GetString(stringBytes);
     }
 

@@ -17,41 +17,47 @@ public class TrackerFinder(Random random, HttpClient httpClient, int port) : ITr
 
     public async Task<ITrackerFetcher> FindTrackerAsync(IEnumerable<IList<string>> urls)
     {
+        var canceller = new CancellationTokenSource();
+        var tasks = new List<Task<ITrackerFetcher>>();
         foreach (var set in urls)
         {
             foreach (string url in set.OrderBy(_ => _random.Next()))
             {
-                try
+                if (url.StartsWith("udp"))
                 {
-                    if (url.StartsWith("udp"))
-                    {
-                        var tracker = await ConnectUdpAsync(url);
-                        if (tracker is not null) return tracker;
-                    }
+                    tasks.Add(ConnectUdpAsync(url, canceller.Token));
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+            }
+        }
+        while (tasks.Count != 0)
+        {
+            var tracker = await Task.WhenAny(tasks);
+            try
+            {
+                var workingTracker = await tracker;
+                canceller.Cancel();
+                return workingTracker;
+            }
+            catch
+            {
+                tasks.Remove(tracker);
             }
         }
         throw new NoValidTrackerException();
     }
 
-    private async Task<ITrackerFetcher?> ConnectUdpAsync(string url)
+    private async Task<ITrackerFetcher> ConnectUdpAsync(string url, CancellationToken cancellationToken = default)
     {
+        const string PROTOCOL_START = "udp://";
         var portSeperator = url.LastIndexOf(':');
         var portEnd = url.IndexOf('/', portSeperator);
         if (portEnd == -1) portEnd = url.Length;
         var port = ushort.Parse(url.AsSpan((portSeperator + 1)..portEnd));
-        var addresses = await Dns.GetHostAddressesAsync(url[6..portSeperator]);
+        var addresses = await Dns.GetHostAddressesAsync(url[PROTOCOL_START.Length..portSeperator], cancellationToken);
         var client = new UdpClient();
         client.Connect(addresses[0], port);
         var udpTracker = new UdpTrackerFetcher(client, _port);
-        var timeoutTask = Task.Delay(2000);
-        var ready = await Task.WhenAny(udpTracker.ConnectAsync(), timeoutTask);
-        if (ready == timeoutTask) return null;
-        Console.WriteLine("Found!");
+        await udpTracker.ConnectAsync(cancellationToken);
         return udpTracker;
     }
 }

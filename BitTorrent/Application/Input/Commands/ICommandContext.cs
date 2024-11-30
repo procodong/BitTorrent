@@ -8,5 +8,5 @@ namespace BitTorrent.Application.Input.Commands;
 public interface ICommandContext
 {
     Task AddTorrent(string torrentPath, string targetPath);
-    void RemoveTorrent(int index);
+    Task RemoveTorrent(int index);
 }

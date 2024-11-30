@@ -13,9 +13,9 @@ using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Managing;
-public class DownloadManager
+public class DownloadCollection : IAsyncDisposable, IDisposable
 {
-    private readonly SlotMap<(string Name, PeerManager Download)> _downloads = [];
+    private readonly List<PeerManagerConnector> _downloads = [];
     private readonly PeerIdGenerator _peerIdGenerator = new();
     private readonly Config _config;
     private readonly ChannelWriter<PeerReceivingSubscribe> _peerReceivingSubscriber;
@@ -23,7 +23,7 @@ public class DownloadManager
     private readonly ITrackerFinder _trackerFinder;
     public bool HasUpdates => _downloads.Count != 0;
 
-    public DownloadManager(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, Config config, ILogger logger, ITrackerFinder trackerFinder)
+    public DownloadCollection(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, Config config, ILogger logger, ITrackerFinder trackerFinder)
     {
         _config = config;
         _logger = logger;
@@ -31,36 +31,60 @@ public class DownloadManager
         _trackerFinder = trackerFinder;
     }
 
-    public async Task<int> StartDownload(Torrent torrent, DownloadSaveManager files, string name)
+    public async Task StartDownload(Torrent torrent, DownloadSaveManager files)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var request = new TrackerUpdate(torrent.OriginalInfoHashBytes, peerId, new(), torrent.TotalSize, TrackerEvent.Started);
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(torrent, files, _config);
-        var downloadManager = new PeerManager(peerId, download, _logger);
-        int index = _downloads.Add((name, downloadManager));
+        var peerManager = new PeerManager(peerId, download, _logger, fetcher);
+        var completer = new TaskCompletionSource();
+        _downloads.Add(new(peerManager, completer, torrent.OriginalInfoHashBytes));
         var trackerChannel = Channel.CreateBounded<IdentifiedPeerWireStream>(8);
         await _peerReceivingSubscriber.WriteAsync(new(torrent.OriginalInfoHashBytes, trackerChannel.Writer));
-        _ = Task.Run(async () =>
+        new Thread(async () =>
         {
-            await downloadManager.ListenAsync(trackerChannel.Reader, fetcher);
-        });
-        return index;
+            await using var _ = peerManager;
+            try
+            {
+                await peerManager.ListenAsync(trackerChannel.Reader, completer);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error in peer manager: {}", e);
+            }
+        }).Start();
     }
 
-    public async Task StopDownload(int id)
+    public async Task RemoveDownload(int id)
     {
-        await using var download = _downloads[id].Download;
-        _downloads.Remove(id);
+        var download = _downloads[id];
+        _downloads.RemoveAt(id);
+        download.Completion.SetCanceled();
         await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
     }
 
     public IEnumerable<DownloadUpdate> GetUpdates()
     {
-        foreach (var (name, download) in _downloads)
+        foreach (var download in _downloads)
         {
-            var transfer = download.Transfered;
-            yield return new(name, transfer, download.TransferRate, download.Size);
+            yield return download.UpdateProvider.GetUpdate();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        while (_downloads.Count != 0)
+        {
+            await RemoveDownload(_downloads.Count - 1);
+        }
+    }
+
+    public void Dispose()
+    {
+        while (_downloads.Count != 0)
+        {
+            _ = RemoveDownload(_downloads.Count - 1);
         }
     }
 }

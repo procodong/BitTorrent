@@ -32,7 +32,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
     private readonly object _haveWritersLock = new();
     private List<int> _rarestPieces = [];
     private int _downloadedPieces = 0;
-    private int _downloadedPiecesOffset = 0;
+    private int _requestedPiecesOffset = 0;
 
     public bool FinishedDownloading => _downloadedPieces >= Torrent.NumberOfPieces;
     public List<int> RarestPieces
@@ -83,7 +83,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
         await files.WriteAsync(buffer);
         lock (piece.Download.Hasher)
         {
-            piece.Download.Hasher.Hash(buffer, piece.Download.PieceIndex);
+            piece.Download.Hasher.Hash(buffer, piece.Request.Begin);
         }
 
         int newDownloaded = Interlocked.Add(ref piece.Download.Downloaded, piece.Request.Length);
@@ -139,17 +139,17 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
         int downloadSize = int.Min(download.Size - download.Downloading, Config.RequestSize);
         int downloadOffset = download.Downloading;
         download.Downloading += downloadSize;
+        if (download.Downloading == PieceSize(download.PieceIndex))
+        {
+            throw new PieceDownloadFullException();
+        }
         if (download.Downloading == download.Size)
         {
-            if (download.Size == PieceSize(download.PieceIndex)) 
+            _requestedPieces[download.PieceIndex] = true;
+            while (_requestedPieces[_requestedPiecesOffset])
             {
-                _requestedPieces[download.PieceIndex] = true;
-                while (_requestedPieces[_downloadedPiecesOffset])
-                {
-                    _downloadedPiecesOffset++;
-                }
+                _requestedPiecesOffset++;
             }
-            throw new PieceDownloadFullException();
         }
         return new(download.PieceIndex, downloadOffset, downloadSize);
     }
@@ -166,7 +166,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
         try
         {
             var download = _pieceRegisters[index];
-            var request = AllocateDownload(_pieceRegisters[index]);
+            var request = AllocateDownload(download);
             return new(download, request);
         }
         catch (PieceDownloadFullException)
@@ -203,7 +203,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
                 return rarePiece;
             }
         }
-        var nextPiece = FindNextPiece(Enumerable.Range(_downloadedPiecesOffset, Torrent.NumberOfPieces - _downloadedPiecesOffset), ownedPieces);
+        var nextPiece = FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.NumberOfPieces - _requestedPiecesOffset), ownedPieces);
         if (nextPiece is not null)
         {
             return nextPiece;
@@ -213,7 +213,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
 
     private bool CanBeRequested(int pieceIndex, BitArray ownedPieces)
     {
-        return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex];
+        return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex] && pieceIndex >= _requestedPiecesOffset;
     }
 
     private PieceDownload? FindNextPiece(IEnumerable<int> downloads, BitArray ownedPieces)

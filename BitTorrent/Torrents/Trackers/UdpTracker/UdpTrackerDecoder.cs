@@ -6,6 +6,7 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,12 +18,13 @@ public static class UdpTrackerDecoder
         var interval = reader.ReadInt32();
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
-        var peerCount = leechers + seeders;
+        int remainingBytes = (int)(reader.BaseStream.Length - reader.BaseStream.Position);
+        int peerCount = remainingBytes / 6;
         var peers = new List<PeerAddress>(peerCount);
-        for (int i = 0; i < peerCount; i++)
+        while (peers.Count < peerCount)
         {
             var ip = reader.ReadBytes(4);
-            var port = reader.ReadInt16();
+            var port = reader.ReadUInt16();
             peers.Add(new(new(ip), port));
         }
         return new(interval, default, seeders, leechers, peers, default);
@@ -38,5 +40,10 @@ public static class UdpTrackerDecoder
     public static long ReadConnectionId(ReadOnlySpan<byte> buffer)
     {
         return BinaryPrimitives.ReadInt64BigEndian(buffer[8..]);
+    }
+
+    public static string ReadErrorMessage(ReadOnlySpan<byte> message)
+    {
+        return System.Text.Encoding.UTF8.GetString(message[8..]);
     }
 }

@@ -19,7 +19,7 @@ var config = new Config(
     RequestSize: 1 << 14,
     RequestQueueSize: 5,
     MaxRarePieceCount: 20,
-    PeerUpdateInterval: 30 * 1000,
+    PeerUpdateInterval: 5 * 1000,
     MaxRequestSize: 1 << 17,
     KeepAliveInterval: 90 * 1000,
     ReceiveTimeout: 2 * 60 * 1000,
@@ -30,15 +30,18 @@ int port = 6881;
 ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
 ILogger logger = factory.CreateLogger("Program");
 var peerReceiver = new TrackerHandler(port, config.ReceiveTimeout, newPeerChannel.Reader);
-_ = Task.Run(peerReceiver.ListenAsync);
+new Thread(async () =>
+{
+    await peerReceiver.ListenAsync();
+}).Start();
 var trackerFetcher = new TrackerFinder(new(), httpClient, port);
-var downloads = new DownloadManager(newPeerChannel.Writer, config, logger, trackerFetcher);
+var downloads = new DownloadCollection(newPeerChannel.Writer, config, logger, trackerFetcher);
 var ui = new CliHandler();
 Console.WriteLine();
 var app = new ApplicationManager(commandChannel.Reader, downloads, ui, config);
 var inputHandler = new InputHandler(commandChannel.Writer);
-_ = Task.Run(async () =>
+new Thread(async () =>
 {
     await inputHandler.ListenAsync(Console.In, Console.Out);
-});
+}).Start();
 await app.ListenAsync();

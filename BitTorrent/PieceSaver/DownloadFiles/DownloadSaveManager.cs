@@ -17,8 +17,7 @@ public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDispo
         {
             if (file is null) continue;
             var directoryPath = string.Join(Path.PathSeparator, file.Path.Take(file.Path.Count - 1));
-            Console.WriteLine(directoryPath);
-            if (!createdDirectories.Contains(directoryPath))
+            if (!createdDirectories.Contains(directoryPath) && file.Path.Count != 1)
             {
                 Directory.CreateDirectory(Path.Combine(path, directoryPath));
                 createdDirectories.Add(directoryPath);

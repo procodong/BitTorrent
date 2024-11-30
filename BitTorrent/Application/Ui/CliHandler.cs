@@ -17,7 +17,7 @@ public class CliHandler : IUiHandler
         Console.SetCursorPosition(_displayPosition.Left, _displayPosition.Top);
         foreach (var (index, update) in updates.Indexed())
         {
-            int downloadedBarCount = (int)((double)update.Size / update.Transfered.Download * 10);
+            int downloadedBarCount = unchecked((int)((double)update.Transfered.Download / update.Size * 10));
             _buffer.Append(index);
             _buffer.Append(". ");
             for (int i = 0; i < downloadedBarCount; i++)

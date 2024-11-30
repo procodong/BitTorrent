@@ -18,10 +18,9 @@ public class PieceHasher(int blockSize)
     public void Hash(byte[] data, int offset)
     {
         int index = offset / _blockSize - _offset;
-        if (index >= _blocks.Count)
+        while (index >= _blocks.Count)
         {
-            int addCount = index + 1 - _blocks.Count;
-            _blocks.AddRange(Enumerable.Range(0, addCount).Select<int, byte[]?>(_ => null));
+            _blocks.Add(null);
         }
         int removeCount = 0;
         _blocks[index] = data;

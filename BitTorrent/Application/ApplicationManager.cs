@@ -17,11 +17,11 @@ namespace BitTorrent.Application;
 public class ApplicationManager : ICommandContext
 {
     private readonly ChannelReader<ICommand> _commandReader;
-    private readonly DownloadManager _downloads;
+    private readonly DownloadCollection _downloads;
     private readonly IUiHandler _uiHandler;
     private readonly Config _config;
 
-    public ApplicationManager(ChannelReader<ICommand> commandReader, DownloadManager downloads, IUiHandler uiHandler, Config config)
+    public ApplicationManager(ChannelReader<ICommand> commandReader, DownloadCollection downloads, IUiHandler uiHandler, Config config)
     {
         _commandReader = commandReader;
         _downloads = downloads;
@@ -61,11 +61,11 @@ public class ApplicationManager : ICommandContext
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);
         var files = DownloadSaveManager.CreateFiles(targetPath, torrent.Files, (int)torrent.PieceSize);
-        await _downloads.StartDownload(torrent, files, targetPath);
+        await _downloads.StartDownload(torrent, files);
     }
 
-    void ICommandContext.RemoveTorrent(int index)
+    async Task ICommandContext.RemoveTorrent(int index)
     {
-        throw new NotImplementedException();
+        await _downloads.RemoveDownload(index);
     }
 }

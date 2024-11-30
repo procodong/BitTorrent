@@ -2,7 +2,6 @@
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Managing;
 using BitTorrent.Torrents.Peers.Errors;
 using System.Collections;
 using System.Net.Sockets;
@@ -14,14 +13,14 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 {
     private readonly PeerWireStream _connection;
     private readonly Download _download;
-    private readonly SharedPeerData _state;
+    private readonly SharedPeerState _state;
     private readonly ChannelReader<int> _haveMessageReceiver;
     private readonly ChannelReader<PeerRelation> _relationReceiver;
     private readonly List<QueuedPieceRequest> _pieceDownloads = [];
     private readonly Queue<PieceRequest> _requestQueue = [];
     private bool _writing = false;
 
-    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerData stats)
+    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerState stats)
     {
         _connection = connection;
         _download = download;
@@ -69,6 +68,11 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
                 break;
             }
             await DequeRequests();
+            if (_connection.Written)
+            {
+                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
+            }
+            RequestBlocks();
             await _connection.FlushAsync();
         }
     }
@@ -110,6 +114,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
             {
                 break;
             }
+            Console.WriteLine($"Requested!, {block.Value.Request.Index}, {block.Value.Request.Begin}");
             _pieceDownloads.Add(block.Value);
             _connection.WritePieceRequest(block.Value.Request);
         }
@@ -117,6 +122,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     private void UpdateRelation(PeerRelation relation)
     {
+        Console.WriteLine($"interested: {relation.Interested}, choked: {relation.Choked}");
         if (relation.Interested != _state.Relation.Interested)
         {
             _connection.WriteUpdateRelation(relation.Interested ? Relation.Interested : Relation.NotInterested);
@@ -136,7 +142,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     public Task OnUnchokedAsync()
     {
         _state.RelationToMe = _state.RelationToMe with { Choked = false };
-        RequestBlocks();
         return Task.CompletedTask;
     }
 
@@ -166,7 +171,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     public async Task OnRequestAsync(PieceRequest request)
     {
-        if (_state.Relation.Choked) return;
+        if (_state.Relation.Choked || !_download.DownloadedPieces[request.Index]) return;
         if (request.Length > _download.Config.MaxRequestSize)
         {
             throw new BadPeerException(PeerErrorReason.InvalidRequest);
@@ -195,7 +200,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         QueuedPieceRequest request = FindDownload(piece.Request);
         await _download.SaveBlockAsync(piece.Stream, request);
         Interlocked.Add(ref _state.Stats.Downloaded, blockLength);
-        RequestBlocks();
     }
 
     public Task OnCancelAsync(PieceRequest request)
