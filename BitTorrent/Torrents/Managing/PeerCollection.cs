@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -18,44 +19,43 @@ namespace BitTorrent.Torrents.Managing;
 public class PeerCollection : IEnumerable<PeerConnector>
 {
     private readonly SlotMap<PeerConnector> _peers = [];
-    private readonly HashSet<PeerAddress> _peerAddresses = [];
+    private readonly HashSet<string> _peerIds = [];
+    private readonly PeerSpawner _spawner;
     private readonly ILogger _logger;
-    private readonly ChannelWriter<IPeerRegisterationEvent> _peerRegisterationWriter;
+    private readonly int _pieceCount;
 
     public int Count => _peers.Count;
 
-    public PeerCollection(ChannelWriter<IPeerRegisterationEvent> peerRegisterationWriter, ILogger logger)
+    public PeerCollection(PeerSpawner spawner, ILogger logger, int pieceCount)
     {
-        _peerRegisterationWriter = peerRegisterationWriter;
+        _spawner = spawner;
         _logger = logger;
+        _pieceCount = pieceCount;
     }
 
-    public int Add(PeerConnector peer)
+    public void AddPeer(string id, PeerWireStream stream)
     {
-        return _peers.Add(peer);
+        if (_peerIds.Contains(id)) return;
+        _peerIds.Add(id);
+        var eventChannel = Channel.CreateBounded<PeerRelation>(16);
+        var haveChannel = Channel.CreateUnbounded<int>();
+        var state = new SharedPeerState(new(_pieceCount));
+        var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new());
+        int index = _peers.Add(peerConnector);
+        _ = _spawner.StartPeerAsync(stream, index, state, eventChannel.Reader, haveChannel);
     }
 
-    public async Task ConnectPeerAsync(PeerAddress address)
+    public void Connect(IEnumerable<PeerAddress> addresses)
     {
-        if (_peerAddresses.Contains(address)) return;
-        try
+        foreach (PeerAddress peer in addresses)
         {
-            _peerAddresses.Add(address);
-            var connection = new TcpClient();
-            await connection.ConnectAsync(address.Ip, address.Port);
-            var stream = new NetworkStream(connection.Client, true);
-            var peerStream = new PeerWireStream(stream);
-            await _peerRegisterationWriter.WriteAsync(new PeerAddEvent(peerStream));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error connection to peer: {}", ex.Message);
+            Connect(peer);
         }
     }
 
-    public async Task QueueRemoval(int index)
+    public void Connect(PeerAddress address)
     {
-        await _peerRegisterationWriter.WriteAsync(new PeerRemovalEvent(index));
+        _ = _spawner.ConnectPeer(address);
     }
 
     public void Remove(int index)
@@ -67,11 +67,11 @@ public class PeerCollection : IEnumerable<PeerConnector>
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable)_peers).GetEnumerator();
+        return _peers.GetEnumerator();
     }
 
     public IEnumerator<PeerConnector> GetEnumerator()
     {
-        return ((IEnumerable<PeerConnector>)_peers).GetEnumerator();
+        return _peers.GetEnumerator();
     }
 }

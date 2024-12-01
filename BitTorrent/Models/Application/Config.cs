@@ -16,6 +16,5 @@ public record class Config(
     int MaxRequestSize,
     int KeepAliveInterval,
     int ReceiveTimeout,
-    int RarePiecesUpdateInterval,
     int UiUpdateInterval
     );

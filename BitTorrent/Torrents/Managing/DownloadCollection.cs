@@ -37,10 +37,13 @@ public class DownloadCollection : IAsyncDisposable, IDisposable
         var request = new TrackerUpdate(torrent.OriginalInfoHashBytes, peerId, new(), torrent.TotalSize, TrackerEvent.Started);
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(torrent, files, _config);
-        var peerManager = new PeerManager(peerId, download, _logger, fetcher);
+        var trackerChannel = Channel.CreateBounded<IdentifiedPeerWireStream>(new BoundedChannelOptions(8)
+        {
+            SingleWriter = false
+        });
+        var peerManager = new PeerManager(peerId, download, trackerChannel.Writer, _logger, fetcher);
         var completer = new TaskCompletionSource();
         _downloads.Add(new(peerManager, completer, torrent.OriginalInfoHashBytes));
-        var trackerChannel = Channel.CreateBounded<IdentifiedPeerWireStream>(8);
         await _peerReceivingSubscriber.WriteAsync(new(torrent.OriginalInfoHashBytes, trackerChannel.Writer));
         new Thread(async () =>
         {

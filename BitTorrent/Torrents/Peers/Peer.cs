@@ -68,11 +68,11 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
                 break;
             }
             await DequeRequests();
+            RequestBlocks();
             if (_connection.Written)
             {
                 keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
             }
-            RequestBlocks();
             await _connection.FlushAsync();
         }
     }
@@ -94,7 +94,14 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
             var block = _download.RequestBlock(request);
             if (block is null) return;
             await _connection.WritePieceAsync(new(request.Index, request.Begin), block);
+            FinishUpload(request.Length);
         }
+    }
+
+    private void FinishUpload(int size)
+    {
+        _download.FinishUpload(size);
+        Interlocked.Add(ref _state.Stats.Uploaded, size);
     }
 
     private void RequestBlocks()
@@ -191,7 +198,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         {
             _writing = false;
         }
-        _download.FinishUpload(request.Length);
+        FinishUpload(request.Length);
     }
 
     public async Task OnPieceAsync(Piece piece)

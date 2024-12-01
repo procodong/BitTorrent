@@ -23,7 +23,6 @@ var config = new Config(
     MaxRequestSize: 1 << 17,
     KeepAliveInterval: 90 * 1000,
     ReceiveTimeout: 2 * 60 * 1000,
-    RarePiecesUpdateInterval: 60 * 1000,
     UiUpdateInterval: 1000
     );
 int port = 6881;
