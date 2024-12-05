@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Peers;
 public interface IPeerEventHandler
 {
-    Task OnChokeAsync();
-    Task OnUnchokedAsync();
-    Task OnInterestedAsync();
-    Task OnNotInterestedAsync();
-    Task OnHaveAsync(int piece);
-    Task OnBitfieldAsync(BitArray bitfield);
-    Task OnRequestAsync(PieceRequest request);
-    Task OnPieceAsync(Piece piece);
-    Task OnCancelAsync(PieceRequest request);
-    Task OnPortAsync(ushort port);
+    Task OnChokeAsync(CancellationToken cancellationToken = default);
+    Task OnUnchokedAsync(CancellationToken cancellationToken = default);
+    Task OnInterestedAsync(CancellationToken cancellationToken = default);
+    Task OnNotInterestedAsync(CancellationToken cancellationToken = default);
+    Task OnHaveAsync(int piece, CancellationToken cancellationToken = default);
+    Task OnBitfieldAsync(BitArray bitfield, CancellationToken cancellationToken = default);
+    Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default);
+    Task OnPieceAsync(Piece piece, CancellationToken cancellationToken = default);
+    Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default);
+    Task OnPortAsync(ushort port, CancellationToken cancellationToken = default);
 }

@@ -31,10 +31,10 @@ public readonly struct SlotMap<T> : IEnumerable<T>
     public void Remove(int index)
     {
         _buffer[index] = default;
-        int lastIndex = _buffer.Count - 1;
-        int i = lastIndex - 1;
-        while (i >= 0 && _buffer[i] is null) i--;
-        _buffer.RemoveRange(i, lastIndex - i);
+        while (_buffer.Count != 0 && _buffer[^1] is null)
+        {
+            _buffer.Pop();
+        }
     }
 
     public int Add(T item) 

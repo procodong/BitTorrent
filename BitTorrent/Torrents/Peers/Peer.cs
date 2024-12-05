@@ -29,49 +29,43 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         _relationReceiver = relationReceiver;
     }
 
-    public async Task ListenAsync()
+    public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength);
-        Task<PeerRelation> relationTask = _relationReceiver.ReadAsync().AsTask();
-        Task<int> haveTask = _haveMessageReceiver.ReadAsync().AsTask();
-        Task keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
-        Task completionTask = _relationReceiver.Completion;
+        Task receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength, cancellationToken);
+        Task<PeerRelation> relationTask = _relationReceiver.ReadAsync(cancellationToken).AsTask();
+        Task<int> haveTask = _haveMessageReceiver.ReadAsync(cancellationToken).AsTask();
+        Task keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval, cancellationToken);
         while (true)
         {
-            var readyTask = await Task.WhenAny(receiveTask, relationTask, haveTask, keepAliveTask, completionTask);
+            var readyTask = await Task.WhenAny(receiveTask, relationTask, haveTask, keepAliveTask);
             if (_writing || readyTask == receiveTask)
             {
                 await receiveTask;
-                receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength);
+                receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength, cancellationToken);
             }
             if (readyTask == relationTask)
             {
                 PeerRelation relation = await relationTask;
                 UpdateRelation(relation);
-                relationTask = _relationReceiver.ReadAsync().AsTask();
+                relationTask = _relationReceiver.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
             {
                 int have = await haveTask;
                 _connection.WriteHaveMessage(have);
-                haveTask = _haveMessageReceiver.ReadAsync().AsTask();
+                haveTask = _haveMessageReceiver.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == keepAliveTask)
             {
                 await keepAliveTask;
                 _connection.WriteKeepAlive();
-                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
+                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval, cancellationToken);
             }
-            else if (readyTask == completionTask)
-            {
-                _state.Completion.SetCanceled();
-                break;
-            }
-            await DequeRequests();
+            await DequeRequests(cancellationToken);
             RequestBlocks();
             if (_connection.Written)
             {
-                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval);
+                keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval, cancellationToken);
             }
             await _connection.FlushAsync();
         }
@@ -87,13 +81,13 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         return piece;
     }
 
-    private async Task DequeRequests()
+    private async Task DequeRequests(CancellationToken cancellationToken = default)
     {
         while (_requestQueue.TryDequeue(out var request))
         {
             var block = _download.RequestBlock(request);
             if (block is null) return;
-            await _connection.WritePieceAsync(new(request.Index, request.Begin), block);
+            await _connection.WritePieceAsync(new(request.Index, request.Begin), block, cancellationToken);
             FinishUpload(request.Length);
         }
     }
@@ -121,7 +115,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
             {
                 break;
             }
-            Console.WriteLine($"Requested!, {block.Value.Request.Index}, {block.Value.Request.Begin}");
             _pieceDownloads.Add(block.Value);
             _connection.WritePieceRequest(block.Value.Request);
         }
@@ -129,7 +122,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     private void UpdateRelation(PeerRelation relation)
     {
-        Console.WriteLine($"interested: {relation.Interested}, choked: {relation.Choked}");
         if (relation.Interested != _state.Relation.Interested)
         {
             _connection.WriteUpdateRelation(relation.Interested ? Relation.Interested : Relation.NotInterested);
@@ -140,43 +132,43 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         }
     }
 
-    public Task OnChokeAsync()
+    public Task OnChokeAsync(CancellationToken cancellationToken = default)
     {
         _state.RelationToMe = _state.RelationToMe with { Choked = true };
         return Task.CompletedTask;
     }
 
-    public Task OnUnchokedAsync()
+    public Task OnUnchokedAsync(CancellationToken cancellationToken = default)
     {
         _state.RelationToMe = _state.RelationToMe with { Choked = false };
         return Task.CompletedTask;
     }
 
-    public Task OnInterestedAsync()
+    public Task OnInterestedAsync(CancellationToken cancellationToken = default)
     {
         _state.RelationToMe = _state.RelationToMe with { Interested = true };
         return Task.CompletedTask;
     }
 
-    public Task OnNotInterestedAsync()
+    public Task OnNotInterestedAsync(CancellationToken cancellationToken = default)
     {
         _state.RelationToMe = _state.RelationToMe with { Choked = false };
         return Task.CompletedTask;
     }
 
-    public Task OnHaveAsync(int piece)
+    public Task OnHaveAsync(int piece, CancellationToken cancellationToken = default)
     {
         _state.OwnedPieces[piece] = true;
         return Task.CompletedTask;
     }
 
-    public Task OnBitfieldAsync(BitArray bitfield)
+    public Task OnBitfieldAsync(BitArray bitfield, CancellationToken cancellationToken = default)
     {
         _state.OwnedPieces = bitfield;
         return Task.CompletedTask;
     }
 
-    public async Task OnRequestAsync(PieceRequest request)
+    public async Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
         if (_state.Relation.Choked || !_download.DownloadedPieces[request.Index]) return;
         if (request.Length > _download.Config.MaxRequestSize)
@@ -192,7 +184,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         _writing = true;
         try
         {
-            await _connection.WritePieceAsync(new(request.Index, request.Begin), block);
+            await _connection.WritePieceAsync(new(request.Index, request.Begin), block, cancellationToken);
         }
         finally
         {
@@ -201,26 +193,26 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         FinishUpload(request.Length);
     }
 
-    public async Task OnPieceAsync(Piece piece)
+    public async Task OnPieceAsync(Piece piece, CancellationToken cancellationToken = default)
     {
         long blockLength = piece.Stream.Length - piece.Stream.Position;
         QueuedPieceRequest request = FindDownload(piece.Request);
-        await _download.SaveBlockAsync(piece.Stream, request);
+        await _download.SaveBlockAsync(piece.Stream, request, cancellationToken);
         Interlocked.Add(ref _state.Stats.Downloaded, blockLength);
     }
 
-    public Task OnCancelAsync(PieceRequest request)
+    public Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        FindDownload(request);
+        var download = FindDownload(request);
         lock (_download)
         {
             _download.Cancel(request);
         }
-        _pieceDownloads.RemoveAll(download => download.Request == request);
+        _pieceDownloads.Remove(download);
         return Task.CompletedTask;
     }
 
-    public Task OnPortAsync(ushort port)
+    public Task OnPortAsync(ushort port, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

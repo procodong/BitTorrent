@@ -1,7 +1,6 @@
 ﻿using BitTorrent.Models.Application;
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
-using BitTorrent.Models.Tracker;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Managing.Events;
@@ -13,7 +12,7 @@ using System.Collections;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Managing;
-public class PeerManager : IDisposable, IAsyncDisposable, IUpdateProvider
+public class PeerManager : IDisposable, IAsyncDisposable
 {
     private readonly PeerCollection _peers;
     private readonly string _peerId;
@@ -21,104 +20,45 @@ public class PeerManager : IDisposable, IAsyncDisposable, IUpdateProvider
     private readonly DataTransferCounter _transfered = new();
     private readonly ILogger _logger;
     private readonly ITrackerFetcher _trackerFetcher;
-    private readonly ChannelReader<int> _peerRemovalReader;
+    private DataTransferVector Transfered => _transfered.Fetch() + _download.RecentlyTransfered;
+    private DataTransferVector TransferRate => new(_download.DownloadRate, _download.UploadRate);
 
-    public PeerManager(string peerId, Download download, ChannelWriter<IdentifiedPeerWireStream> peerWriter, ILogger logger, ITrackerFetcher trackerFetcher)
+    public PeerManager(string peerId, Download download, PeerCollection peers, ILogger logger, ITrackerFetcher trackerFetcher)
     {
         _peerId = peerId;
         _download = download;
         _logger = logger;
         _trackerFetcher = trackerFetcher;
-        var removalChannel = Channel.CreateBounded<int>(new BoundedChannelOptions(8)
-        {
-            SingleWriter = false
-        });
-        _peerRemovalReader = removalChannel.Reader;
-        var spawner = new PeerSpawner(download, logger, removalChannel.Writer, peerWriter, peerId);
-        _peers = new(spawner, logger, download.Torrent.NumberOfPieces);
+        _peers = peers;
     }
 
-    private DataTransferVector Transfered => _transfered.Fetch() + _download.RecentlyTransfered;
-    private DataTransferVector TransferRate => new(_download.DownloadRate, _download.UploadRate);
-
-    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> trackerReceiver, TaskCompletionSource completer)
+    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int> peerRemover, CancellationToken cancellationToken = default)
     {
-        Task<IdentifiedPeerWireStream> trackerTask = trackerReceiver.ReadAsync().AsTask();
-        var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_download.Config.PeerUpdateInterval));
-        Task updateIntervalTask = updateInterval.WaitForNextTickAsync().AsTask();
-        Task<int> peerRemovalTask = _peerRemovalReader.ReadAsync().AsTask();
-        Task trackerUpdateTask = _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Started));
-        while (true)
+        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, (e) => GetTrackerUpdate(e))
         {
-            var ready = await Task.WhenAny(trackerTask, updateIntervalTask, peerRemovalTask, trackerUpdateTask, completer.Task);
-            if (ready == trackerTask)
-            {
-                var (id, stream) = await trackerTask;
-                _peers.AddPeer(id, stream);
-                trackerTask = trackerReceiver.ReadAsync().AsTask();
-            }
-            else if (ready == updateIntervalTask)
-            {
-                await updateIntervalTask;
-                await Update();
-                updateIntervalTask = updateInterval.WaitForNextTickAsync().AsTask();
-            }
-            else if (ready == peerRemovalTask)
-            {
-                int peer = await peerRemovalTask;
-                _peers.Remove(peer);
-                peerRemovalTask = _peerRemovalReader.ReadAsync().AsTask();
-            }
-            else if (ready == trackerUpdateTask)
-            {
-                if (trackerUpdateTask is Task<TrackerResponse> responseTask)
-                {
-                    try
-                    {
-                        var response = await responseTask;
-                        _logger.LogInformation("Amount of peers: {} interval: {}", response.Peers.Count, response.Interval);
-                        _peers.Connect(response.Peers);
-                        trackerUpdateTask = Task.Delay(response.Interval * 1000);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("{Message}", ex);
-                        trackerUpdateTask = Task.Delay(5000);
-                    }
-                }
-                else
-                {
-                    trackerUpdateTask = _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.None));
-                }
-            }
-            else if (ready == completer.Task)
-            {
-                return;
-            }
-        }
+            Update = Update,
+            PeerAddition = _peers.Add,
+            PeerRemoval = _peers.Remove,
+            TrackerResponse = (response) => _peers.ConnectAll(response.Peers),
+            Error = (err) => _logger.LogError("Error in peer manager: {}", err)
+        };
+        await events.ListenAsync(cancellationToken);
     }
 
     private async Task Update()
     {
-        try
+        var (interesting, unChoked) = GetPeerRelations();
+        await UpdateRelations(interesting, unChoked);
+        var recent = _download.ResetRecentTransfer();
+        _transfered.FetchAdd(recent);
+        if (_download.RarestPieces.Count == 0)
         {
-            var (interesting, unChoked) = GetPeerRelations();
-            await UpdateRelations(interesting, unChoked);
-            var recent = _download.ResetRecentTransfer();
-            _transfered.FetchAdd(recent);
-            if (_download.RarestPieces.Count == 0)
+            var pieces = FindRaresPieces();
+            lock (_download)
             {
-                var pieces = FindRaresPieces();
-                lock (_download)
-                {
-                    _download.RarestPieces.Clear();
-                    _download.RarestPieces.AddRange(pieces);
-                }
+                _download.RarestPieces.Clear();
+                _download.RarestPieces.AddRange(pieces);
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("{}", ex);
         }
     }
 

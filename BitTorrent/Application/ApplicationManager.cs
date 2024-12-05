@@ -4,7 +4,7 @@ using BitTorrent.Application.Input.Commands;
 using BitTorrent.Application.Ui;
 using BitTorrent.Files.DownloadFiles;
 using BitTorrent.Models.Application;
-using BitTorrent.Torrents.Managing;
+using BitTorrent.Torrents.Downloads;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;

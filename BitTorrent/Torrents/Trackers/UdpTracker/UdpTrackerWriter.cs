@@ -1,4 +1,4 @@
-﻿using BitTorrent.Models.Tracker;
+﻿using BitTorrent.Models.Trackers;
 using BitTorrent.Utils;
 using System;
 using System.Collections.Generic;

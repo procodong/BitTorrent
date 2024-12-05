@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Tracker;
+namespace BitTorrent.Models.Trackers;
 public record class TrackerResponse(
     int Interval,
     int? MinInterval,

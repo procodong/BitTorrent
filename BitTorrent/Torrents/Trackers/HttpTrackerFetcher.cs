@@ -2,7 +2,6 @@
 using BencodeNET.Parsing;
 using BitTorrent.Errors;
 using BitTorrent.Models.Peers;
-using BitTorrent.Models.Tracker;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Trackers.Errors;
 using Microsoft.Extensions.Logging;
@@ -43,7 +42,7 @@ public class HttpTrackerFetcher : ITrackerFetcher
     private TrackerRequest GetRequest(TrackerUpdate update) =>
         new(update.InfoHash, update.ClientId, _listenPort, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
 
-    public async Task<TrackerResponse> FetchAsync(TrackerUpdate update)
+    public async Task<TrackerResponse> FetchAsync(TrackerUpdate update, CancellationToken cancellationToken = default)
     {
         var request = GetRequest(update);
         var builder = new UriBuilder(_url)
@@ -65,9 +64,9 @@ public class HttpTrackerFetcher : ITrackerFetcher
         }
         builder.Query = query.ToString();
 
-        var response = await _httpClient.GetAsync(builder.ToString());
+        var response = await _httpClient.GetAsync(builder.ToString(), cancellationToken);
         var parser = new BencodeParser();
-        var content = await parser.ParseAsync<BDictionary>(response.Content.ReadAsStream());
+        var content = await parser.ParseAsync<BDictionary>(response.Content.ReadAsStream(cancellationToken), cancellationToken: cancellationToken);
         var error = content.Get<BString?>("failure reason");
         if (error is not null)
         {

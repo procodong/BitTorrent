@@ -4,6 +4,7 @@ using BitTorrent.Application.Input.Commands;
 using BitTorrent.Application.Ui;
 using BitTorrent.Models.Application;
 using BitTorrent.Models.Trackers;
+using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Managing;
 using BitTorrent.Torrents.Trackers;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ var config = new Config(
     RequestSize: 1 << 14,
     RequestQueueSize: 5,
     MaxRarePieceCount: 20,
-    PeerUpdateInterval: 5 * 1000,
+    PeerUpdateInterval: 10 * 1000,
     MaxRequestSize: 1 << 17,
     KeepAliveInterval: 90 * 1000,
     ReceiveTimeout: 2 * 60 * 1000,
@@ -28,7 +29,7 @@ var config = new Config(
 int port = 6881;
 ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
 ILogger logger = factory.CreateLogger("Program");
-var peerReceiver = new TrackerHandler(port, config.ReceiveTimeout, newPeerChannel.Reader);
+var peerReceiver = new TrackerHandler(port, config.ReceiveTimeout, logger, newPeerChannel.Reader);
 new Thread(async () =>
 {
     await peerReceiver.ListenAsync();

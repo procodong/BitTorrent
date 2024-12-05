@@ -1,5 +1,5 @@
 ﻿using BitTorrent.Models.Peers;
-using BitTorrent.Models.Tracker;
+using BitTorrent.Models.Trackers;
 using System;
 using System.Collections.Generic;
 using System.Linq;

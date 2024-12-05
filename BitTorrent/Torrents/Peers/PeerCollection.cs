@@ -1,8 +1,8 @@
 ﻿using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
+using BitTorrent.Torrents.Managing;
 using BitTorrent.Torrents.Managing.Events;
-using BitTorrent.Torrents.Peers;
 using BitTorrent.Utils;
 using Microsoft.Extensions.Logging;
 using System;
@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Managing;
+namespace BitTorrent.Torrents.Peers;
 public class PeerCollection : IEnumerable<PeerConnector>
 {
     private readonly SlotMap<PeerConnector> _peers = [];
@@ -33,19 +33,19 @@ public class PeerCollection : IEnumerable<PeerConnector>
         _pieceCount = pieceCount;
     }
 
-    public void AddPeer(string id, PeerWireStream stream)
+    public void Add(IdentifiedPeerWireStream stream)
     {
-        if (_peerIds.Contains(id)) return;
-        _peerIds.Add(id);
+        if (_peerIds.Contains(stream.PeerId)) return;
+        _peerIds.Add(stream.PeerId);
         var eventChannel = Channel.CreateBounded<PeerRelation>(16);
         var haveChannel = Channel.CreateUnbounded<int>();
         var state = new SharedPeerState(new(_pieceCount));
         var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new());
         int index = _peers.Add(peerConnector);
-        _ = _spawner.StartPeerAsync(stream, index, state, eventChannel.Reader, haveChannel);
+        _ = _spawner.StartPeer(stream.Stream, index, state, eventChannel.Reader, haveChannel);
     }
 
-    public void Connect(IEnumerable<PeerAddress> addresses)
+    public void ConnectAll(IEnumerable<PeerAddress> addresses)
     {
         foreach (PeerAddress peer in addresses)
         {

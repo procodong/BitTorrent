@@ -7,12 +7,10 @@ using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.PieceSaver.DownloadFiles;
 using BitTorrent.Torrents.Downloads.Errors;
-using BitTorrent.Torrents.Peers;
 using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Utils;
 using System.Collections;
 using System.Diagnostics;
-using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
@@ -75,17 +73,16 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
         return _recentDataTransfer.FetchReplace(new());
     }
 
-    public async Task SaveBlockAsync(Stream stream, QueuedPieceRequest piece)
+    public async Task SaveBlockAsync(Stream stream, QueuedPieceRequest piece, CancellationToken cancellationToken = default)
     {
         var files = _files.GetStream(piece.Download.PieceIndex, piece.Request.Begin, piece.Request.Length);
         byte[] buffer = new byte[piece.Request.Length];
-        await stream.ReadExactlyAsync(buffer);
-        await files.WriteAsync(buffer);
+        await stream.ReadExactlyAsync(buffer, cancellationToken);
+        await files.WriteAsync(buffer, cancellationToken);
         lock (piece.Download.Hasher)
         {
             piece.Download.Hasher.Hash(buffer, piece.Request.Begin);
         }
-
         int newDownloaded = Interlocked.Add(ref piece.Download.Downloaded, piece.Request.Length);
         Interlocked.Add(ref _recentDataTransfer.Downloaded, piece.Request.Length);
         if (newDownloaded < piece.Download.Size || piece.Download.Size != PieceSize(piece.Download.PieceIndex))
@@ -119,7 +116,6 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
 
     public void Cancel(PieceRequest cancel)
     {
-        ValidateRequest(cancel);
         var queued = new PieceDownload(cancel.Length, cancel.Index, new(Config.RequestSize), cancel.Begin);
         _pieceRegisters.Add(queued);
     }
@@ -136,14 +132,14 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
 
     public PieceRequest AllocateDownload(PieceDownload download)
     {
+        if (download.Downloading == download.Size)
+        {
+            throw new PieceDownloadFullException();
+        }
         int downloadSize = int.Min(download.Size - download.Downloading, Config.RequestSize);
         int downloadOffset = download.Downloading;
         download.Downloading += downloadSize;
         if (download.Downloading == PieceSize(download.PieceIndex))
-        {
-            throw new PieceDownloadFullException();
-        }
-        if (download.Downloading == download.Size)
         {
             _requestedPieces[download.PieceIndex] = true;
             while (_requestedPieces[_requestedPiecesOffset])

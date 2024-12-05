@@ -1,8 +1,8 @@
 ﻿using BitTorrent.Models.Peers;
-using BitTorrent.Models.Tracker;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Peers;
 using BitTorrent.Utils;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,17 +18,20 @@ public class TrackerHandler
     private readonly ChannelReader<PeerReceivingSubscribe> _downloadReceiver;
     private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());
     private readonly TcpListener _listener;
+    private readonly ILogger _logger;
     private readonly int _clientReceiveTimeout;
 
-    public TrackerHandler(int port, int clientReceiveTimeout, ChannelReader<PeerReceivingSubscribe> downloadReceiver)
+    public TrackerHandler(int port, int clientReceiveTimeout, ILogger logger, ChannelReader<PeerReceivingSubscribe> downloadReceiver)
     {
         _listener = new(IPAddress.Any, port);
         _clientReceiveTimeout = clientReceiveTimeout;
         _downloadReceiver = downloadReceiver;
+        _logger = logger;
     }
 
     public async Task ListenAsync()
     {
+        _listener.Start();
         Task<TcpClient> clientTask = _listener.AcceptTcpClientAsync();
         Task<PeerReceivingSubscribe> newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
         while (true)
@@ -36,22 +39,42 @@ public class TrackerHandler
             var ready = await Task.WhenAny(clientTask, newDownloadTask);
             if (ready == clientTask)
             {
-                TcpClient client = await clientTask;
-                await CreateClient(client);
-                clientTask = _listener.AcceptTcpClientAsync();
+                try
+                {
+                    TcpClient client = await clientTask;
+                    await CreateClient(client);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Error responding to peer: {}", ex);
+                }
+                finally
+                {
+                    clientTask = _listener.AcceptTcpClientAsync();
+                }
             }
             else if (ready == newDownloadTask)
             {
-                PeerReceivingSubscribe download = await newDownloadTask;
-                if (download.EventWriter is null)
+                try
                 {
-                    _eventSenders.Remove(download.InfoHash);
+                    PeerReceivingSubscribe download = await newDownloadTask;
+                    if (download.EventWriter is null)
+                    {
+                        _eventSenders.Remove(download.InfoHash);
+                    }
+                    else
+                    {
+                        _eventSenders[download.InfoHash] = download.EventWriter;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    _eventSenders[download.InfoHash] = download.EventWriter;
+                    _logger.LogError("Error adding or removing a download from tracker handler: {}", ex);
                 }
-                newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
+                finally
+                {
+                    newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
+                }
             }
         }
     }

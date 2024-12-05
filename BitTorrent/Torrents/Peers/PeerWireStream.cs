@@ -19,8 +19,9 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     private readonly BufferedStream _stream;
     private bool _written;
     public const string PROTOCOL = "BitTorrent protocol";
-
+    private bool _handShaken;
     public bool Written => _written;
+    public bool HandShaken => _handShaken;
 
     public PeerWireStream(Stream stream)
     {
@@ -42,9 +43,10 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         _written = true;
     }
 
-    public async Task InitializeConnectionAsync(BitArray? bitfield, HandShake handShake)
+    public async Task SendHandShake(BitArray? bitfield, byte[] infoHash, string peerId)
     {
-        MessageEncoder.EncodeHandShake(Writer, handShake);
+        _handShaken = true;
+        MessageEncoder.EncodeHandShake(Writer, new(PROTOCOL, infoHash, peerId));
         if (bitfield is not null)
         {
             await WriteBitfieldAsync(bitfield);
@@ -102,11 +104,11 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         OnWrite();
     }
 
-    public async Task WritePieceAsync(PieceShareHeader requestedPiece, Stream piece)
+    public async Task WritePieceAsync(PieceShareHeader requestedPiece, Stream piece, CancellationToken cancellationToken = default)
     {
         MessageEncoder.EncodeHeader(Writer, new((int)piece.Length + 9, MessageType.Piece));
         MessageEncoder.EncodePieceHeader(Writer, requestedPiece);
-        await piece.CopyToAsync(_stream);
+        await piece.CopyToAsync(_stream, cancellationToken);
         OnWrite();
     }
 
@@ -126,7 +128,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     }
 
 
-    public async Task ReceiveAsync(IPeerEventHandler eventHandler, long maxMessageLength)
+    public async Task ReceiveAsync(IPeerEventHandler eventHandler, long maxMessageLength, CancellationToken cancellationToken = default)
     {
         var message = await ReceiveAsync();
         if (message.Stream.Length > maxMessageLength)
@@ -137,42 +139,42 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         switch (message.Type)
         {
             case MessageType.Choke:
-                await eventHandler.OnChokeAsync();
+                await eventHandler.OnChokeAsync(cancellationToken);
                 break;
             case MessageType.Unchoke:
-                await eventHandler.OnUnchokedAsync();
+                await eventHandler.OnUnchokedAsync(cancellationToken);
                 break;
             case MessageType.Interested:
-                await eventHandler.OnInterestedAsync();
+                await eventHandler.OnInterestedAsync(cancellationToken);
                 break;
             case MessageType.NotInterested:
-                await eventHandler.OnNotInterestedAsync();
+                await eventHandler.OnNotInterestedAsync(cancellationToken);
                 break;
             case MessageType.Have:
                 var index = await Reader.ReadInt32Async();
-                await eventHandler.OnHaveAsync(index);
+                await eventHandler.OnHaveAsync(index, cancellationToken);
                 break;
             case MessageType.Bitfield:
                 var bytes = new byte[message.Stream.Length];
-                await message.Stream.ReadExactlyAsync(bytes);
+                await message.Stream.ReadExactlyAsync(bytes, cancellationToken);
                 var bitfield = new BitArray(bytes);
-                await eventHandler.OnBitfieldAsync(bitfield);
+                await eventHandler.OnBitfieldAsync(bitfield, cancellationToken);
                 break;
             case MessageType.Request:
                 var request = await MessageDecoder.DecodeRequestAsync(parser);
-                await eventHandler.OnRequestAsync(request);
+                await eventHandler.OnRequestAsync(request, cancellationToken);
                 break;
             case MessageType.Piece:
                 var piece = await MessageDecoder.DecodePieceHeaderAsync(parser);
                 var pieceRequest = new PieceRequest(piece.Index, piece.Begin, (int)(message.Stream.Length - message.Stream.Position));
-                await eventHandler.OnPieceAsync(new(pieceRequest, message.Stream));
+                await eventHandler.OnPieceAsync(new(pieceRequest, message.Stream), cancellationToken);
                 break;
             case MessageType.Cancel:
                 PieceRequest cancel = await MessageDecoder.DecodeRequestAsync(parser);
-                await eventHandler.OnCancelAsync(cancel);
+                await eventHandler.OnCancelAsync(cancel, cancellationToken);
                 break;
             case MessageType.Port:
-                await eventHandler.OnPortAsync(parser.ReadUInt16());
+                await eventHandler.OnPortAsync(parser.ReadUInt16(), cancellationToken);
                 break;
         }
         if (message.Stream.Position != message.Stream.Length)
