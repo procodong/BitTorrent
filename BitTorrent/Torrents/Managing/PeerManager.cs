@@ -3,7 +3,6 @@ using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Managing.Events;
 using BitTorrent.Torrents.Peers;
 using BitTorrent.Torrents.Trackers;
 using BitTorrent.Utils;
@@ -34,7 +33,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
 
     public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int> peerRemover, CancellationToken cancellationToken = default)
     {
-        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, (e) => GetTrackerUpdate(e))
+        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
         {
             Update = Update,
             PeerAddition = _peers.Add,
@@ -112,7 +111,10 @@ public class PeerManager : IDisposable, IAsyncDisposable
             {
                 peer.LastUnchokedStats.Downloaded = peer.LastStatistics.Download;
             }
-            await peer.RelationEventWriter.WriteAsync(new(interesting, !unChoked));
+            if (interesting != peer.Data.Relation.Interested || !unChoked != peer.Data.Relation.Choked)
+            {
+                await peer.RelationEventWriter.WriteAsync(new(interesting, !unChoked));
+            }
         }
     }
 
@@ -143,8 +145,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         foreach (var peer in _peers)
         {
-            peer.RelationEventWriter.Complete();
-            peer.Data.Completion.Task.GetAwaiter().GetResult();
+            peer.Canceller.Cancel();
         }
         _download.Dispose();
         _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));
@@ -155,8 +156,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         foreach (var peer in _peers)
         {
-            peer.RelationEventWriter.Complete();
-            await peer.Data.Completion.Task;
+            peer.Canceller.Cancel();
         }
         await _download.DisposeAsync();
         await _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));

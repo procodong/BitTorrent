@@ -1,12 +1,11 @@
-﻿using BitTorrent.Torrents.Peers.Errors;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Errors;
-public class BadPeerException(PeerErrorReason error) : Exception
+namespace BitTorrent.Torrents.Peers.Errors;
+public class BadPeerException(PeerErrorReason reason) : Exception
 {
-    public readonly PeerErrorReason Reason = error;
+    public readonly PeerErrorReason Reason = reason;
 }

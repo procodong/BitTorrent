@@ -2,7 +2,6 @@
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Managing;
-using BitTorrent.Torrents.Managing.Events;
 using BitTorrent.Utils;
 using Microsoft.Extensions.Logging;
 using System;
@@ -38,11 +37,16 @@ public class PeerCollection : IEnumerable<PeerConnector>
         if (_peerIds.Contains(stream.PeerId)) return;
         _peerIds.Add(stream.PeerId);
         var eventChannel = Channel.CreateBounded<PeerRelation>(16);
-        var haveChannel = Channel.CreateUnbounded<int>();
         var state = new SharedPeerState(new(_pieceCount));
-        var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new());
+        var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new(), new());
         int index = _peers.Add(peerConnector);
-        _ = _spawner.StartPeer(stream.Stream, index, state, eventChannel.Reader, haveChannel);
+        _ = _spawner.StartPeer(stream.Stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token);
+    }
+
+    public void Remove(int index)
+    {
+        _peers[index].Canceller.Cancel();
+        _peers.Remove(index);
     }
 
     public void ConnectAll(IEnumerable<PeerAddress> addresses)
@@ -56,13 +60,6 @@ public class PeerCollection : IEnumerable<PeerConnector>
     public void Connect(PeerAddress address)
     {
         _ = _spawner.ConnectPeer(address);
-    }
-
-    public void Remove(int index)
-    {
-        var peer = _peers[index];
-        peer.RelationEventWriter.Complete();
-        _peers.Remove(index);
     }
 
     IEnumerator IEnumerable.GetEnumerator()

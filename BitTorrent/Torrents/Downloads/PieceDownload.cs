@@ -8,11 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Torrents.Downloads;
-public class PieceDownload(int size, int pieceIndex, PieceHasher hasher, int offset = 0)
+public class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
-    public int Downloading = 0;
-    public int Downloaded = 0;
-    public int DownloadOffset = offset;
+    public int Downloaded;
     public readonly int PieceIndex = pieceIndex;
     public readonly int Size = size;
     public readonly PieceHasher Hasher = hasher;

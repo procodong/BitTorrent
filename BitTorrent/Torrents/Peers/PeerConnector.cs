@@ -13,7 +13,8 @@ public record class PeerConnector(
     SharedPeerState Data, 
     ChannelWriter<PeerRelation> RelationEventWriter,
     DataTransferVector LastStatistics,
-    DataTransferCounter LastUnchokedStats
+    DataTransferCounter LastUnchokedStats,
+    CancellationTokenSource Canceller
     )
 {
     public DataTransferVector LastStatistics = LastStatistics;

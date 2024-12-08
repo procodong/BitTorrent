@@ -1,4 +1,4 @@
-﻿using BitTorrent.Errors;
+﻿using BitTorrent.Files.Streams;
 using BitTorrent.Models.Messages;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Encoding;
@@ -16,31 +16,27 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Peers;
 public class PeerWireStream : IDisposable, IAsyncDisposable
 {
-    private readonly BufferedStream _stream;
-    private bool _written;
+    private readonly Stream _stream;
+    private readonly byte[] _readBuffer;
+    private readonly byte[] _writeBuffer;
+    private MemoryStream _readCursor;
+    private readonly MemoryStream _writeCursor;
     public const string PROTOCOL = "BitTorrent protocol";
     private bool _handShaken;
-    public bool Written => _written;
     public bool HandShaken => _handShaken;
+
+    public bool Written => _writeCursor.Position != 0;
+
+    private BigEndianBinaryReader Reader => new(_readCursor);
+    private BigEndianBinaryWriter Writer => new(_writeCursor);
 
     public PeerWireStream(Stream stream)
     {
-        _stream = new BufferedStream(stream);
-    }
-
-    private BigEndianBinaryReader Reader
-    {
-        get => new(_stream);
-    }
-
-    private BigEndianBinaryWriter Writer
-    {
-        get => new(_stream);
-    }
-
-    private void OnWrite()
-    {
-        _written = true;
+        _stream = stream;
+        _readBuffer = new byte[1 << 9];
+        _writeBuffer = new byte[1 << 13];
+        _writeCursor = new(_writeBuffer);
+        _readCursor = new(_readBuffer);
     }
 
     public async Task SendHandShake(BitArray? bitfield, byte[] infoHash, string peerId)
@@ -56,7 +52,8 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
 
     public async Task<HandShake> ReadHandShakeAsync()
     {
-        HandShake receivedHandshake = await MessageDecoder.DecodeHandShakeAsync(Reader);
+        await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN);
+        HandShake receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
         if (!receivedHandshake.Protocol.SequenceEqual(PROTOCOL))
         {
             throw new BadPeerException(PeerErrorReason.InvalidProtocol);
@@ -75,67 +72,88 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         bitfield.CopyTo(buf, 0);
         MessageEncoder.EncodeHeader(Writer, new(len + 1, MessageType.Bitfield));
         await _stream.WriteAsync(buf);
-        OnWrite();
     }
 
     public void WriteUpdateRelation(Relation relation)
     {
         MessageEncoder.EncodeHeader(Writer, new(1, (MessageType)relation));
-        OnWrite();
     }
 
     public void WriteKeepAlive()
     {
         Writer.Write(0);
-        OnWrite();
     }
 
     public void WriteHaveMessage(int piece)
     {
         MessageEncoder.EncodeHeader(Writer, new(5, MessageType.Have));
         Writer.Write(piece);
-        OnWrite();
     }
 
     public void WritePieceRequest(PieceRequest request)
     {
         MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Request));
         MessageEncoder.EncodePieceRequest(Writer, request);
-        OnWrite();
     }
 
     public async Task WritePieceAsync(PieceShareHeader requestedPiece, Stream piece, CancellationToken cancellationToken = default)
     {
         MessageEncoder.EncodeHeader(Writer, new((int)piece.Length + 9, MessageType.Piece));
         MessageEncoder.EncodePieceHeader(Writer, requestedPiece);
-        await piece.CopyToAsync(_stream, cancellationToken);
-        OnWrite();
+        while (true)
+        {
+            int writeLen = await piece.ReadAsync(_writeBuffer.AsMemory((int)_writeCursor.Position), cancellationToken);
+            if (writeLen == 0) break;
+            _writeCursor.Position += writeLen;
+            if (_writeCursor.Position == _writeBuffer.Length)
+            {
+                await FlushAsync();
+            }
+        }
     }
 
-    public async Task<Message> ReceiveAsync()
+    private async Task ReadAsync(CancellationToken cancellationToken = default)
+    {
+        int readLen = await _stream.ReadAsync(_readBuffer, cancellationToken);
+        if (readLen == 0)
+        {
+            throw new EndOfStreamException();
+        }
+        _readCursor = new MemoryStream(_readBuffer, 0, readLen);
+    }
+
+    public async Task<Message> ReceiveAsync(CancellationToken cancellationToken = default)
     {
         int len = 0;
         while (len == 0)
         {
-            len = await Reader.ReadInt32Async();
+            try
+            {
+                len = Reader.ReadInt32();
+            }
+            catch (EndOfStreamException)
+            {
+                await ReadAsync(cancellationToken);
+            }
         }
         byte type = Reader.ReadByte();
         if (type > (byte)MessageType.Port)
         {
             throw new BadPeerException(PeerErrorReason.InvalidProtocol);
         }
-        return new((MessageType)type, new(_stream, len - 1));
+        return new(len - 1, (MessageType)type);
     }
 
 
     public async Task ReceiveAsync(IPeerEventHandler eventHandler, long maxMessageLength, CancellationToken cancellationToken = default)
     {
-        var message = await ReceiveAsync();
-        if (message.Stream.Length > maxMessageLength)
+        var message = await ReceiveAsync(cancellationToken);
+        if (message.Length > maxMessageLength)
         {
             throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
         }
-        var parser = new BigEndianBinaryReader(message.Stream);
+        int buffered = int.Min((int)_readCursor.Length - (int)_readCursor.Position, message.Length);
+        long startPos = _readCursor.Position;
         switch (message.Type)
         {
             case MessageType.Choke:
@@ -151,45 +169,48 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 await eventHandler.OnNotInterestedAsync(cancellationToken);
                 break;
             case MessageType.Have:
-                var index = await Reader.ReadInt32Async();
+                var index = Reader.ReadInt32();
                 await eventHandler.OnHaveAsync(index, cancellationToken);
                 break;
             case MessageType.Bitfield:
-                var bytes = new byte[message.Stream.Length];
-                await message.Stream.ReadExactlyAsync(bytes, cancellationToken);
-                var bitfield = new BitArray(bytes);
+                byte[] buffer = new byte[message.Length];
+                _readCursor.Read(buffer.AsSpan(..buffered));
+                await _stream.ReadExactlyAsync(buffer.AsMemory(buffered), cancellationToken);
+                var bitfield = new BitArray(buffer);
                 await eventHandler.OnBitfieldAsync(bitfield, cancellationToken);
                 break;
             case MessageType.Request:
-                var request = await MessageDecoder.DecodeRequestAsync(parser);
+                var request = MessageDecoder.DecodeRequest(Reader);
                 await eventHandler.OnRequestAsync(request, cancellationToken);
                 break;
             case MessageType.Piece:
-                var piece = await MessageDecoder.DecodePieceHeaderAsync(parser);
-                var pieceRequest = new PieceRequest(piece.Index, piece.Begin, (int)(message.Stream.Length - message.Stream.Position));
-                await eventHandler.OnPieceAsync(new(pieceRequest, message.Stream), cancellationToken);
+                var piece = MessageDecoder.DecodePieceHeader(Reader);
+                var pieceRequest = new PieceRequest(piece.Index, piece.Begin, message.Length - MessageDecoder.PIECE_HEADER_LEN);
+                int savedCount = int.Min((int)_readCursor.Length - (int)_readCursor.Position, pieceRequest.Length);
+                int streamLen = pieceRequest.Length - savedCount;
+                var stream = new ConcatStream(new LimitedStream(_readCursor, savedCount), new LimitedStream(_stream, streamLen));
+                await eventHandler.OnPieceAsync(new(pieceRequest, stream), cancellationToken);
                 break;
             case MessageType.Cancel:
-                PieceRequest cancel = await MessageDecoder.DecodeRequestAsync(parser);
+                PieceRequest cancel = MessageDecoder.DecodeRequest(Reader);
                 await eventHandler.OnCancelAsync(cancel, cancellationToken);
                 break;
             case MessageType.Port:
-                await eventHandler.OnPortAsync(parser.ReadUInt16(), cancellationToken);
+                await eventHandler.OnPortAsync(Reader.ReadUInt16(), cancellationToken);
                 break;
         }
-        if (message.Stream.Position != message.Stream.Length)
+        if (_readCursor.Position - startPos != buffered)
         {
-            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
+            _readCursor.Position = startPos + buffered;
         }
     }
 
+
     public async Task FlushAsync()
     {
-        if (_written)
-        {
-            await _stream.FlushAsync();
-            _written = false;
-        }
+        await _stream.WriteAsync(_writeBuffer.AsMemory(..(int)Writer.BaseStream.Position));
+        await _stream.FlushAsync();
+        _writeCursor.Position = 0;
     }
 
     public void Dispose()

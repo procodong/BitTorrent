@@ -16,5 +16,6 @@ public record class Config(
     int MaxRequestSize,
     int KeepAliveInterval,
     int ReceiveTimeout,
-    int UiUpdateInterval
+    int UiUpdateInterval,
+    int PieceSegmentSize
     );

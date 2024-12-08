@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Peers.Errors;
 public enum PeerErrorReason
 {
-    InvalidInfoHash,
-    InvalidPacketSize,
-    InvalidProtocol,
+    InvalidRequest,
     InvalidPiece,
-    InvalidRequest
+    InvalidProtocol,
+    InvalidPacketSize
 }

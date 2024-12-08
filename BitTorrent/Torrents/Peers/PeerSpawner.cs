@@ -1,7 +1,6 @@
 ﻿using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Managing.Events;
 using BitTorrent.Torrents.Peers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -53,8 +52,9 @@ public class PeerSpawner
         }
     }
 
-    public async Task StartPeer(PeerWireStream stream, int index, SharedPeerState state, ChannelReader<PeerRelation> relationReader, Channel<int> haveChannel)
+    public async Task StartPeer(PeerWireStream stream, int index, SharedPeerState state, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
+        var haveChannel = Channel.CreateUnbounded<int>();
         int downloadWriterIndex = _download.AddPeer(haveChannel.Writer);
         try
         {
@@ -63,7 +63,7 @@ public class PeerSpawner
                 await stream.SendHandShake(_download.DownloadedPiecesCount != 0 ? _download.DownloadedPieces : null, _download.Torrent.OriginalInfoHashBytes, _peerId);
             }
             await using var peer = new Peer(stream, haveChannel.Reader, relationReader, _download, state);
-            await peer.ListenAsync();
+            await peer.ListenAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -72,7 +72,7 @@ public class PeerSpawner
         finally
         {
             _download.RemovePeer(downloadWriterIndex);
-            await _peerRemovalWriter.WriteAsync(index);
+            await _peerRemovalWriter.WriteAsync(index, cancellationToken);
         }
     }
 }

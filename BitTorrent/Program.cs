@@ -24,7 +24,8 @@ var config = new Config(
     MaxRequestSize: 1 << 17,
     KeepAliveInterval: 90 * 1000,
     ReceiveTimeout: 2 * 60 * 1000,
-    UiUpdateInterval: 1000
+    UiUpdateInterval: 1000,
+    PieceSegmentSize: 1 << 17
     );
 int port = 6881;
 ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());

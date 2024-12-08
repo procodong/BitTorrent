@@ -1,4 +1,5 @@
 ﻿using BitTorrent.Models.Messages;
+using BitTorrent.Torrents.Peers;
 using BitTorrent.Utils;
 using System;
 using System.Buffers.Binary;
@@ -11,34 +12,36 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Encoding;
 public static class MessageDecoder
 {
-    public static async Task<HandShake> DecodeHandShakeAsync(BigEndianBinaryReader reader)
+    public const int HANDSHAKE_LEN = 49 + 19;
+    public const int PIECE_HEADER_LEN = 8;
+    public static HandShake DecodeHandShake(BigEndianBinaryReader reader)
     {
-        var protocol = await reader.ReadStringAsync();
+        var protocol = reader.ReadString();
         if (reader.BaseStream.CanSeek)
         {
             reader.BaseStream.Position += 8;
         }
         else
         {
-            await reader.ReadBytesAsync(8);
+            reader.ReadBytes(8);
         }
-        var infoHash = await reader.ReadBytesAsync(20);
-        var peerId = System.Text.Encoding.ASCII.GetString(await reader.ReadBytesAsync(20));
+        var infoHash = reader.ReadBytes(20);
+        var peerId = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(20));
         return new(protocol, infoHash, peerId);
     }
 
-    public static async Task<PieceRequest> DecodeRequestAsync(BigEndianBinaryReader reader)
+    public static PieceRequest DecodeRequest(BigEndianBinaryReader reader)
     {
-        var index = await reader.ReadInt32Async();
-        var begin = await reader.ReadInt32Async();
-        var length = await reader.ReadInt32Async();
+        var index = reader.ReadInt32();
+        var begin = reader.ReadInt32();
+        var length = reader.ReadInt32();
         return new(index, begin, length);
     }
 
-    public static async Task<PieceShareHeader> DecodePieceHeaderAsync(BigEndianBinaryReader reader)
+    public static PieceShareHeader DecodePieceHeader(BigEndianBinaryReader reader)
     {
-        var index = await reader.ReadInt32Async();
-        var begin = await reader.ReadInt32Async();
+        var index = reader.ReadInt32();
+        var begin = reader.ReadInt32();
         return new(index, begin);
     }
 }

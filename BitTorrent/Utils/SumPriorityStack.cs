@@ -1,12 +1,11 @@
-﻿using BitTorrent.Utils;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Managing;
+namespace BitTorrent.Utils;
 public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Priority)>
 {
     private readonly List<(T Item, int Priority)> _stack = [];

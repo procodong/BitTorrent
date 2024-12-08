@@ -30,6 +30,10 @@ public class PieceHasher(int blockSize)
             removeCount++;
         }
         _offset += removeCount;
+        for (int i = 0; i < removeCount; i++)
+        {
+            ArrayPool<byte>.Shared.Return(_blocks[i]!);
+        }
         _blocks.RemoveRange(0, removeCount);
     }
 

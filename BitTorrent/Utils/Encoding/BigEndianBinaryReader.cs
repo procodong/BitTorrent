@@ -29,6 +29,7 @@ public class BigEndianBinaryReader : BinaryReader
         BaseStream.ReadExactly(buffer);
         return BinaryPrimitives.ReadInt32BigEndian(buffer);
     }
+
     public override long ReadInt64()
     {
         Span<byte> buffer = stackalloc byte[8];
@@ -54,11 +55,5 @@ public class BigEndianBinaryReader : BinaryReader
         Span<byte> buffer = stackalloc byte[8];
         BaseStream.ReadExactly(buffer);
         return BinaryPrimitives.ReadUInt64BigEndian(buffer);
-    }
-    public async Task<int> ReadInt32Async()
-    {
-        var buffer = new byte[4];
-        await BaseStream.ReadExactlyAsync(buffer);
-        return BinaryPrimitives.ReadInt32BigEndian(buffer);
     }
 }

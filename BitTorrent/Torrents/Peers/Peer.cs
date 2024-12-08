@@ -1,5 +1,4 @@
-﻿using BitTorrent.Errors;
-using BitTorrent.Models.Messages;
+﻿using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Peers.Errors;
@@ -16,7 +15,8 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     private readonly SharedPeerState _state;
     private readonly ChannelReader<int> _haveMessageReceiver;
     private readonly ChannelReader<PeerRelation> _relationReceiver;
-    private readonly List<QueuedPieceRequest> _pieceDownloads = [];
+    private readonly List<Block> _pieceDownloads = [];
+    private PieceSegmentHandle? _segment;
     private readonly Queue<PieceRequest> _requestQueue = [];
     private bool _writing = false;
 
@@ -27,6 +27,10 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         _state = stats;
         _haveMessageReceiver = haveMessages;
         _relationReceiver = relationReceiver;
+        lock (download)
+        {
+            _segment = download.AssignSegment(stats.OwnedPieces);
+        }
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
@@ -71,10 +75,10 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         }
     }
 
-    private QueuedPieceRequest FindDownload(PieceRequest request)
+    private Block FindDownload(PieceRequest request)
     {
-        var piece = _pieceDownloads.Find(d => d.Request == request);
-        if (piece.Download is null)
+        var piece = _pieceDownloads.Find(d => d.Begin == request.Begin && d.Piece.PieceIndex == request.Index && d.Length == request.Length);
+        if (piece.Piece is null)
         {
             throw new BadPeerException(PeerErrorReason.InvalidRequest);
         }
@@ -100,23 +104,31 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     private void RequestBlocks()
     {
-        if (_state.RelationToMe.Choked)
+        if (_state.RelationToMe.Choked || _segment is null)
         {
             return;
         }
         while (_pieceDownloads.Count < _download.Config.RequestQueueSize)
         {
-            QueuedPieceRequest? block;
-            lock (_download)
+            PieceRequest block = _segment.GetRequest(_download.Config.RequestSize);
+            if (block.Length == 0)
             {
-                block = _download.AssignBlockRequest(_state.OwnedPieces);
+                PieceSegmentHandle? segment;
+                lock (_download)
+                {
+                    segment = _download.AssignSegment(_state.OwnedPieces);
+                }
+                if (segment is not null)
+                {
+                    _segment = segment;
+                }
+                block = _segment.GetRequest(_download.Config.RequestSize);
             }
-            if (!block.HasValue)
+            if (block.Length != 0)
             {
-                break;
+                _pieceDownloads.Add(new(_segment.Piece, block.Begin, block.Length));
+                _connection.WritePieceRequest(block);
             }
-            _pieceDownloads.Add(block.Value);
-            _connection.WritePieceRequest(block.Value.Request);
         }
     }
 
@@ -195,10 +207,9 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     public async Task OnPieceAsync(Piece piece, CancellationToken cancellationToken = default)
     {
-        long blockLength = piece.Stream.Length - piece.Stream.Position;
-        QueuedPieceRequest request = FindDownload(piece.Request);
-        await _download.SaveBlockAsync(piece.Stream, request, cancellationToken);
-        Interlocked.Add(ref _state.Stats.Downloaded, blockLength);
+        Block block = FindDownload(piece.Request);
+        await _download.SaveBlockAsync(piece.Stream, block, cancellationToken);
+        Interlocked.Add(ref _state.Stats.Downloaded, piece.Request.Length);
     }
 
     public Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
@@ -206,7 +217,7 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         var download = FindDownload(request);
         lock (_download)
         {
-            _download.Cancel(request);
+            _download.Cancel(download);
         }
         _pieceDownloads.Remove(download);
         return Task.CompletedTask;
@@ -217,13 +228,27 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
         return Task.CompletedTask;
     }
 
+    private void CancelAll()
+    {
+        if (_segment is not null)
+        {
+            _download.Cancel(new(_segment.Piece, _segment.Position, _segment.Piece.Size - _segment.Position));
+        }
+        foreach (var download in _pieceDownloads)
+        {
+            _download.Cancel(download);
+        }
+    }
+
     public void Dispose()
     {
+        CancelAll();
         _connection.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
+        CancelAll();
         return _connection.DisposeAsync();
     }
 }
