@@ -17,17 +17,10 @@ public static class MessageDecoder
     public static HandShake DecodeHandShake(BigEndianBinaryReader reader)
     {
         var protocol = reader.ReadString();
-        if (reader.BaseStream.CanSeek)
-        {
-            reader.BaseStream.Position += 8;
-        }
-        else
-        {
-            reader.ReadBytes(8);
-        }
+        reader.Skip(8);
         var infoHash = reader.ReadBytes(20);
-        var peerId = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(20));
-        return new(protocol, infoHash, peerId);
+        var peerId = reader.ReadBytes(20);
+        return new(protocol, infoHash.ToArray(), peerId.ToArray());
     }
 
     public static PieceRequest DecodeRequest(BigEndianBinaryReader reader)

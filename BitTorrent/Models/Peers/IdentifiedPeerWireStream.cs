@@ -6,4 +6,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Models.Peers;
-public readonly record struct IdentifiedPeerWireStream(string PeerId, PeerWireStream Stream);
+public readonly record struct IdentifiedPeerWireStream(byte[] PeerId, PeerWireStream Stream);

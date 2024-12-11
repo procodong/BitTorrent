@@ -1,6 +1,5 @@
 ﻿using BencodeNET.Objects;
 using BencodeNET.Parsing;
-using BitTorrent.Errors;
 using BitTorrent.Models.Peers;
 using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Trackers.Errors;

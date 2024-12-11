@@ -1,18 +1,21 @@
-﻿using BencodeNET.Torrents;
-using BitTorrent.Files.DownloadFiles;
+﻿using BencodeNET.IO;
+using BencodeNET.Torrents;
+using BitTorrent.Application.Input;
 using BitTorrent.Models.Application;
 using BitTorrent.Models.Peers;
 using BitTorrent.Models.Trackers;
+using BitTorrent.Storage;
 using BitTorrent.Torrents.Managing;
 using BitTorrent.Torrents.Peers;
 using BitTorrent.Torrents.Trackers;
 using BitTorrent.Torrents.Trackers.Errors;
 using BitTorrent.Utils;
 using Microsoft.Extensions.Logging;
+using System.IO.Pipelines;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Downloads;
-public class DownloadCollection : IAsyncDisposable, IDisposable
+public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
 {
     private readonly List<PeerManagerConnector> _downloads = [];
     private readonly PeerIdGenerator _peerIdGenerator = new();
@@ -21,6 +24,8 @@ public class DownloadCollection : IAsyncDisposable, IDisposable
     private readonly ILogger _logger;
     private readonly ITrackerFinder _trackerFinder;
     public bool HasUpdates => _downloads.Count != 0;
+    public Config Config => _config;
+    public ILogger Logger => _logger;
 
     public DownloadCollection(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, Config config, ILogger logger, ITrackerFinder trackerFinder)
     {
@@ -29,8 +34,8 @@ public class DownloadCollection : IAsyncDisposable, IDisposable
         _peerReceivingSubscriber = peerReceivingSubscriber;
         _trackerFinder = trackerFinder;
     }
-
-    public async Task StartDownload(Torrent torrent, DownloadSaveManager files)
+    
+    public async Task StartDownload(Torrent torrent, DownloadStorage files)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var request = new TrackerUpdate(torrent.OriginalInfoHashBytes, peerId, new(), torrent.TotalSize, TrackerEvent.Started);
@@ -44,7 +49,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable
         {
             SingleWriter = false
         });
-        var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, peerId);
+        var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, System.Text.Encoding.ASCII.GetBytes(peerId));
         var peers = new PeerCollection(spawner, _logger, torrent.NumberOfPieces);
         var peerManager = new PeerManager(peerId, download, peers, _logger, fetcher);
         var cancellationTokenSource = new CancellationTokenSource();
@@ -91,5 +96,23 @@ public class DownloadCollection : IAsyncDisposable, IDisposable
         {
             _ = RemoveDownload(_downloads.Count - 1);
         }
+    }
+
+    async Task ICommandContext.AddTorrent(string torrentPath, string targetPath)
+    {
+        var file = File.Open(torrentPath, FileMode.Open);
+        var parser = new TorrentParser();
+        var stream = new PipeBencodeReader(PipeReader.Create(file));
+        var torrent = await parser.ParseAsync(stream);
+        var files = DownloadStorage.CreateFiles(targetPath, torrent.Files, (int)torrent.PieceSize);
+        await StartDownload(torrent, files);
+    }
+
+    async Task ICommandContext.RemoveTorrent(int index)
+    {
+        var download = _downloads[index];
+        _downloads.RemoveAt(index);
+        download.CancellationTokenSource.Cancel();
+        await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
     }
 }

@@ -18,7 +18,7 @@ namespace BitTorrent.Torrents.Peers;
 public class PeerCollection : IEnumerable<PeerConnector>
 {
     private readonly SlotMap<PeerConnector> _peers = [];
-    private readonly HashSet<string> _peerIds = [];
+    private readonly HashSet<ReadOnlyMemory<byte>> _peerIds = new(new MemoryComparer<byte>());
     private readonly PeerSpawner _spawner;
     private readonly ILogger _logger;
     private readonly int _pieceCount;

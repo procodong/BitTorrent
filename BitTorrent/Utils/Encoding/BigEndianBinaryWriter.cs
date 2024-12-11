@@ -6,54 +6,67 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Utils;
-public class BigEndianBinaryWriter : BinaryWriter
+public readonly struct BigEndianBinaryWriter
 {
-    public BigEndianBinaryWriter(Stream output) : base(output)
+    private readonly MemoryStream _stream;
+    public BigEndianBinaryWriter(MemoryStream output)
     {
+        _stream = output;
     }
 
-    public BigEndianBinaryWriter(Stream output, Encoding encoding) : base(output, encoding)
+    private Span<byte> Remaining()
     {
-    }
-    public override void Write(short value)
-    {
-        Span<byte> buffer = stackalloc byte[sizeof(short)];
-        BinaryPrimitives.WriteInt16BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        return _stream.GetBuffer().AsSpan((int)_stream.Position);
     }
 
-    public override void Write(ushort value)
+    public void Write(Span<byte> bytes)
     {
-        Span<byte> buffer = stackalloc byte[sizeof(ushort)];
-        BinaryPrimitives.WriteUInt16BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        _stream.Write(bytes);
     }
 
-    public override void Write(int value)
+    public void Write(string text)
     {
-        Span<byte> buffer = stackalloc byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        var buffer = Remaining();
+        foreach (var (i, character) in text.Indexed())
+        {
+            buffer[i] = (byte)character;
+        }
+        _stream.Position += buffer.Length;
     }
 
-    public override void Write(uint value)
+    public void Write(short value)
     {
-        Span<byte> buffer = stackalloc byte[sizeof(uint)];
-        BinaryPrimitives.WriteUInt32BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        BinaryPrimitives.WriteInt16BigEndian(Remaining(), value);
+        _stream.Position += sizeof(short);
     }
 
-    public override void Write(long value)
+    public void Write(ushort value)
     {
-        Span<byte> buffer = stackalloc byte[sizeof(long)];
-        BinaryPrimitives.WriteInt64BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        BinaryPrimitives.WriteUInt16BigEndian(Remaining(), value);
+        _stream.Position += sizeof(ushort);
     }
 
-    public override void Write(ulong value)
+    public void Write(int value)
     {
-        Span<byte> buffer = stackalloc byte[sizeof(ulong)];
-        BinaryPrimitives.WriteUInt64BigEndian(buffer, value);
-        OutStream.Write(buffer);
+        BinaryPrimitives.WriteInt32BigEndian(Remaining(), value);
+        _stream.Position += sizeof(int);
+    }
+
+    public void Write(uint value)
+    {
+        BinaryPrimitives.WriteUInt32BigEndian(Remaining(), value);
+        _stream.Position += sizeof(uint);
+    }
+
+    public void Write(long value)
+    {
+        BinaryPrimitives.WriteInt64BigEndian(Remaining(), value);
+        _stream.Position += sizeof(long);
+    }
+
+    public void Write(ulong value)
+    {
+        BinaryPrimitives.WriteUInt64BigEndian(Remaining(), value);
+        _stream.Position += sizeof(ulong);
     }
 }

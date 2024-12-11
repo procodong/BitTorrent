@@ -123,21 +123,14 @@ public class PeerManager : IDisposable, IAsyncDisposable
         int rareCount = int.Min(_download.Torrent.NumberOfPieces / 10, _download.Config.MaxRarePieceCount);
         var comparer = Comparer<(int Index, int Count)>.Create((v1, v2) => v1.Count - v2.Count);
         var rarestPieceStack = new PriorityStack<(int Index, int Count)>(rareCount, comparer);
-        foreach (var piece in PieceCounts().Indexed())
+        for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
         {
-            rarestPieceStack.Include(piece);
+            int count = _peers.Select(peer => peer.Data.OwnedPieces[i] ? 1 : 0).Sum();
+            rarestPieceStack.Include((i, count));
         }
         return rarestPieceStack.Select(v => v.Index);
     }
 
-    private IEnumerable<int> PieceCounts()
-    {
-        for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
-        {
-            int count = _peers.Select(peer => peer.Data.OwnedPieces[i] ? 1 : 0).Sum();
-            yield return count;
-        }
-    }
     public DownloadUpdate GetUpdate()
         => new(_download.Torrent.DisplayName, Transfered, TransferRate, _download.Torrent.TotalSize);
 
@@ -149,7 +142,6 @@ public class PeerManager : IDisposable, IAsyncDisposable
         }
         _download.Dispose();
         _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));
-        
     }
 
     public async ValueTask DisposeAsync()

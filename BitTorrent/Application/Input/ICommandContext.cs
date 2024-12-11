@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Application.Input.Commands;
+namespace BitTorrent.Application.Input;
 public interface ICommandContext
 {
     Task AddTorrent(string torrentPath, string targetPath);

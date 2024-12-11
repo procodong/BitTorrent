@@ -33,7 +33,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
     {
         var request = new TrackerRequest(update.InfoHash, update.ClientId, _port, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
         int transaction = await SendAnnounceAsync(request, cancellationToken);
-        var response = await ReceiveAsync(transaction, cancellationToken);
+        var response = await ReceiveAsync(transaction, () => SendAnnounceAsync(request, cancellationToken), cancellationToken);
         var stream = new MemoryStream(response)
         {
             Position = 8
@@ -45,9 +45,8 @@ public class UdpTrackerFetcher : ITrackerFetcher
     private async Task<int> SendAnnounceAsync(TrackerRequest request, CancellationToken cancellationToken = default) 
     {
         var stream = new MemoryStream(_buffer);
-        var writer = new UdpTrackerWriter(stream);
         int transactionId = _random.Next();
-        writer.WriteAnnounce(_connectionId!.Value, transactionId, request);
+        UdpTrackerEncoder.WriteAnnounce(new(stream), _connectionId!.Value, transactionId, request);
         await _client.SendAsync(_buffer.AsMemory(0, (int)stream.Position), cancellationToken);
         return transactionId;
     }
@@ -55,7 +54,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         int transactionId = await SendConnectAsync(cancellationToken);
-        var response = await ReceiveAsync(transactionId, cancellationToken);
+        var response = await ReceiveAsync(transactionId, () => SendConnectAsync(cancellationToken), cancellationToken);
         _connectionId = UdpTrackerDecoder.ReadConnectionId(response);
     }
 
@@ -63,13 +62,12 @@ public class UdpTrackerFetcher : ITrackerFetcher
     {
         int transactionId = _random.Next();
         var stream = new MemoryStream(_buffer);
-        var writer = new UdpTrackerWriter(stream);
-        writer.WriteConnect(transactionId);
+        UdpTrackerEncoder.WriteConnect(new(stream), transactionId);
         await _client.SendAsync(_buffer.AsMemory(0, (int)stream.Position), cancellationToken);
         return transactionId;
     }
 
-    private async Task<byte[]> ReceiveAsync(int transactionId, CancellationToken cancellationToken = default)
+    private async Task<byte[]> ReceiveAsync(int transactionId, Func<Task<int>> send, CancellationToken cancellationToken = default)
     {
         if (_receivedMessages.TryGetValue(transactionId, out var message))
         {
@@ -100,6 +98,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
             else if (header.Action == 0)
             {
                 _connectionId = UdpTrackerDecoder.ReadConnectionId(receive.Buffer);
+                transactionId = await send();
             }
             else
             {

@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.PieceSaver;
+namespace BitTorrent.Storage;
 public class PieceHasher(int blockSize)
 {
     private int _offset = 0;

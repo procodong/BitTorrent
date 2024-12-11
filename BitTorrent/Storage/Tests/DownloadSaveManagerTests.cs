@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.PieceSaver.DownloadFiles.Tests;
+namespace BitTorrent.Storage.DownloadFiles.Tests;
 [TestClass]
 public class DownloadSaveManagerTests
 {

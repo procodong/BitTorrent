@@ -1,14 +1,15 @@
 ﻿using BencodeNET.Torrents;
-using BitTorrent.PieceSaver.DownloadFiles;
+using BitTorrent.Storage;
+using BitTorrent.Storage.DownloadFiles;
 using BitTorrent.Utils;
 
-namespace BitTorrent.Files.DownloadFiles;
-public class DownloadSaveManager(int pieceSize, List<StreamData> saves) : IDisposable, IAsyncDisposable
+namespace BitTorrent.Storage;
+public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposable, IAsyncDisposable
 {
     private readonly int _pieceSize = pieceSize;
     private readonly List<StreamData> _saves = saves;
 
-    public static DownloadSaveManager CreateFiles(string path, MultiFileInfoList files, int pieceSize)
+    public static DownloadStorage CreateFiles(string path, MultiFileInfoList files, int pieceSize)
     {
         var createdFiles = new List<StreamData>(files.Count);
         var createdDirectories = new HashSet<string>();

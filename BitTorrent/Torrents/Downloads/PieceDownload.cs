@@ -1,4 +1,4 @@
-﻿using BitTorrent.PieceSaver;
+﻿using BitTorrent.Storage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

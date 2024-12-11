@@ -15,25 +15,23 @@ using System.Threading.Tasks;
 namespace BitTorrent.Torrents.Trackers;
 public class TrackerHandler
 {
-    private readonly ChannelReader<PeerReceivingSubscribe> _downloadReceiver;
     private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());
     private readonly TcpListener _listener;
     private readonly ILogger _logger;
     private readonly int _clientReceiveTimeout;
 
-    public TrackerHandler(int port, int clientReceiveTimeout, ILogger logger, ChannelReader<PeerReceivingSubscribe> downloadReceiver)
+    public TrackerHandler(int port, int clientReceiveTimeout, ILogger logger)
     {
         _listener = new(IPAddress.Any, port);
         _clientReceiveTimeout = clientReceiveTimeout;
-        _downloadReceiver = downloadReceiver;
         _logger = logger;
     }
 
-    public async Task ListenAsync()
+    public async Task ListenAsync(ChannelReader<PeerReceivingSubscribe> downloadReceiver)
     {
         _listener.Start();
         Task<TcpClient> clientTask = _listener.AcceptTcpClientAsync();
-        Task<PeerReceivingSubscribe> newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
+        Task<PeerReceivingSubscribe> newDownloadTask = downloadReceiver.ReadAsync().AsTask();
         while (true)
         {
             var ready = await Task.WhenAny(clientTask, newDownloadTask);
@@ -73,7 +71,7 @@ public class TrackerHandler
                 }
                 finally
                 {
-                    newDownloadTask = _downloadReceiver.ReadAsync().AsTask();
+                    newDownloadTask = downloadReceiver.ReadAsync().AsTask();
                 }
             }
         }

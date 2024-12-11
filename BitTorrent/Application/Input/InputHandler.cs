@@ -1,5 +1,4 @@
-﻿using BitTorrent.Application.Input.Commands;
-using BitTorrent.Application.Input.Parsing;
+﻿using BitTorrent.Application.Input.Parsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +9,9 @@ using System.Threading.Tasks;
 namespace BitTorrent.Application.Input;
 public class InputHandler
 {
-    private readonly ChannelWriter<ICommand> _commandWriter;
+    private readonly ChannelWriter<Func<ICommandContext, Task>> _commandWriter;
 
-    public InputHandler(ChannelWriter<ICommand> commandWriter)
+    public InputHandler(ChannelWriter<Func<ICommandContext, Task>> commandWriter)
     {
         _commandWriter = commandWriter;
     }
@@ -21,7 +20,7 @@ public class InputHandler
     {
         while (true)
         {
-            var line = await input.ReadLineAsync();
+            var line = input.ReadLine();
             if (line is null) break;
             try
             {

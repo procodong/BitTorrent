@@ -1,11 +1,10 @@
 ﻿
 using BencodeNET.Torrents;
-using BitTorrent.Files.DownloadFiles;
 using BitTorrent.Models.Application;
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
-using BitTorrent.PieceSaver;
-using BitTorrent.PieceSaver.DownloadFiles;
+using BitTorrent.Storage;
+using BitTorrent.Storage.DownloadFiles;
 using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Utils;
 using System.Buffers;
@@ -17,7 +16,7 @@ using System.Security.Cryptography;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Downloads;
-public class Download(Torrent torrent, DownloadSaveManager files, Config config) : IDisposable, IAsyncDisposable
+public class Download(Torrent torrent, DownloadStorage files, Config config) : IDisposable, IAsyncDisposable
 {
     public readonly Torrent Torrent = torrent;
     public readonly Config Config = config;
@@ -25,7 +24,7 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
     public readonly long MaxMessageLength = int.Max(config.RequestSize + 13, torrent.NumberOfPieces + 6);
     private readonly DataTransferCounter _recentDataTransfer = new();
     private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
-    private readonly DownloadSaveManager _files = files;
+    private readonly DownloadStorage _files = files;
     private readonly List<PieceSegmentHandle> _pieceRegisters = [];
     private readonly BitArray _requestedPieces = new(torrent.NumberOfPieces);
     private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
@@ -217,9 +216,9 @@ public class Download(Torrent torrent, DownloadSaveManager files, Config config)
         return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex] && pieceIndex >= _requestedPiecesOffset;
     }
 
-    private PieceDownload? FindNextPiece(IEnumerable<int> downloads, BitArray ownedPieces)
+    private PieceDownload? FindNextPiece(IEnumerable<int> pieces, BitArray ownedPieces)
     {
-        int? piece = downloads.Find(piece => CanBeRequested(piece, ownedPieces));
+        int? piece = pieces.Find(piece => CanBeRequested(piece, ownedPieces));
         if (!piece.HasValue) return null;
         return new PieceDownload(PieceSize(piece.Value), piece.Value, new(Config.RequestSize));
     }

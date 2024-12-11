@@ -26,10 +26,11 @@ public static class MessageEncoder
 
     public static void EncodeHandShake(BigEndianBinaryWriter writer, HandShake handShake)
     {
+        writer.Write((byte)handShake.Protocol.Length);
         writer.Write(handShake.Protocol);
-        writer.Write(new byte[8]);
+        writer.Write(stackalloc byte[8]);
         writer.Write(handShake.InfoHash);
-        writer.Write(System.Text.Encoding.ASCII.GetBytes(handShake.PeerId));
+        writer.Write(handShake.PeerId);
     }
 
     public static void EncodeHeader(BigEndianBinaryWriter writer, MessageHeader header)

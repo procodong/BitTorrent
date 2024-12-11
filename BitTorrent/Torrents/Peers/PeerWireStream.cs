@@ -36,24 +36,22 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         _readBuffer = new byte[1 << 9];
         _writeBuffer = new byte[1 << 13];
         _writeCursor = new(_writeBuffer);
-        _readCursor = new(_readBuffer);
+        _readCursor = new(_readBuffer, 0, 0);
     }
 
-    public async Task SendHandShake(BitArray? bitfield, byte[] infoHash, string peerId)
+    public async Task SendHandShake(BitArray bitfield, byte[] infoHash, byte[] peerId)
     {
         _handShaken = true;
         MessageEncoder.EncodeHandShake(Writer, new(PROTOCOL, infoHash, peerId));
-        if (bitfield is not null)
-        {
-            await WriteBitfieldAsync(bitfield);
-        }
+        WriteBitfield(bitfield);
         await FlushAsync();
     }
 
-    public async Task<HandShake> ReadHandShakeAsync()
+    public async Task<HandShake> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
-        await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN);
+        await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN, cancellationToken: cancellationToken);
         HandShake receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
+        Console.WriteLine(receivedHandshake);
         if (!receivedHandshake.Protocol.SequenceEqual(PROTOCOL))
         {
             throw new BadPeerException(PeerErrorReason.InvalidProtocol);
@@ -61,7 +59,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         return receivedHandshake;
     }
 
-    public async Task WriteBitfieldAsync(BitArray bitfield)
+    private void WriteBitfield(BitArray bitfield)
     {
         int len = bitfield.Length / 8;
         if (bitfield.Length % 8 != 0)
@@ -71,7 +69,6 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         var buf = new byte[len];
         bitfield.CopyTo(buf, 0);
         MessageEncoder.EncodeHeader(Writer, new(len + 1, MessageType.Bitfield));
-        await _stream.WriteAsync(buf);
     }
 
     public void WriteUpdateRelation(Relation relation)
@@ -110,6 +107,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 await FlushAsync();
             }
         }
+        await FlushAsync();
     }
 
     private async Task ReadAsync(CancellationToken cancellationToken = default)
@@ -139,6 +137,9 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         byte type = Reader.ReadByte();
         if (type > (byte)MessageType.Port)
         {
+            int buffered = int.Min((int)_readCursor.Length - (int)_readCursor.Position, len);
+            _readCursor.Position += buffered;
+            await _stream.ReadAsync(new byte[len - buffered], cancellationToken);
             throw new BadPeerException(PeerErrorReason.InvalidProtocol);
         }
         return new(len - 1, (MessageType)type);
@@ -199,16 +200,13 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 await eventHandler.OnPortAsync(Reader.ReadUInt16(), cancellationToken);
                 break;
         }
-        if (_readCursor.Position - startPos != buffered)
-        {
-            _readCursor.Position = startPos + buffered;
-        }
+        _readCursor.Position = startPos + buffered;
     }
 
 
     public async Task FlushAsync()
     {
-        await _stream.WriteAsync(_writeBuffer.AsMemory(..(int)Writer.BaseStream.Position));
+        await _stream.WriteAsync(_writeBuffer.AsMemory(..(int)_writeCursor.Position));
         await _stream.FlushAsync();
         _writeCursor.Position = 0;
     }

@@ -6,54 +6,84 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Utils;
-public class BigEndianBinaryReader : BinaryReader
+public readonly struct BigEndianBinaryReader
 {
-    public BigEndianBinaryReader(Stream input) : base(input)
+    private readonly MemoryStream _stream;
+
+    public MemoryStream BaseStream => _stream;
+    public BigEndianBinaryReader(MemoryStream stream)
     {
+        _stream = stream;
     }
 
-    public BigEndianBinaryReader(Stream input, Encoding encoding) : base(input, encoding)
+    private Span<byte> Remaining()
     {
+        return _stream.GetBuffer().AsSpan((int)_stream.Position);
     }
 
-    public override short ReadInt16()
+    public void Skip(int count)
     {
-        Span<byte> buffer = stackalloc byte[2];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadInt16BigEndian(buffer);
+        _stream.Position += count;
     }
 
-    public override int ReadInt32()
+    public byte ReadByte()
     {
-        Span<byte> buffer = stackalloc byte[4];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadInt32BigEndian(buffer);
+        var b = Remaining()[0];
+        _stream.Position++;
+        return b;
     }
 
-    public override long ReadInt64()
+    public Span<byte> ReadBytes(int count)
     {
-        Span<byte> buffer = stackalloc byte[8];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadInt64BigEndian(buffer);
+        var bytes = Remaining()[..count];
+        _stream.Position += count;
+        return bytes;
     }
 
-    public override ushort ReadUInt16()
+    public string ReadString()
     {
-        Span<byte> buffer = stackalloc byte[2];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+        int len = ReadByte();
+        var text = Encoding.UTF8.GetString(ReadBytes(len));
+        _stream.Position += len;
+        return text;
     }
 
-    public override uint ReadUInt32()
+    public short ReadInt16()
     {
-        Span<byte> buffer = stackalloc byte[4];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadUInt32BigEndian(buffer);
+        var num = BinaryPrimitives.ReadInt16BigEndian(Remaining());
+        _stream.Position += sizeof(short);
+        return num;
     }
-    public override ulong ReadUInt64()
+    public ushort ReadUInt16()
     {
-        Span<byte> buffer = stackalloc byte[8];
-        BaseStream.ReadExactly(buffer);
-        return BinaryPrimitives.ReadUInt64BigEndian(buffer);
+        var num = BinaryPrimitives.ReadUInt16BigEndian(Remaining());
+        _stream.Position += sizeof(ushort);
+        return num;
+    }
+
+    public int ReadInt32()
+    {
+        var num = BinaryPrimitives.ReadInt32BigEndian(Remaining());
+        _stream.Position += sizeof(int);
+        return num;
+    }
+    public uint ReadUInt32()
+    {
+        var num = BinaryPrimitives.ReadUInt32BigEndian(Remaining());
+        _stream.Position += sizeof(uint);
+        return num;
+    }
+
+    public long ReadInt64()
+    {
+        var num = BinaryPrimitives.ReadInt64BigEndian(Remaining());
+        _stream.Position += sizeof(long);
+        return num;
+    }
+    public ulong ReadUInt64()
+    {
+        var num = BinaryPrimitives.ReadUInt64BigEndian(Remaining());
+        _stream.Position += sizeof(ulong);
+        return num;
     }
 }

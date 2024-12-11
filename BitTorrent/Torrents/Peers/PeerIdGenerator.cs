@@ -12,6 +12,6 @@ public class PeerIdGenerator
     public string GeneratePeerId()
     {
         var number = _random.NextInt64(1_000_000_000_00, 9_999_999_999_99);
-        return $"-BT0001-{number}";
+        return $"-AS0001-{number}";
     }
 }
