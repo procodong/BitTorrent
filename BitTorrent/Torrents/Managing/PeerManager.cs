@@ -31,13 +31,13 @@ public class PeerManager : IDisposable, IAsyncDisposable
         _peers = peers;
     }
 
-    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int> peerRemover, CancellationToken cancellationToken = default)
+    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerAdder, ChannelReader<int?> peerRemover, CancellationToken cancellationToken = default)
     {
-        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
+        var events = new PeerManagerEventHandler(peerRemover, peerAdder, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
         {
             Update = Update,
             PeerAddition = _peers.Add,
-            PeerRemoval = _peers.Remove,
+            PeerRemoval = _peers.RemoveAsync,
             TrackerResponse = (response) => _peers.ConnectAll(response.Peers),
             Error = (err) => _logger.LogError("Error in peer manager: {}", err)
         };
@@ -148,10 +148,13 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         foreach (var peer in _peers)
         {
-            peer.Canceller.Cancel();
+            try
+            {
+                await peer.Canceller.CancelAsync();
+            }
+            catch { }
         }
         await _download.DisposeAsync();
         await _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));
     }
-
 }

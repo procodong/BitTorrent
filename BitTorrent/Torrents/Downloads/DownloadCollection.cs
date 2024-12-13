@@ -8,8 +8,6 @@ using BitTorrent.Storage;
 using BitTorrent.Torrents.Managing;
 using BitTorrent.Torrents.Peers;
 using BitTorrent.Torrents.Trackers;
-using BitTorrent.Torrents.Trackers.Errors;
-using BitTorrent.Utils;
 using Microsoft.Extensions.Logging;
 using System.IO.Pipelines;
 using System.Threading.Channels;
@@ -45,12 +43,12 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
         {
             SingleWriter = false
         });
-        var removalChannel = Channel.CreateBounded<int>(new BoundedChannelOptions(8)
+        var removalChannel = Channel.CreateBounded<int?>(new BoundedChannelOptions(8)
         {
             SingleWriter = false
         });
         var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, System.Text.Encoding.ASCII.GetBytes(peerId));
-        var peers = new PeerCollection(spawner, _logger, torrent.NumberOfPieces);
+        var peers = new PeerCollection(spawner, _logger, torrent.NumberOfPieces, _config.MaxParallelPeers);
         var peerManager = new PeerManager(peerId, download, peers, _logger, fetcher);
         var cancellationTokenSource = new CancellationTokenSource();
         _downloads.Add(new(peerManager, cancellationTokenSource, torrent.OriginalInfoHashBytes));
@@ -64,7 +62,10 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
             }
             catch (Exception e)
             {
-                _logger.LogError("Error in peer manager: {}", e);
+                if (e is not OperationCanceledException)
+                {
+                    _logger.LogError("Error in peer manager: {}", e);
+                }
             }
         }).Start();
     }
@@ -100,7 +101,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
 
     async Task ICommandContext.AddTorrent(string torrentPath, string targetPath)
     {
-        var file = File.Open(torrentPath, FileMode.Open);
+        await using var file = File.Open(torrentPath, FileMode.Open);
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);

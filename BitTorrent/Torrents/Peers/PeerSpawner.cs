@@ -2,6 +2,7 @@
 using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Peers;
+using BitTorrent.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,11 +17,11 @@ public class PeerSpawner
 {
     private readonly Download _download;
     private readonly ILogger _logger;
-    private readonly ChannelWriter<int> _peerRemovalWriter;
+    private readonly ChannelWriter<int?> _peerRemovalWriter;
     private readonly ChannelWriter<IdentifiedPeerWireStream> _peerAdderWriter;
     private readonly byte[] _peerId;
 
-    public PeerSpawner(Download download, ILogger logger, ChannelWriter<int> peerRemovalWriter, ChannelWriter<IdentifiedPeerWireStream> peerWriter, byte[] peerId)
+    public PeerSpawner(Download download, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<IdentifiedPeerWireStream> peerWriter, byte[] peerId)
     {
         _download = download;
         _logger = logger;
@@ -37,7 +38,7 @@ public class PeerSpawner
             await connection.ConnectAsync(address.Ip, address.Port);
             var stream = new NetworkStream(connection.Client, true);
             var peerStream = new PeerWireStream(stream);
-            await peerStream.SendHandShake(_download.DownloadedPieces, _download.Torrent.OriginalInfoHashBytes, _peerId);
+            await peerStream.SendHandShakeAsync(GetBitField(), _download.Torrent.OriginalInfoHashBytes, _peerId);
             HandShake receivedHandshake = await peerStream.ReadHandShakeAsync();
             if (!receivedHandshake.InfoHash.SequenceEqual(_download.Torrent.OriginalInfoHashBytes))
             {
@@ -48,6 +49,7 @@ public class PeerSpawner
         }
         catch (Exception ex)
         {
+            await _peerRemovalWriter.WriteAsync(default);
             _logger.LogError("Error connecting to peer: {}", ex);
         }
     }
@@ -60,14 +62,17 @@ public class PeerSpawner
         {
             if (!stream.HandShaken)
             {
-                await stream.SendHandShake(_download.DownloadedPieces, _download.Torrent.OriginalInfoHashBytes, _peerId);
+                await stream.SendHandShakeAsync(GetBitField(), _download.Torrent.OriginalInfoHashBytes, _peerId);
             }
             await using var peer = new Peer(stream, haveChannel.Reader, relationReader, _download, state);
             await peer.ListenAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error in peer connection: {}", ex);
+            if (ex is not OperationCanceledException)
+            {
+                _logger.LogError("Error in peer connection: {}", ex);
+            }
         }
         finally
         {
@@ -75,4 +80,6 @@ public class PeerSpawner
             await _peerRemovalWriter.WriteAsync(index, cancellationToken);
         }
     }
+
+    private ZeroCopyBitArray? GetBitField() => _download.DownloadedPiecesCount != 0 ? _download.DownloadedPieces : null;
 }

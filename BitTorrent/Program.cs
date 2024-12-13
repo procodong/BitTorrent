@@ -19,7 +19,8 @@ var config = new Config(
     KeepAliveInterval: 90 * 1000,
     ReceiveTimeout: 2 * 60 * 1000,
     UiUpdateInterval: 1000,
-    PieceSegmentSize: 1 << 17
+    PieceSegmentSize: 1 << 17,
+    MaxParallelPeers: 30
     );
 int port = 6881;
 ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");
@@ -39,14 +40,24 @@ new Thread(async () =>
     await inputHandler.ListenAsync(Console.In, Console.Out);
 }).Start();
 
-var httpClient = new HttpClient();
-var trackerFetcher = new TrackerFinder(new(), httpClient, port);
-var downloads = new DownloadCollection(newDownloadChannel.Writer, config, logger, trackerFetcher);
-var downloadManager = new DownloadManager(downloads, updateChannel.Writer);
-
-_ = downloadManager.ListenAsync(commandChannel.Reader);
-
 var ui = new CliHandler();
 Console.WriteLine();
 var uiUpdater = new UiUpdater(ui);
-await uiUpdater.ListenAsync(updateChannel.Reader);
+
+_ = uiUpdater.ListenAsync(updateChannel.Reader);
+
+var canceller = new CancellationTokenSource();
+var trackerFetcher = new TrackerFinder(new(), logger, port);
+var downloads = new DownloadCollection(newDownloadChannel.Writer, config, logger, trackerFetcher);
+await using var downloadManager = new DownloadManager(downloads, updateChannel.Writer);
+
+Console.CancelKeyPress += (_, e) =>
+{
+    canceller.Cancel();
+    e.Cancel = true;
+};
+try
+{
+    await downloadManager.ListenAsync(commandChannel.Reader, canceller.Token);
+}
+catch (OperationCanceledException) { }

@@ -17,6 +17,7 @@ namespace BitTorrent.Torrents.Trackers;
 public class HttpTrackerFetcher : ITrackerFetcher
 {
     private readonly HttpClient _httpClient;
+    public TrackerResponse? InitialResponse;
     private readonly string _url;
     private readonly int _listenPort;
 
@@ -43,6 +44,12 @@ public class HttpTrackerFetcher : ITrackerFetcher
 
     public async Task<TrackerResponse> FetchAsync(TrackerUpdate update, CancellationToken cancellationToken = default)
     {
+        if (InitialResponse is not null)
+        {
+            var respone = InitialResponse;
+            InitialResponse = null;
+            return respone;
+        }
         var request = GetRequest(update);
         var builder = new UriBuilder(_url)
         {

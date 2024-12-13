@@ -1,5 +1,6 @@
 ﻿using BitTorrent.Torrents.Trackers.Errors;
 using BitTorrent.Torrents.Trackers.UdpTracker;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +10,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Torrents.Trackers;
-public class TrackerFinder(Random random, HttpClient httpClient, int port) : ITrackerFinder
+public class TrackerFinder(Random random, ILogger logger, int port) : ITrackerFinder
 {
     private readonly int _port = port;
     private readonly Random _random = random;
-    private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger _logger = logger;
 
     public async Task<ITrackerFetcher> FindTrackerAsync(IEnumerable<IList<string>> urls)
     {
@@ -35,11 +36,15 @@ public class TrackerFinder(Random random, HttpClient httpClient, int port) : ITr
             try
             {
                 var workingTracker = await tracker;
-                canceller.Cancel();
+                await canceller.CancelAsync();
                 return workingTracker;
             }
-            catch
+            catch (Exception ex)
             {
+                if (ex is TrackerException)
+                {
+                    _logger.LogError("Tracker exception connecting to tracker: {}", ex.Message);
+                }
                 tasks.Remove(tracker);
             }
         }

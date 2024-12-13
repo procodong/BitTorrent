@@ -22,14 +22,18 @@ public class PeerCollection : IEnumerable<PeerConnector>
     private readonly PeerSpawner _spawner;
     private readonly ILogger _logger;
     private readonly int _pieceCount;
+    private readonly int _maxParallelPeers;
+    private List<PeerAddress> _potentialPeers = [];
+    private int _peerCursor;
 
     public int Count => _peers.Count;
 
-    public PeerCollection(PeerSpawner spawner, ILogger logger, int pieceCount)
+    public PeerCollection(PeerSpawner spawner, ILogger logger, int pieceCount, int maxParallelPeers)
     {
         _spawner = spawner;
         _logger = logger;
         _pieceCount = pieceCount;
+        _maxParallelPeers = maxParallelPeers;
     }
 
     public void Add(IdentifiedPeerWireStream stream)
@@ -43,15 +47,26 @@ public class PeerCollection : IEnumerable<PeerConnector>
         _ = _spawner.StartPeer(stream.Stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token);
     }
 
-    public void Remove(int index)
+    public async Task RemoveAsync(int? index)
     {
-        _peers[index].Canceller.Cancel();
-        _peers.Remove(index);
+        if (index is not null)
+        {
+            await _peers[index.Value].Canceller.CancelAsync();
+            _peers.Remove(index.Value);
+        }
+        if (_peerCursor < _potentialPeers.Count)
+        {
+            Connect(_potentialPeers[_peerCursor]);
+            _peerCursor++;
+        }
     }
 
-    public void ConnectAll(IEnumerable<PeerAddress> addresses)
+    public void ConnectAll(List<PeerAddress> addresses)
     {
-        foreach (PeerAddress peer in addresses)
+        _potentialPeers = addresses;
+        int maxPeers = int.Min(addresses.Count, _maxParallelPeers);
+        _peerCursor = maxPeers + 1;
+        foreach (PeerAddress peer in addresses.Take(maxPeers))
         {
             Connect(peer);
         }

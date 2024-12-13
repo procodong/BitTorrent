@@ -17,5 +17,6 @@ public record class Config(
     int KeepAliveInterval,
     int ReceiveTimeout,
     int UiUpdateInterval,
-    int PieceSegmentSize
+    int PieceSegmentSize,
+    int MaxParallelPeers
     );

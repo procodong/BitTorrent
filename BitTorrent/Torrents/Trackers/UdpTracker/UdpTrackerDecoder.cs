@@ -17,7 +17,7 @@ public static class UdpTrackerDecoder
         var interval = reader.ReadInt32();
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
-        int remainingBytes = (int)(reader.BaseStream.Length - reader.BaseStream.Position);
+        int remainingBytes = reader.Length - reader.Position;
         int peerCount = remainingBytes / 6;
         var peers = new List<PeerAddress>(peerCount);
         while (peers.Count < peerCount)

@@ -14,14 +14,14 @@ namespace BitTorrent.Torrents.Managing;
 
 public delegate void NewPeer(IdentifiedPeerWireStream stream);
 public delegate Task Update();
-public delegate void PeerRemoval(int peerIndex);
+public delegate Task PeerRemoval(int? peerIndex);
 public delegate void TrackerResponse(Models.Trackers.TrackerResponse respose);
 public delegate TrackerUpdate TrackerInterval();
 public delegate void Error(Exception exception);
 
 public class PeerManagerEventHandler
 {
-    private readonly ChannelReader<int> _peerRemovalReader;
+    private readonly ChannelReader<int?> _peerRemovalReader;
     private readonly ChannelReader<IdentifiedPeerWireStream> _peerReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
@@ -32,7 +32,7 @@ public class PeerManagerEventHandler
     private readonly Func<TrackerEvent, TrackerUpdate> _trackerUpdateProvider;
     public Error Error;
 
-    public PeerManagerEventHandler(ChannelReader<int> peerRemovalReader, ChannelReader<IdentifiedPeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, Func<TrackerEvent, TrackerUpdate> trackerUpdates)
+    public PeerManagerEventHandler(ChannelReader<int?> peerRemovalReader, ChannelReader<IdentifiedPeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, Func<TrackerEvent, TrackerUpdate> trackerUpdates)
     {
         _peerRemovalReader = peerRemovalReader;
         _peerReader = peerReader;
@@ -40,7 +40,7 @@ public class PeerManagerEventHandler
         _updateInterval = updateInterval;
         PeerAddition = (_) => { };
         Update = () => Task.CompletedTask;
-        PeerRemoval = (_) => { };
+        PeerRemoval = (_) => Task.CompletedTask;
         TrackerResponse = (_) => { };
         Error = (_) => { };
         _trackerUpdateProvider = trackerUpdates;
@@ -51,7 +51,7 @@ public class PeerManagerEventHandler
         Task<IdentifiedPeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
         var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
         Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
-        Task<int> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
+        Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
         Task trackerUpdateTask = _trackerFetcher.FetchAsync(_trackerUpdateProvider(TrackerEvent.Started), cancellationToken);
         while (true)
         {
@@ -63,7 +63,7 @@ public class PeerManagerEventHandler
                     var stream = await peerAdditionTask;
                     PeerAddition(stream);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Error(ex);
                 }
@@ -79,7 +79,7 @@ public class PeerManagerEventHandler
                     await updateIntervalTask;
                     await Update();
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Error(ex);
                 }
@@ -92,10 +92,10 @@ public class PeerManagerEventHandler
             {
                 try
                 {
-                    int peer = await peerRemovalTask;
-                    PeerRemoval(peer);
+                    int? peer = await peerRemovalTask;
+                    await PeerRemoval(peer);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Error(ex);
                 }
@@ -114,7 +114,7 @@ public class PeerManagerEventHandler
                         TrackerResponse(response);
                         trackerUpdateTask = Task.Delay(response.Interval * 1000, cancellationToken);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         trackerUpdateTask = Task.Delay(5000, cancellationToken);
                         Error(ex);

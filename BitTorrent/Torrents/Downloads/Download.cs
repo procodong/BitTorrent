@@ -4,14 +4,12 @@ using BitTorrent.Models.Application;
 using BitTorrent.Models.Messages;
 using BitTorrent.Models.Peers;
 using BitTorrent.Storage;
-using BitTorrent.Storage.DownloadFiles;
 using BitTorrent.Torrents.Peers.Errors;
 using BitTorrent.Utils;
 using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Threading.Channels;
 
@@ -20,13 +18,13 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
 {
     public readonly Torrent Torrent = torrent;
     public readonly Config Config = config;
-    public readonly BitArray DownloadedPieces = new(torrent.NumberOfPieces);
+    public readonly ZeroCopyBitArray DownloadedPieces = new(torrent.NumberOfPieces);
     public readonly long MaxMessageLength = int.Max(config.RequestSize + 13, torrent.NumberOfPieces + 6);
     private readonly DataTransferCounter _recentDataTransfer = new();
     private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
     private readonly DownloadStorage _files = files;
     private readonly List<PieceSegmentHandle> _pieceRegisters = [];
-    private readonly BitArray _requestedPieces = new(torrent.NumberOfPieces);
+    private readonly ZeroCopyBitArray _requestedPieces = new(torrent.NumberOfPieces);
     private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
     private readonly object _haveWritersLock = new();
     private List<int> _rarestPieces = [];

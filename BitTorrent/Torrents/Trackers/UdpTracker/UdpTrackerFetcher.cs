@@ -1,5 +1,6 @@
 ﻿using BitTorrent.Models.Trackers;
 using BitTorrent.Torrents.Trackers.Errors;
+using BitTorrent.Utils;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -34,20 +35,16 @@ public class UdpTrackerFetcher : ITrackerFetcher
         var request = new TrackerRequest(update.InfoHash, update.ClientId, _port, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
         int transaction = await SendAnnounceAsync(request, cancellationToken);
         var response = await ReceiveAsync(transaction, () => SendAnnounceAsync(request, cancellationToken), cancellationToken);
-        var stream = new MemoryStream(response)
-        {
-            Position = 8
-        };
-        TrackerResponse responseData = UdpTrackerDecoder.ReadAnnounceResponse(new(stream));
+        TrackerResponse responseData = UdpTrackerDecoder.ReadAnnounceResponse(new(response, 8));
         return responseData;
     }
 
     private async Task<int> SendAnnounceAsync(TrackerRequest request, CancellationToken cancellationToken = default) 
     {
-        var stream = new MemoryStream(_buffer);
         int transactionId = _random.Next();
-        UdpTrackerEncoder.WriteAnnounce(new(stream), _connectionId!.Value, transactionId, request);
-        await _client.SendAsync(_buffer.AsMemory(0, (int)stream.Position), cancellationToken);
+        var writer = new BigEndianBinaryWriter(_buffer);
+        UdpTrackerEncoder.WriteAnnounce(writer, _connectionId!.Value, transactionId, request);
+        await _client.SendAsync(_buffer.AsMemory(0, writer.Position), cancellationToken);
         return transactionId;
     }
 
@@ -61,9 +58,9 @@ public class UdpTrackerFetcher : ITrackerFetcher
     private async Task<int> SendConnectAsync(CancellationToken cancellationToken = default)
     {
         int transactionId = _random.Next();
-        var stream = new MemoryStream(_buffer);
-        UdpTrackerEncoder.WriteConnect(new(stream), transactionId);
-        await _client.SendAsync(_buffer.AsMemory(0, (int)stream.Position), cancellationToken);
+        var writer = new BigEndianBinaryWriter(_buffer);
+        UdpTrackerEncoder.WriteConnect(writer, transactionId);
+        await _client.SendAsync(_buffer.AsMemory(0, writer.Position), cancellationToken);
         return transactionId;
     }
 
@@ -71,6 +68,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
     {
         if (_receivedMessages.TryGetValue(transactionId, out var message))
         {
+            _receivedMessages.Remove(transactionId);
             return message;
         }
         int resends = 0;
@@ -85,7 +83,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
                 continue;
             }
             var receive = await receiveTask;
-            var header = UdpTrackerDecoder.DecodeHeader(new(new MemoryStream(receive.Buffer)));
+            var header = UdpTrackerDecoder.DecodeHeader(new(receive.Buffer));
             if (header.Action == 3)
             {
                 var errorMessage = UdpTrackerDecoder.ReadErrorMessage(receive.Buffer);

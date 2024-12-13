@@ -1,12 +1,14 @@
 namespace BitTorrent.Utils;
 
-public class ZeroCopyBitArray
+public readonly struct ZeroCopyBitArray
 {
     private readonly byte[] _buffer;
 
     public ZeroCopyBitArray(int length)
     {
-        _buffer = new byte[length];
+        int realLength = length / 8;
+        if (length % 8 != 0) realLength++;
+        _buffer = new byte[realLength];
     }
 
     public byte[] Buffer => _buffer;
@@ -16,14 +18,14 @@ public class ZeroCopyBitArray
         get
         {
             byte value = _buffer[index / 8];
-            int offset = index % 8; 
+            int offset = index % 8;
             byte mask = (byte)(1 << offset);
             return (value & mask) != 0;
         }
         set
         {
             ref byte target = ref _buffer[index / 8];
-            int offset = index % 8; 
+            int offset = index % 8;
             byte mask = (byte)(1 << offset);
             if (value)
             {
@@ -31,7 +33,7 @@ public class ZeroCopyBitArray
             }
             else
             {
-                target ^= mask;
+                target &= unchecked((byte)~mask);
             }
         }
     }
