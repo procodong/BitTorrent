@@ -74,13 +74,14 @@ public class ConcatStream : Stream
                 if (read == 0)
                 {
                     _current = CurentStream.Second;
-                    return await _secondStream.ReadAsync(buffer, cancellationToken);
+                    read = await _secondStream.ReadAsync(buffer, cancellationToken);
                 }
                 return read;
             case CurentStream.Second:
                 return await _secondStream.ReadAsync(buffer, cancellationToken);
+            default:
+                throw new InvalidDataException();
         }
-        return 0;
     }
 
     public override long Seek(long offset, SeekOrigin origin)

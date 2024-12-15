@@ -20,7 +20,8 @@ var config = new Config(
     ReceiveTimeout: 2 * 60 * 1000,
     UiUpdateInterval: 1000,
     PieceSegmentSize: 1 << 17,
-    MaxParallelPeers: 30
+    MaxParallelPeers: 30,
+    TransferRateResetInterval: 10
     );
 int port = 6881;
 ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -24,7 +25,8 @@ public class PeerCollection : IEnumerable<PeerConnector>
     private readonly int _pieceCount;
     private readonly int _maxParallelPeers;
     private List<PeerAddress> _potentialPeers = [];
-    private int _peerCursor;
+    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor = new List<(int, PeerAddress)>().GetEnumerator();
+    private int _missedPeers;
 
     public int Count => _peers.Count;
 
@@ -34,17 +36,22 @@ public class PeerCollection : IEnumerable<PeerConnector>
         _logger = logger;
         _pieceCount = pieceCount;
         _maxParallelPeers = maxParallelPeers;
+        _missedPeers = _maxParallelPeers;
     }
 
     public void Add(IdentifiedPeerWireStream stream)
     {
-        if (_peerIds.Contains(stream.PeerId)) return;
+        if (_peerIds.Contains(stream.PeerId))
+        {
+            _missedPeers++;
+            return;
+        }
         _peerIds.Add(stream.PeerId);
         var eventChannel = Channel.CreateBounded<PeerRelation>(16);
         var state = new SharedPeerState(new(_pieceCount));
         var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new(), new());
         int index = _peers.Add(peerConnector);
-        _ = _spawner.StartPeer(stream.Stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token);
+        _ = _spawner.SpawnListener(stream.Stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token);
     }
 
     public async Task RemoveAsync(int? index)
@@ -54,27 +61,35 @@ public class PeerCollection : IEnumerable<PeerConnector>
             await _peers[index.Value].Canceller.CancelAsync();
             _peers.Remove(index.Value);
         }
-        if (_peerCursor < _potentialPeers.Count)
+        if (_peerCursor.MoveNext())
         {
-            Connect(_potentialPeers[_peerCursor]);
-            _peerCursor++;
+            _ = _spawner.SpawnConnect(_peerCursor.Current.Address);
+        }
+        else
+        {
+            _missedPeers++;
         }
     }
 
-    public void ConnectAll(List<PeerAddress> addresses)
+    public void Update(List<PeerAddress> addresses)
     {
-        _potentialPeers = addresses;
-        int maxPeers = int.Min(addresses.Count, _maxParallelPeers);
-        _peerCursor = maxPeers + 1;
-        foreach (PeerAddress peer in addresses.Take(maxPeers))
+        var newPeers = new List<PeerAddress>(addresses.Count);
+        var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
+        foreach (PeerAddress peer in addresses)
         {
-            Connect(peer);
+            if (!oldPeers.Contains(peer))
+            {
+                newPeers.Add(peer);
+            }
         }
-    }
-
-    public void Connect(PeerAddress address)
-    {
-        _ = _spawner.ConnectPeer(address);
+        _potentialPeers = newPeers;
+        _peerCursor = newPeers.Indexed().GetEnumerator();
+        int i;
+        for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
+        {
+            _ = _spawner.SpawnConnect(_peerCursor.Current.Address);
+        }
+        _missedPeers -= i;
     }
 
     IEnumerator IEnumerable.GetEnumerator()

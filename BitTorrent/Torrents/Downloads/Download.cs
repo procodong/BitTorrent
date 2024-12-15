@@ -101,7 +101,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
         await files.WriteAsync(buffer, cancellationToken);
         lock (block.Piece.Hasher)
         {
-            block.Piece.Hasher.Hash(buffer, block.Begin);
+            block.Piece.Hasher.Hash(buffer, block.Begin / Config.RequestSize);
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         Interlocked.Add(ref _recentDataTransfer.Downloaded, block.Length);
@@ -111,8 +111,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
         }
         Interlocked.Increment(ref _downloadedPieces);
         Memory<byte> correctHash = Torrent.Pieces.AsMemory(block.Piece.PieceIndex * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes);
-        IEnumerable<byte> correctHashIter = MemoryMarshal.ToEnumerable<byte>(correctHash);
-        if (!block.Piece.Hasher.Finish().SequenceEqual(correctHashIter))
+        if (!correctHash.Span.SequenceEqual(block.Piece.Hasher.Finish()))
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
@@ -218,7 +217,8 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
     {
         int? piece = pieces.Find(piece => CanBeRequested(piece, ownedPieces));
         if (!piece.HasValue) return null;
-        return new PieceDownload(PieceSize(piece.Value), piece.Value, new(Config.RequestSize));
+        int size = PieceSize(piece.Value);
+        return new PieceDownload(size, piece.Value, new((int)(size / Config.RequestSize) + 1));
     }
 
     private int PieceSize(int piece)

@@ -132,6 +132,14 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 await ReadAsync(cancellationToken);
             }
         }
+        int buffered = _readCursor.Length - _readCursor.Position;
+        if (len < _readBuffer.Length && buffered < len)
+        {
+            _readBuffer.AsSpan(_readCursor.Position.._readCursor.Length).CopyTo(_readBuffer);
+            int read = await _stream.ReadAtLeastAsync(_readBuffer.AsMemory(buffered), len - buffered, cancellationToken: cancellationToken);
+            _readCursor.Position = 0;
+            _readCursor.Length = buffered + read;
+        }
         byte type = _readCursor.ReadByte();
         if (type > (byte)MessageType.Port)
         {
@@ -143,11 +151,11 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     public async Task ReceiveAsync(IPeerEventHandler eventHandler, long maxMessageLength, CancellationToken cancellationToken = default)
     {
         var message = await ReceiveAsync(cancellationToken);
+        int buffered = int.Min(_readCursor.Length - _readCursor.Position, message.Length);
         if (message.Length > maxMessageLength)
         {
             throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
         }
-        int buffered = int.Min(_readCursor.Length - _readCursor.Position, message.Length);
         int startPos = _readCursor.Position;
         switch (message.Type)
         {
@@ -183,7 +191,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 var pieceRequest = new PieceRequest(piece.Index, piece.Begin, message.Length - MessageDecoder.PIECE_HEADER_LEN);
                 int savedCount = buffered - MessageDecoder.PIECE_HEADER_LEN;
                 int streamLen = pieceRequest.Length - savedCount;
-                var bufferedData = new LimitedStream(new MemoryStream(_readBuffer, _readCursor.Position, _readCursor.Length - _readCursor.Position), savedCount);
+                var bufferedData = new MemoryStream(_readBuffer, _readCursor.Position, savedCount);
                 var stream = new ConcatStream(bufferedData, new LimitedStream(_stream, streamLen));
                 await eventHandler.OnPieceAsync(new(pieceRequest, stream), cancellationToken);
                 break;

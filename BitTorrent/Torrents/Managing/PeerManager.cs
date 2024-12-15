@@ -19,6 +19,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     private readonly DataTransferCounter _transfered = new();
     private readonly ILogger _logger;
     private readonly ITrackerFetcher _trackerFetcher;
+    private int _updateTick;
     private DataTransferVector Transfered => _transfered.Fetch() + _download.RecentlyTransfered;
     private DataTransferVector TransferRate => new(_download.DownloadRate, _download.UploadRate);
 
@@ -31,14 +32,14 @@ public class PeerManager : IDisposable, IAsyncDisposable
         _peers = peers;
     }
 
-    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerAdder, ChannelReader<int?> peerRemover, CancellationToken cancellationToken = default)
+    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int?> peerRemover, CancellationToken cancellationToken = default)
     {
-        var events = new PeerManagerEventHandler(peerRemover, peerAdder, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
+        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
         {
             Update = Update,
             PeerAddition = _peers.Add,
             PeerRemoval = _peers.RemoveAsync,
-            TrackerResponse = (response) => _peers.ConnectAll(response.Peers),
+            TrackerResponse = (response) => _peers.Update(response.Peers),
             Error = (err) => _logger.LogError("Error in peer manager: {}", err)
         };
         await events.ListenAsync(cancellationToken);
@@ -48,16 +49,14 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         var (interesting, unChoked) = GetPeerRelations();
         await UpdateRelations(interesting, unChoked);
-        var recent = _download.ResetRecentTransfer();
-        _transfered.FetchAdd(recent);
-        if (_download.RarestPieces.Count == 0)
+        if (_updateTick % _download.Config.TransferRateResetInterval == 0)
         {
-            var pieces = FindRaresPieces();
-            lock (_download)
-            {
-                _download.RarestPieces.Clear();
-                _download.RarestPieces.AddRange(pieces);
-            }
+            var recent = _download.ResetRecentTransfer();
+            _transfered.FetchAdd(recent);
+        }
+        unchecked
+        {
+            _updateTick++;
         }
     }
 
@@ -121,16 +120,23 @@ public class PeerManager : IDisposable, IAsyncDisposable
     private IEnumerable<int> FindRaresPieces()
     {
         int rareCount = int.Min(_download.Torrent.NumberOfPieces / 10, _download.Config.MaxRarePieceCount);
-        var comparer = Comparer<(int Index, int Count)>.Create((v1, v2) => v1.Count - v2.Count);
+        var comparer = Comparer<(int Index, int Count)>.Create((v1, v2) => v2.Count - v1.Count);
         var rarestPieceStack = new PriorityStack<(int Index, int Count)>(rareCount, comparer);
-        for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
+        foreach (var piece in PieceCounts().Indexed())
         {
-            int count = _peers.Select(peer => peer.Data.OwnedPieces[i] ? 1 : 0).Sum();
-            rarestPieceStack.Include((i, count));
+            rarestPieceStack.Include(piece);
         }
         return rarestPieceStack.Select(v => v.Index);
     }
 
+    private IEnumerable<int> PieceCounts()
+    {
+        for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
+        {
+            int count = _peers.Select(peer => peer.Data.OwnedPieces[i] ? 1 : 0).Sum();
+            yield return count;
+        }
+    }
     public DownloadUpdate GetUpdate()
         => new(_download.Torrent.DisplayName, Transfered, TransferRate, _download.Torrent.TotalSize);
 
@@ -148,13 +154,10 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         foreach (var peer in _peers)
         {
-            try
-            {
-                await peer.Canceller.CancelAsync();
-            }
-            catch { }
+            peer.Canceller.Cancel();
         }
         await _download.DisposeAsync();
         await _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));
     }
+
 }

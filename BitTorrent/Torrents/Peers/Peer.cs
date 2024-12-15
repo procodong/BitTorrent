@@ -134,7 +134,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     private void UpdateRelation(PeerRelation relation)
     {
-        Console.WriteLine(relation);
         if (relation.Interested != _state.Relation.Interested)
         {
             _connection.WriteUpdateRelation(relation.Interested ? Relation.Interested : Relation.NotInterested);
@@ -184,7 +183,6 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     public async Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
         if (_state.Relation.Choked || !_download.DownloadedPieces[request.Index]) return;
-        Console.WriteLine(request);
         if (request.Length > _download.Config.MaxRequestSize)
         {
             throw new BadPeerException(PeerErrorReason.InvalidRequest);

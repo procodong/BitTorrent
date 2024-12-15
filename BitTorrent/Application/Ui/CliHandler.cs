@@ -29,12 +29,16 @@ public class CliHandler : IUiHandler
             {
                 _buffer.Append('░');
             }
+            _buffer.Append(' ');
+            _buffer.Append(update.DownloadName);
             _buffer.Append(" download per second: ");
             _buffer.Append(update.TransferRate.Download);
             _buffer.Append(" upload per second: ");
             _buffer.Append(update.TransferRate.Upload);
-            _buffer.Append(' ');
-            _buffer.Append(update.DownloadName);
+            _buffer.Append(" downloaded: ");
+            _buffer.Append(update.Transfered.Download);
+            _buffer.Append(" uploaded: ");
+            _buffer.Append(update.Transfered.Upload);
             _buffer.AppendLine();
         }
         Console.Write(_buffer.ToString());

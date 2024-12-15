@@ -30,7 +30,7 @@ public class PeerSpawner
         _peerId = peerId;
     }
 
-    public async Task ConnectPeer(PeerAddress address)
+    public async Task SpawnConnect(PeerAddress address)
     {
         try
         {
@@ -50,11 +50,14 @@ public class PeerSpawner
         catch (Exception ex)
         {
             await _peerRemovalWriter.WriteAsync(default);
-            _logger.LogError("Error connecting to peer: {}", ex);
+            if (ex is not SocketException && ex is not EndOfStreamException)
+            {
+                _logger.LogError("connecting to peer", ex);
+            }
         }
     }
 
-    public async Task StartPeer(PeerWireStream stream, int index, SharedPeerState state, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
+    public async Task SpawnListener(PeerWireStream stream, int index, SharedPeerState state, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
         var haveChannel = Channel.CreateUnbounded<int>();
         int downloadWriterIndex = _download.AddPeer(haveChannel.Writer);
@@ -69,9 +72,9 @@ public class PeerSpawner
         }
         catch (Exception ex)
         {
-            if (ex is not OperationCanceledException)
+            if (ex is not OperationCanceledException && ex is not IOException)
             {
-                _logger.LogError("Error in peer connection: {}", ex);
+                _logger.LogError("peer connection", ex);
             }
         }
         finally

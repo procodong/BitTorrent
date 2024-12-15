@@ -8,33 +8,23 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrent.Storage;
-public class PieceHasher(int blockSize)
+public class PieceHasher(int blockCount)
 {
     private int _offset = 0;
-    private readonly List<byte[]?> _blocks = [];
-    private readonly int _blockSize = blockSize;
+    private readonly byte[]?[] _blocks = new byte[]?[blockCount];
     private readonly SHA1 _hasher = SHA1.Create();
 
-    public void Hash(byte[] data, int offset)
+    public void Hash(byte[] data, int index)
     {
-        int index = offset / _blockSize - _offset;
-        while (index >= _blocks.Count)
-        {
-            _blocks.Add(null);
-        }
-        int removeCount = 0;
         _blocks[index] = data;
-        foreach (var block in _blocks.TakeWhile(v => v is not null))
+        for (; _offset < _blocks.Length; _offset++)
         {
-            _hasher.TransformBlock(block!, 0, block!.Length, null, 0);
-            removeCount++;
+            ref var block = ref _blocks[_offset];
+            if (block is null) break;
+            _hasher.TransformBlock(block, 0, block.Length, null, 0);
+            ArrayPool<byte>.Shared.Return(block);
+            block = null;
         }
-        _offset += removeCount;
-        for (int i = 0; i < removeCount; i++)
-        {
-            ArrayPool<byte>.Shared.Return(_blocks[i]!);
-        }
-        _blocks.RemoveRange(0, removeCount);
     }
 
     public byte[] Finish()
