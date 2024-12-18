@@ -17,6 +17,7 @@ public class ConcatStream : Stream
     private readonly Stream _firstStream;
     private readonly Stream _secondStream;
     private CurentStream _current = CurentStream.First;
+    private int _positon;
 
     public ConcatStream(Stream firstStream, Stream secondStream)
     {
@@ -32,8 +33,8 @@ public class ConcatStream : Stream
 
     public override long Length => _firstStream.Length + _secondStream.Length;
 
-    public override long Position { 
-        get => throw new NotSupportedException(); 
+    public override long Position {
+        get => _positon; 
         set => throw new NotSupportedException();
     }
 
@@ -58,9 +59,12 @@ public class ConcatStream : Stream
                     _current = CurentStream.Second;
                     return _secondStream.Read(buffer);
                 }
+                _positon += read;
                 return read;
             case CurentStream.Second:
-                return _secondStream.Read(buffer);
+                int count = _secondStream.Read(buffer);
+                _positon += count;
+                return count;
         }
         return 0;
     }
@@ -76,9 +80,12 @@ public class ConcatStream : Stream
                     _current = CurentStream.Second;
                     read = await _secondStream.ReadAsync(buffer, cancellationToken);
                 }
+                _positon += read;
                 return read;
             case CurentStream.Second:
-                return await _secondStream.ReadAsync(buffer, cancellationToken);
+                int count = await _secondStream.ReadAsync(buffer, cancellationToken);
+                _positon += count;
+                return count;
             default:
                 throw new InvalidDataException();
         }

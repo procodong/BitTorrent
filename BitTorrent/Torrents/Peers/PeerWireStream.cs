@@ -41,28 +41,31 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         _writeCursor.Position = 0;
         if (bitfield is not null)
         {
-            await SendBitFieldAsync(bitfield.Value);
+            MessageEncoder.EncodeHeader(_writeCursor, new(bitfield.Value.Buffer.Length + 1, MessageType.Bitfield));
+            await _stream.WriteAsync(_writeBuffer.AsMemory(.._writeCursor.Position));
+            await _stream.WriteAsync(bitfield.Value.Buffer);
+        }
+        else
+        {
+            await _stream.WriteAsync(_writeBuffer.AsMemory(.._writeCursor.Position));
         }
         await _stream.FlushAsync();
     }
 
     public async Task<HandShake> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
-        await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN, cancellationToken: cancellationToken);
+        int len = await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN, cancellationToken: cancellationToken);
+        if (len == 0)
+        {
+            throw new EndOfStreamException();
+        }
+        _readCursor.Length = len;
         HandShake receivedHandshake = MessageDecoder.DecodeHandShake(_readCursor);
         if (receivedHandshake.Protocol != PROTOCOL)
         {
             throw new BadPeerException(PeerErrorReason.InvalidProtocol);
         }
         return receivedHandshake;
-    }
-
-    private async Task SendBitFieldAsync(ZeroCopyBitArray bitfield)
-    {
-        var buf = new byte[5];
-        MessageEncoder.EncodeHeader(new(buf), new(bitfield.Buffer.Length + 1, MessageType.Bitfield));
-        await _stream.WriteAsync(buf);
-        await _stream.WriteAsync(bitfield.Buffer);
     }
 
     public void WriteUpdateRelation(Relation relation)
@@ -121,7 +124,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     public async Task<Message> ReceiveAsync(CancellationToken cancellationToken = default)
     {
         int len = 0;
-        while (len <= 0)
+        while (len == 0)
         {
             try
             {
@@ -178,7 +181,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
             case MessageType.Bitfield:
                 byte[] buffer = new byte[message.Length];
                 _readBuffer.AsSpan(_readCursor.Position, buffered).CopyTo(buffer);
-                await _stream.ReadExactlyAsync(buffer.AsMemory(buffered), cancellationToken);
+                await _stream.ReadExactlyAsync(buffer.AsMemory(buffered..), cancellationToken);
                 var bitfield = new BitArray(buffer);
                 await eventHandler.OnBitfieldAsync(bitfield, cancellationToken);
                 break;

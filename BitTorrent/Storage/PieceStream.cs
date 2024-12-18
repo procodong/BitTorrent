@@ -115,7 +115,7 @@ public class PieceStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        WriteAsync(buffer.AsMemory(offset, count)).GetAwaiter().GetResult();
+        WriteAsync(buffer.AsMemory(offset, count)).AsTask().GetAwaiter().GetResult();
     }
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)

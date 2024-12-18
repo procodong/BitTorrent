@@ -25,7 +25,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
     private readonly int _pieceCount;
     private readonly int _maxParallelPeers;
     private List<PeerAddress> _potentialPeers = [];
-    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor = new List<(int, PeerAddress)>().GetEnumerator();
+    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor = Enumerable.Empty<(int Index, PeerAddress Address)>().GetEnumerator();
     private int _missedPeers;
 
     public int Count => _peers.Count;
@@ -43,7 +43,10 @@ public class PeerCollection : IEnumerable<PeerConnector>
     {
         if (_peerIds.Contains(stream.PeerId))
         {
-            _missedPeers++;
+            if (_peerCursor.MoveNext())
+            {
+                _ = _spawner.SpawnConnect(_peerCursor.Current.Address);
+            }
             return;
         }
         _peerIds.Add(stream.PeerId);
@@ -56,6 +59,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
 
     public async Task RemoveAsync(int? index)
     {
+        Console.WriteLine(_peers.Count);
         if (index is not null)
         {
             await _peers[index.Value].Canceller.CancelAsync();
@@ -73,6 +77,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
 
     public void Update(List<PeerAddress> addresses)
     {
+        Console.WriteLine(addresses.Count);
         var newPeers = new List<PeerAddress>(addresses.Count);
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
         foreach (PeerAddress peer in addresses)

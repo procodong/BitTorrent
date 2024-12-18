@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
 var config = new Config(
-    TargetDownload: 100_000,
-    TargetUpload: 1000,
-    TargetUploadSeeding: 100_000,
+    TargetDownload: 10_000_000,
+    TargetUpload: 100_000,
+    TargetUploadSeeding: 10_000_000,
     RequestSize: 1 << 14,
     RequestQueueSize: 5,
     MaxRarePieceCount: 20,
@@ -30,7 +30,7 @@ var commandChannel = Channel.CreateBounded<Func<ICommandContext, Task>>(32);
 var newDownloadChannel = Channel.CreateBounded<PeerReceivingSubscribe>(32);
 var updateChannel = Channel.CreateBounded<IEnumerable<DownloadUpdate>>(32);
 
-var peerReceiver = new TrackerHandler(port, config.ReceiveTimeout, logger);
+var peerReceiver = new TrackerHandler(port, logger);
 
 _ = peerReceiver.ListenAsync(newDownloadChannel.Reader);
 

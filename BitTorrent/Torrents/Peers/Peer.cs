@@ -3,6 +3,7 @@ using BitTorrent.Models.Peers;
 using BitTorrent.Torrents.Downloads;
 using BitTorrent.Torrents.Peers.Errors;
 using System.Collections;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading.Channels;
 
@@ -20,17 +21,13 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     private PieceSegmentHandle? _segment;
     private bool _writing = false;
 
-    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerState stats)
+    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerState state)
     {
         _connection = connection;
         _download = download;
-        _state = stats;
+        _state = state;
         _haveMessageReceiver = haveMessages;
         _relationReceiver = relationReceiver;
-        lock (download)
-        {
-            _segment = download.AssignSegment(stats.OwnedPieces);
-        }
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
@@ -177,6 +174,10 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     public Task OnBitfieldAsync(BitArray bitfield, CancellationToken cancellationToken = default)
     {
         _state.OwnedPieces = bitfield;
+        lock (_download)
+        {
+            _segment = _download.AssignSegment(_state.OwnedPieces);
+        }
         return Task.CompletedTask;
     }
 

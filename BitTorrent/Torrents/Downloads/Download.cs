@@ -97,7 +97,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
     {
         var files = _files.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(block.Length);
-        await stream.ReadExactlyAsync(buffer, cancellationToken);
+        await stream.ReadExactlyAsync(buffer.AsMemory(..block.Length), cancellationToken);
         await files.WriteAsync(buffer, cancellationToken);
         lock (block.Piece.Hasher)
         {
@@ -115,9 +115,9 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
-        DownloadedPieces[block.Piece.PieceIndex] = true;
-        lock (_haveWritersLock)
+        lock (DownloadedPieces.Buffer)
         {
+            DownloadedPieces[block.Piece.PieceIndex] = true;
             foreach (var peer in _haveWriters)
             {
                 peer.TryWrite(block.Piece.PieceIndex);
@@ -215,10 +215,15 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
 
     private PieceDownload? FindNextPiece(IEnumerable<int> pieces, BitArray ownedPieces)
     {
-        int? piece = pieces.Find(piece => CanBeRequested(piece, ownedPieces));
-        if (!piece.HasValue) return null;
-        int size = PieceSize(piece.Value);
-        return new PieceDownload(size, piece.Value, new((int)(size / Config.RequestSize) + 1));
+        foreach (var piece in pieces)
+        {
+            if (CanBeRequested(piece, ownedPieces))
+            {
+                int size = PieceSize(piece);
+                return new PieceDownload(size, piece, new((int)(size / Config.RequestSize) + 1));
+            }
+        }
+        return default;
     }
 
     private int PieceSize(int piece)

@@ -23,7 +23,7 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
                 createdDirectories.Add(directoryPath);
             }
             var filePath = Path.Combine(path, file.FullPath);;
-            var createdFile = File.Create(filePath, 1 << 12, FileOptions.Asynchronous);
+            var createdFile = File.Create(filePath, 0, FileOptions.Asynchronous);
             createdFile.SetLength(file.FileSize);
             createdFiles.Add(new(createdFile, createdBytes, new(1, 1)));
             createdBytes += file.FileSize;

@@ -18,12 +18,10 @@ public class TrackerHandler
     private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());
     private readonly TcpListener _listener;
     private readonly ILogger _logger;
-    private readonly int _clientReceiveTimeout;
 
-    public TrackerHandler(int port, int clientReceiveTimeout, ILogger logger)
+    public TrackerHandler(int port, ILogger logger)
     {
         _listener = new(IPAddress.Any, port);
-        _clientReceiveTimeout = clientReceiveTimeout;
         _logger = logger;
     }
 
@@ -79,7 +77,6 @@ public class TrackerHandler
 
     private async Task CreateClient(TcpClient client)
     {
-        client.ReceiveTimeout = _clientReceiveTimeout;
         var stream = new NetworkStream(client.Client, true);
         var peerStream = new PeerWireStream(stream);
         var handshake = await peerStream.ReadHandShakeAsync();
