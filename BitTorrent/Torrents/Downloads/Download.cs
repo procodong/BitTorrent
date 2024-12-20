@@ -14,30 +14,42 @@ using System.Security.Cryptography;
 using System.Threading.Channels;
 
 namespace BitTorrent.Torrents.Downloads;
-public class Download(Torrent torrent, DownloadStorage files, Config config) : IDisposable, IAsyncDisposable
+public class Download : IDisposable, IAsyncDisposable
 {
-    public readonly Torrent Torrent = torrent;
-    public readonly Config Config = config;
-    public readonly ZeroCopyBitArray DownloadedPieces = new(torrent.NumberOfPieces);
-    public readonly long MaxMessageLength = int.Max(config.RequestSize + 13, torrent.NumberOfPieces + 6);
+    private readonly Torrent _torrent;
+    private readonly Config _config;
+    private readonly ZeroCopyBitArray _downloadedPieces;
     private readonly DataTransferCounter _recentDataTransfer = new();
     private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
-    private readonly DownloadStorage _files = files;
+    private readonly DownloadStorage _storage;
     private readonly List<PieceSegmentHandle> _pieceRegisters = [];
-    private readonly ZeroCopyBitArray _requestedPieces = new(torrent.NumberOfPieces);
+    private readonly ZeroCopyBitArray _requestedPieces;
     private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
     private readonly object _haveWritersLock = new();
     private List<int> _rarestPieces = [];
-    private int _downloadedPieces = 0;
+    private int _downloadedPiecesCount = 0;
     private int _requestedPiecesOffset = 0;
 
-    public bool FinishedDownloading => _downloadedPieces >= Torrent.NumberOfPieces;
+    public Download(Torrent torrent, DownloadStorage storage, Config config)
+    {
+        _torrent = torrent;
+        _config = config;
+        _downloadedPieces = new(torrent.NumberOfPieces);
+        _storage = storage;
+        _requestedPieces = new(torrent.NumberOfPieces);
+    }
+
+    public ZeroCopyBitArray DownloadedPieces => _downloadedPieces;
+    public bool HasDownloadedPieces => _downloadedPiecesCount != 0;
+    public Torrent Torrent => _torrent;
+    public Config Config => _config;
+    public int MaxMessageLength => int.Max(_config.RequestSize + 13, _downloadedPieces.Buffer.Length + 5);
+    public bool FinishedDownloading => _downloadedPiecesCount >= _torrent.NumberOfPieces;
     public List<int> RarestPieces
     {
         get => _rarestPieces;
         set => _rarestPieces = value;
     }
-    public int DownloadedPiecesCount => _downloadedPieces;
     public DataTransferVector RecentlyTransfered => _recentDataTransfer.Fetch();
     public long UploadRate
     {
@@ -49,7 +61,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
             }
         }
     }
-    public long UploadRateTarget => FinishedDownloading ? Config.TargetUpload : Config.TargetUploadSeeding;
+    public long UploadRateTarget => FinishedDownloading ? _config.TargetUploadSeeding : Config.TargetUpload;
     public long DownloadRate
     {
         get
@@ -60,7 +72,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
             }
         }
     }
-    public long DownloadRateTarget => FinishedDownloading ? Config.TargetDownload : 0;
+
     public double SecondsSinceTimerReset => _recentTransferUpdateWatch.Elapsed.TotalSeconds;
 
     public int AddPeer(ChannelWriter<int> communicator)
@@ -95,7 +107,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
 
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
-        var files = _files.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
+        var files = _storage.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(block.Length);
         await stream.ReadExactlyAsync(buffer.AsMemory(..block.Length), cancellationToken);
         await files.WriteAsync(buffer, cancellationToken);
@@ -109,18 +121,18 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
         {
             return;
         }
-        Interlocked.Increment(ref _downloadedPieces);
+        Interlocked.Increment(ref _downloadedPiecesCount);
         Memory<byte> correctHash = Torrent.Pieces.AsMemory(block.Piece.PieceIndex * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes);
         if (!correctHash.Span.SequenceEqual(block.Piece.Hasher.Finish()))
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
-        lock (DownloadedPieces.Buffer)
+        lock (_haveWritersLock)
         {
-            DownloadedPieces[block.Piece.PieceIndex] = true;
+            _downloadedPieces[block.Piece.PieceIndex] = true;
             foreach (var peer in _haveWriters)
             {
-                peer.TryWrite(block.Piece.PieceIndex);
+                peer.WriteAsync(block.Piece.PieceIndex).AsTask();
             }
         }
     }
@@ -129,7 +141,7 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
     {
         ValidateRequest(request);
         if (UploadRate >= UploadRateTarget) return null;
-        return _files.GetStream(request.Index, request.Begin, request.Length);
+        return _storage.GetStream(request.Index, request.Begin, request.Length);
     }
 
     public void Cancel(Block block)
@@ -149,7 +161,8 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
 
     public PieceSegmentHandle? AssignSegment(BitArray ownedPieces)
     {
-        if (DownloadRate > DownloadRateTarget) return null;
+        if (DownloadRate > Config.TargetDownload || FinishedDownloading) 
+            return null;
         var slot = SeachPiece(ownedPieces);
         if (!slot.HasValue)
         {
@@ -233,11 +246,11 @@ public class Download(Torrent torrent, DownloadStorage files, Config config) : I
 
     public void Dispose()
     {
-        _files.Dispose();
+        _storage.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
-        return _files.DisposeAsync();
+        return _storage.DisposeAsync();
     }
 }

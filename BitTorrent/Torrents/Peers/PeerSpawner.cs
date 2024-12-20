@@ -59,7 +59,7 @@ public class PeerSpawner
 
     public async Task SpawnListener(PeerWireStream stream, int index, SharedPeerState state, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
-        var haveChannel = Channel.CreateUnbounded<int>();
+        var haveChannel = Channel.CreateBounded<int>(16);
         int downloadWriterIndex = _download.AddPeer(haveChannel.Writer);
         try
         {
@@ -67,8 +67,8 @@ public class PeerSpawner
             {
                 await stream.SendHandShakeAsync(GetBitField(), _download.Torrent.OriginalInfoHashBytes, _peerId);
             }
-            await using var peer = new Peer(stream, haveChannel.Reader, relationReader, _download, state);
-            await peer.ListenAsync(cancellationToken);
+            await using var peer = new Peer(stream, _download, state);
+            await peer.ListenAsync(haveChannel.Reader, relationReader, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -84,5 +84,5 @@ public class PeerSpawner
         }
     }
 
-    private ZeroCopyBitArray? GetBitField() => _download.DownloadedPiecesCount != 0 ? _download.DownloadedPieces : null;
+    private ZeroCopyBitArray? GetBitField() => _download.HasDownloadedPieces ? _download.DownloadedPieces : null;
 }

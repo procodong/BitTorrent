@@ -14,27 +14,23 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
     private readonly PeerWireStream _connection;
     private readonly Download _download;
     private readonly SharedPeerState _state;
-    private readonly ChannelReader<int> _haveMessageReceiver;
-    private readonly ChannelReader<PeerRelation> _relationReceiver;
     private readonly List<Block> _pieceDownloads = [];
     private readonly Queue<PieceRequest> _requestQueue = [];
     private PieceSegmentHandle? _segment;
     private bool _writing = false;
 
-    public Peer(PeerWireStream connection, ChannelReader<int> haveMessages, ChannelReader<PeerRelation> relationReceiver, Download download, SharedPeerState state)
+    public Peer(PeerWireStream connection, Download download, SharedPeerState state)
     {
         _connection = connection;
         _download = download;
         _state = state;
-        _haveMessageReceiver = haveMessages;
-        _relationReceiver = relationReceiver;
     }
 
-    public async Task ListenAsync(CancellationToken cancellationToken = default)
+    public async Task ListenAsync(ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
         Task receiveTask = _connection.ReceiveAsync(this, _download.MaxMessageLength, cancellationToken);
-        Task<PeerRelation> relationTask = _relationReceiver.ReadAsync(cancellationToken).AsTask();
-        Task<int> haveTask = _haveMessageReceiver.ReadAsync(cancellationToken).AsTask();
+        Task<PeerRelation> relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
+        Task<int> haveTask = haveMessageReader.ReadAsync(cancellationToken).AsTask();
         Task keepAliveTask = Task.Delay(_download.Config.KeepAliveInterval, cancellationToken);
         while (true)
         {
@@ -48,13 +44,13 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
             {
                 PeerRelation relation = await relationTask;
                 UpdateRelation(relation);
-                relationTask = _relationReceiver.ReadAsync(cancellationToken).AsTask();
+                relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
             {
                 int have = await haveTask;
                 _connection.WriteHaveMessage(have);
-                haveTask = _haveMessageReceiver.ReadAsync(cancellationToken).AsTask();
+                haveTask = haveMessageReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == keepAliveTask)
             {
@@ -101,29 +97,28 @@ public class Peer : IDisposable, IAsyncDisposable, IPeerEventHandler
 
     private void RequestBlocks()
     {
-        if (_state.RelationToMe.Choked || _segment is null)
+        if (_state.RelationToMe.Choked)
         {
             return;
         }
         while (_pieceDownloads.Count < _download.Config.RequestQueueSize)
         {
-            PieceRequest block = _segment.GetRequest(_download.Config.RequestSize);
-            if (block.Length == 0)
+            PieceRequest block = _segment?.GetRequest(_download.Config.RequestSize) ?? new();
+            while (block.Length == 0)
             {
-                PieceSegmentHandle? segment;
                 lock (_download)
                 {
-                    segment = _download.AssignSegment(_state.OwnedPieces);
+                    _segment = _download.AssignSegment(_state.OwnedPieces);
                 }
-                if (segment is not null)
+                if (_segment is null)
                 {
-                    _segment = segment;
+                    break;
                 }
                 block = _segment.GetRequest(_download.Config.RequestSize);
             }
             if (block.Length != 0)
             {
-                _pieceDownloads.Add(new(_segment.Piece, block.Begin, block.Length));
+                _pieceDownloads.Add(new(_segment!.Piece, block.Begin, block.Length));
                 _connection.WritePieceRequest(block);
             }
         }

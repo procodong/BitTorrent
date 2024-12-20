@@ -55,10 +55,6 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     public async Task<HandShake> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
         int len = await _stream.ReadAtLeastAsync(_readBuffer, MessageDecoder.HANDSHAKE_LEN, cancellationToken: cancellationToken);
-        if (len == 0)
-        {
-            throw new EndOfStreamException();
-        }
         _readCursor.Length = len;
         HandShake receivedHandshake = MessageDecoder.DecodeHandShake(_readCursor);
         if (receivedHandshake.Protocol != PROTOCOL)

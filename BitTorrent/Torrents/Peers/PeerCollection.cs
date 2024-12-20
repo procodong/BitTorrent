@@ -43,10 +43,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
     {
         if (_peerIds.Contains(stream.PeerId))
         {
-            if (_peerCursor.MoveNext())
-            {
-                _ = _spawner.SpawnConnect(_peerCursor.Current.Address);
-            }
+            ConnectNext();
             return;
         }
         _peerIds.Add(stream.PeerId);
@@ -59,12 +56,16 @@ public class PeerCollection : IEnumerable<PeerConnector>
 
     public async Task RemoveAsync(int? index)
     {
-        Console.WriteLine(_peers.Count);
         if (index is not null)
         {
             await _peers[index.Value].Canceller.CancelAsync();
             _peers.Remove(index.Value);
         }
+        ConnectNext();
+    }
+
+    private void ConnectNext()
+    {
         if (_peerCursor.MoveNext())
         {
             _ = _spawner.SpawnConnect(_peerCursor.Current.Address);
@@ -77,18 +78,10 @@ public class PeerCollection : IEnumerable<PeerConnector>
 
     public void Update(List<PeerAddress> addresses)
     {
-        Console.WriteLine(addresses.Count);
-        var newPeers = new List<PeerAddress>(addresses.Count);
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
-        foreach (PeerAddress peer in addresses)
-        {
-            if (!oldPeers.Contains(peer))
-            {
-                newPeers.Add(peer);
-            }
-        }
-        _potentialPeers = newPeers;
-        _peerCursor = newPeers.Indexed().GetEnumerator();
+        addresses.RemoveAll(oldPeers.Contains);
+        _potentialPeers = addresses;
+        _peerCursor = addresses.Indexed().GetEnumerator();
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
         {

@@ -7,31 +7,22 @@ using System.Threading.Tasks;
 namespace BitTorrent.Storage;
 public class StreamHandlePool
 {
-    private readonly List<StreamHandle> _handles;
+    private readonly StreamHandle[] _handles;
     private readonly IStreamHandleFactory _factory;
+    private volatile int _count;
+
+
 
     public StreamHandlePool(int handleLimit, IStreamHandleFactory factory)
     {
         _factory = factory;
-        _handles = new(handleLimit);
+        _handles = new StreamHandle[handleLimit];
     }
 
     public ValueTask<StreamHandle> GetHandle()
     {
-        foreach (var handle in _handles)
-        {
-            if (handle.Lock.CurrentCount != 0)
-            {
-                return ValueTask.FromResult(handle);
-            }
-        }
-        if (_handles.Count != _handles.Capacity)
-        {
-            return new(Task.Run(_factory.CreateStream));
-        }
-        else
-        {
-            throw new NotImplementedException();
-        }
+        int index = Random.Shared.Next(0, _count - 1);
+        var handle = _handles[index];
+        throw new NotImplementedException();
     }
 }

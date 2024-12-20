@@ -29,7 +29,7 @@ public readonly struct ZeroCopyBitArray
             byte mask = (byte)(1 << offset);
             if (value)
             {
-                target &= mask;
+                target |= mask;
             }
             else
             {

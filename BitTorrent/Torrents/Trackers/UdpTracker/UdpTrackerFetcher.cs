@@ -26,7 +26,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
     {
         _client = client;
         _random = new();
-        _buffer = new byte[100];
+        _buffer = new byte[1 << 7];
         _port = port;
     }
 
