@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Trackers;
+namespace BitTorrentClient.Models.Trackers;
 public enum TrackerEvent
 {
     None = 0,

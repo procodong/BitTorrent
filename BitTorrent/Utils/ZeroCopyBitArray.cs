@@ -1,4 +1,4 @@
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 
 public readonly struct ZeroCopyBitArray
 {

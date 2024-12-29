@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Application;
+namespace BitTorrentClient.Models.Application;
 public record class Config(
     int TargetDownload,
     int TargetUpload,
@@ -19,5 +19,7 @@ public record class Config(
     int UiUpdateInterval,
     int PieceSegmentSize,
     int MaxParallelPeers,
-    int TransferRateResetInterval
+    int TransferRateResetInterval,
+    int HandlesPerMb,
+    int MaxHandleCount
     );

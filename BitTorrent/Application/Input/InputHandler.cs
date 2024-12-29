@@ -1,4 +1,4 @@
-﻿using BitTorrent.Application.Input.Parsing;
+﻿using BitTorrentClient.Application.Input.Parsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Application.Input;
+namespace BitTorrentClient.Application.Input;
 public class InputHandler
 {
     private readonly ChannelWriter<Func<ICommandContext, Task>> _commandWriter;

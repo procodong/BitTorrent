@@ -1,4 +1,4 @@
-﻿using BitTorrent.Files.Streams;
+﻿using BitTorrentClient.Files.Streams;
 
-namespace BitTorrent.Models.Messages;
+namespace BitTorrentClient.Models.Messages;
 public readonly record struct Message(int Length, MessageType Type);

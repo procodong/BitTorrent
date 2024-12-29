@@ -4,25 +4,53 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Storage;
-public class StreamHandlePool
+namespace BitTorrentClient.Storage;
+public class StreamHandlePool : IDisposable, IAsyncDisposable
 {
-    private readonly StreamHandle[] _handles;
-    private readonly IStreamHandleFactory _factory;
-    private volatile int _count;
-
-
+    private readonly Lazy<Task<StreamHandle[]>> _handles;
 
     public StreamHandlePool(int handleLimit, IStreamHandleFactory factory)
     {
-        _factory = factory;
-        _handles = new StreamHandle[handleLimit];
+        _handles = new Lazy<Task<StreamHandle[]>>(() =>
+        {
+            return Task.Run(() =>
+            {
+                var handles = new StreamHandle[handleLimit];
+                for (int i = 0; i < handles.Length; i++)
+                {
+                    handles[i] = factory.CreateStream();
+                }
+                return handles;
+            });
+        }, true);
     }
 
-    public ValueTask<StreamHandle> GetHandle()
+    public void Dispose()
     {
-        int index = Random.Shared.Next(0, _count - 1);
-        var handle = _handles[index];
-        throw new NotImplementedException();
+        if (_handles.IsValueCreated)
+        {
+            foreach (var handle in _handles.Value.Result)
+            {
+                handle.Stream.Dispose();
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_handles.IsValueCreated)
+        {
+            foreach (var handle in _handles.Value.Result)
+            {
+                await handle.Stream.DisposeAsync();
+            }
+        }
+    }
+
+    public async Task<StreamHandle> GetHandle()
+    {
+        var handles = await _handles.Value;
+        int index = Random.Shared.Next(0, handles.Length - 1);
+        return handles[index];
     }
 }

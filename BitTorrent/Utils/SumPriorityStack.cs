@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Priority)>
 {
     private readonly List<(T Item, int Priority)> _stack = [];
@@ -17,9 +17,9 @@ public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Priori
         _sum += addition;
         if (_sum >= _capacity)
         {
-            _stack.Sort(Comparer<(T, int Priority)>.Create((v1, v2) => v1.Priority - v2.Priority));
+            _stack.Sort(Comparer<(T, int Priority)>.Create((v1, v2) => v2.Priority - v1.Priority));
         }
-        while (_sum >= _capacity)
+        while (_sum >= _capacity && _stack.Count != 0)
         {
             var (_, minPriority) = _stack.Pop();
             _sum -= minPriority;

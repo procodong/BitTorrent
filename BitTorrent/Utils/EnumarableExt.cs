@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 public static class EnumarableExt
 {
     public static IEnumerable<(int Index, T Value)> Indexed<T>(this IEnumerable<T> source)
@@ -13,6 +13,7 @@ public static class EnumarableExt
     }
 
     public static T? Find<T>(this IEnumerable<T> source, Func<T, bool> condition)
+        where T : struct
     {
         foreach (var item in source)
         {

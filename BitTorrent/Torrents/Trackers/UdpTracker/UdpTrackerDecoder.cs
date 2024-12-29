@@ -1,6 +1,6 @@
-﻿using BitTorrent.Models.Peers;
-using BitTorrent.Models.Trackers;
-using BitTorrent.Utils;
+﻿using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Utils.Parsing;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Trackers.UdpTracker;
+namespace BitTorrentClient.Torrents.Trackers.UdpTracker;
 public static class UdpTrackerDecoder
 {
     public static TrackerResponse ReadAnnounceResponse(BigEndianBinaryReader reader)

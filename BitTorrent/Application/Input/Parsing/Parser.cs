@@ -1,11 +1,11 @@
-﻿using BitTorrent.Application.Input.Exceptions;
+﻿using BitTorrentClient.Application.Input.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Application.Input.Parsing;
+namespace BitTorrentClient.Application.Input.Parsing;
 public class Parser(string input)
 {
     private readonly string _input = input;

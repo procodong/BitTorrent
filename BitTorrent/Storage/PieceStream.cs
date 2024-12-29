@@ -5,7 +5,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Storage;
+namespace BitTorrentClient.Storage;
 public class PieceStream : Stream
 {
     private readonly IEnumerator<StreamPart> _parts;
@@ -21,7 +21,7 @@ public class PieceStream : Stream
     public override long Length => _length;
 
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
-    public StreamPart Current => _parts.Current;
+    public StreamPart CurrentFile => _parts.Current;
 
     public PieceStream(IEnumerable<StreamPart> parts, int length)
     {
@@ -43,7 +43,7 @@ public class PieceStream : Stream
 
     private bool UpdateCurrentFile()
     {
-        if (_position >= Current.Length)
+        if (_position >= CurrentFile.Length)
         {
             return Next();
         }
@@ -52,21 +52,23 @@ public class PieceStream : Stream
 
     private int CapReadCount(int count)
     {
-        return int.Min(count, Current.Length - _position);
+        return int.Min(count, CurrentFile.Length - _position);
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!UpdateCurrentFile()) return 0;
-        await Current.StreamData.Lock.WaitAsync(cancellationToken);
-        UpdatePosition();
+        var handle = await CurrentFile.StreamData.Handles.GetHandle();
+        await handle.Lock.WaitAsync(cancellationToken);
+        UpdatePosition(handle.Stream);
         int readCount = -1;
         try
         {
-            readCount = await Current.StreamData.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
+            readCount = await handle.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
         }
         finally
         {
+            handle.Lock.Release();
             FinalizeRead(readCount);
         }
         return readCount;
@@ -75,28 +77,29 @@ public class PieceStream : Stream
     public override int Read(Span<byte> buffer)
     {
         if (!UpdateCurrentFile()) return 0;
-        Current.StreamData.Lock.Wait();
-        UpdatePosition();
+        var handle = CurrentFile.StreamData.Handles.GetHandle().GetAwaiter().GetResult();
+        handle.Lock.Wait();
+        UpdatePosition(handle.Stream);
         int readCount = -1;
         try
         {
-            readCount = Current.StreamData.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
+            readCount = handle.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
         }
         finally
         {
+            handle.Lock.Release();
             FinalizeRead(readCount);
         }
         return readCount;
     }
 
-    private void UpdatePosition()
+    private void UpdatePosition(Stream stream)
     {
-        Current.StreamData.Stream.Position = Current.Position + _position;
+        stream.Position = CurrentFile.Position + _position;
     }
 
     public void FinalizeRead(int readCount)
     {
-        Current.StreamData.Lock.Release();
         if (readCount != -1)
         {
             _position += readCount;
@@ -124,16 +127,17 @@ public class PieceStream : Stream
         while (writtenBytes < buffer.Length)
         {
             if (!UpdateCurrentFile()) return;
+            var handle = await CurrentFile.StreamData.Handles.GetHandle();
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
-            await Current.StreamData.Lock.WaitAsync(cancellationToken);
-            UpdatePosition();
+            await handle.Lock.WaitAsync(cancellationToken);
+            UpdatePosition(handle.Stream);
             try
             {
-                await Current.StreamData.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
+                await handle.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
             }
             finally
             {
-                Current.StreamData.Lock.Release();
+                handle.Lock.Release();
             }
             _position += writeLen;
             writtenBytes += writeLen;

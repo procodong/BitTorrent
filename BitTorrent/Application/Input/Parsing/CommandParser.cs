@@ -1,11 +1,11 @@
-﻿using BitTorrent.Application.Input.Exceptions;
+﻿using BitTorrentClient.Application.Input.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Application.Input.Parsing;
+namespace BitTorrentClient.Application.Input.Parsing;
 public static class CommandParser
 {
     public static Func<ICommandContext, Task> ParseCommand(string line)
@@ -16,12 +16,12 @@ public static class CommandParser
         {
             var torrentPath = parser.ParseString().ToString();
             var path = parser.ParseString().ToString();
-            return (ctx) => ctx.AddTorrent(torrentPath, path);
+            return (ctx) => ctx.AddTorrentAsync(torrentPath, path);
         }
         else if (command.SequenceEqual("remove"))
         {
             int index = parser.ParseInteger();
-            return (ctx) => ctx.RemoveTorrent(index);
+            return (ctx) => ctx.RemoveTorrentAsync(index);
         }
         throw new InvalidCommandException(command.ToString());
     }

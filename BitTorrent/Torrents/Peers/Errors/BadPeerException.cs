@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Peers.Errors;
+namespace BitTorrentClient.Torrents.Peers.Errors;
 public class BadPeerException(PeerErrorReason reason) : Exception
 {
     public readonly PeerErrorReason Reason = reason;

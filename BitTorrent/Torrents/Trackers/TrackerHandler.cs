@@ -1,7 +1,8 @@
-﻿using BitTorrent.Models.Peers;
-using BitTorrent.Models.Trackers;
-using BitTorrent.Torrents.Peers;
-using BitTorrent.Utils;
+﻿using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Torrents.Peers;
+using BitTorrentClient.Torrents.Peers.Streaming;
+using BitTorrentClient.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Trackers;
+namespace BitTorrentClient.Torrents.Trackers;
 public class TrackerHandler
 {
     private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());

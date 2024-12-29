@@ -1,5 +1,5 @@
-﻿using BitTorrent.Torrents.Trackers.Errors;
-using BitTorrent.Torrents.Trackers.UdpTracker;
+﻿using BitTorrentClient.Torrents.Trackers.Errors;
+using BitTorrentClient.Torrents.Trackers.UdpTracker;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Trackers;
+namespace BitTorrentClient.Torrents.Trackers;
 public class TrackerFinder(Random random, ILogger logger, int port) : ITrackerFinder
 {
     private readonly int _port = port;

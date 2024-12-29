@@ -4,12 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 public static class ListExt
 {
     public static T SwapRemove<T>(this List<T> list, int index)
     {
-        T old = list[index];   
+        T old = list[index];
+        if (list.Count == 1)
+        {
+            list.Clear();
+            return old;
+        }
         list[index] = list.Pop();
         return old;
     }

@@ -1,16 +1,15 @@
-﻿using BitTorrent.Models.Application;
-using BitTorrent.Models.Messages;
-using BitTorrent.Models.Peers;
-using BitTorrent.Models.Trackers;
-using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Peers;
-using BitTorrent.Torrents.Trackers;
-using BitTorrent.Utils;
+﻿using BitTorrentClient.Models.Application;
+using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Torrents.Downloads;
+using BitTorrentClient.Torrents.Peers;
+using BitTorrentClient.Torrents.Trackers;
+using BitTorrentClient.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Threading.Channels;
 
-namespace BitTorrent.Torrents.Managing;
+namespace BitTorrentClient.Torrents.Managing;
 public class PeerManager : IDisposable, IAsyncDisposable
 {
     private readonly PeerCollection _peers;
@@ -32,15 +31,15 @@ public class PeerManager : IDisposable, IAsyncDisposable
         _peers = peers;
     }
 
-    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int?> peerRemover, CancellationToken cancellationToken = default)
+    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int?> peerRemoveReader, CancellationToken cancellationToken = default)
     {
-        var events = new PeerManagerEventHandler(peerRemover, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
+        var events = new PeerManagerEventHandler(peerRemoveReader, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
         {
             Update = Update,
             PeerAddition = _peers.Add,
             PeerRemoval = _peers.RemoveAsync,
             TrackerResponse = (response) => _peers.Update(response.Peers),
-            Error = (err) => _logger.LogError("Error in peer manager: {}", err)
+            Error = (err) => _logger.LogError("Peer manager", err)
         };
         await events.ListenAsync(cancellationToken);
     }
@@ -52,7 +51,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
         if (_updateTick % _download.Config.TransferRateResetInterval == 0)
         {
             var recent = _download.ResetRecentTransfer();
-            _transfered.FetchAdd(recent);
+            _transfered.AtomicAdd(recent);
         }
         unchecked
         {
@@ -70,14 +69,14 @@ public class PeerManager : IDisposable, IAsyncDisposable
 
         foreach (var (index, peer) in _peers.Indexed())
         {
-            bool interested = peer.Data.Relation.Interested;
-            bool choked = peer.Data.Relation.Choked;
+            bool interested = peer.State.Relation.Interested;
+            bool choked = peer.State.Relation.Choked;
             var stats = new DataTransferVector(
-                choked ? peer.LastUnchokedStats.Downloaded : Interlocked.Read(ref peer.Data.Stats.Downloaded), 
-                !interested ? peer.LastUnchokedStats.Uploaded : Interlocked.Read(ref peer.Data.Stats.Uploaded)
+                choked ? peer.LastUnchokedStats.Download : Interlocked.Read(ref peer.State.Stats.Downloaded), 
+                !interested ? peer.LastUnchokedStats.Upload : Interlocked.Read(ref peer.State.Stats.Uploaded)
                 );
             var statChange = (stats - peer.LastStatistics) / _download.SecondsSinceTimerReset;
-            unchokedPeers.Include(index, (int)statChange.Upload, (int)statChange.Upload);
+            unchokedPeers.Include(index, (int)statChange.Upload + (int)statChange.Download, (int)statChange.Upload);
             interestingPeers.Include(index, (int)statChange.Download, (int)statChange.Download);
             peer.LastStatistics = stats;
         }
@@ -102,15 +101,12 @@ public class PeerManager : IDisposable, IAsyncDisposable
         {
             bool interesting = interestingPeers[index];
             bool unChoked = unchokedPeers[index];
-            if (!interesting)
+            peer.LastUnchokedStats = peer.LastUnchokedStats with
             {
-                peer.LastUnchokedStats.Uploaded = peer.LastStatistics.Download;
-            }
-            if (!unChoked)
-            {
-                peer.LastUnchokedStats.Downloaded = peer.LastStatistics.Download;
-            }
-            if (interesting != peer.Data.Relation.Interested || !unChoked != peer.Data.Relation.Choked)
+                Upload = interesting ? peer.LastUnchokedStats.Upload : peer.LastStatistics.Download,
+                Download = unChoked ? peer.LastUnchokedStats.Download : peer.LastStatistics.Download
+            };
+            if (interesting != peer.State.Relation.Interested || !unChoked != peer.State.Relation.Choked)
             {
                 await peer.RelationEventWriter.WriteAsync(new(interesting, !unChoked));
             }
@@ -133,7 +129,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         for (int i = 0; i < _download.Torrent.NumberOfPieces; i++)
         {
-            int count = _peers.Select(peer => peer.Data.OwnedPieces[i] ? 1 : 0).Sum();
+            int count = _peers.Select(peer => peer.State.OwnedPieces[i] ? 1 : 0).Sum();
             yield return count;
         }
     }
@@ -154,7 +150,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     {
         foreach (var peer in _peers)
         {
-            peer.Canceller.Cancel();
+            await peer.Canceller.CancelAsync();
         }
         await _download.DisposeAsync();
         await _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 public class PriorityStack<T>(int size, IComparer<T> comparer) : IEnumerable<T>
 {
     private readonly List<T> _stack = new(size);

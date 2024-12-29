@@ -1,42 +1,45 @@
 ﻿using BencodeNET.IO;
 using BencodeNET.Torrents;
-using BitTorrent.Application.Input;
-using BitTorrent.Models.Application;
-using BitTorrent.Models.Peers;
-using BitTorrent.Models.Trackers;
-using BitTorrent.Storage;
-using BitTorrent.Torrents.Managing;
-using BitTorrent.Torrents.Peers;
-using BitTorrent.Torrents.Trackers;
+using BitTorrentClient.Application.Input;
+using BitTorrentClient.Models.Application;
+using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Storage;
+using BitTorrentClient.Torrents.Managing;
+using BitTorrentClient.Torrents.Peers;
+using BitTorrentClient.Torrents.Trackers;
 using Microsoft.Extensions.Logging;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Channels;
 
-namespace BitTorrent.Torrents.Downloads;
+namespace BitTorrentClient.Torrents.Downloads;
 public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
 {
     private readonly List<PeerManagerConnector> _downloads = [];
-    private readonly PeerIdGenerator _peerIdGenerator = new();
+    private readonly PeerIdGenerator _peerIdGenerator;
     private readonly Config _config;
     private readonly ChannelWriter<PeerReceivingSubscribe> _peerReceivingSubscriber;
+    private readonly DownloadStorageFactory _storageFactory;
     private readonly ILogger _logger;
     private readonly ITrackerFinder _trackerFinder;
     public bool HasUpdates => _downloads.Count != 0;
     public Config Config => _config;
     public ILogger Logger => _logger;
 
-    public DownloadCollection(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, Config config, ILogger logger, ITrackerFinder trackerFinder)
+    public DownloadCollection(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, PeerIdGenerator peerIdGenerator, DownloadStorageFactory storageFactory, Config config, ILogger logger, ITrackerFinder trackerFinder)
     {
+        _peerIdGenerator = peerIdGenerator;
         _config = config;
         _logger = logger;
         _peerReceivingSubscriber = peerReceivingSubscriber;
         _trackerFinder = trackerFinder;
+        _storageFactory = storageFactory;
     }
     
-    public async Task StartDownload(Torrent torrent, DownloadStorage files)
+    public async Task StartDownloadAsync(Torrent torrent, DownloadStorage files)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
-        var request = new TrackerUpdate(torrent.OriginalInfoHashBytes, peerId, new(), torrent.TotalSize, TrackerEvent.Started);
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(torrent, files, _config);
         var peerAdditionChannel = Channel.CreateBounded<IdentifiedPeerWireStream>(new BoundedChannelOptions(8)
@@ -48,33 +51,33 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
             SingleWriter = false
         });
         var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, System.Text.Encoding.ASCII.GetBytes(peerId));
-        var peers = new PeerCollection(spawner, _logger, torrent.NumberOfPieces, _config.MaxParallelPeers);
+        var peers = new PeerCollection(spawner, torrent.NumberOfPieces, _config.MaxParallelPeers);
         var peerManager = new PeerManager(peerId, download, peers, _logger, fetcher);
         var cancellationTokenSource = new CancellationTokenSource();
         _downloads.Add(new(peerManager, cancellationTokenSource, torrent.OriginalInfoHashBytes));
         await _peerReceivingSubscriber.WriteAsync(new(torrent.OriginalInfoHashBytes, peerAdditionChannel.Writer));
-        new Thread(async () =>
-        {
-            await using var _ = peerManager;
-            try
-            {
-                await peerManager.ListenAsync(peerAdditionChannel.Reader, removalChannel.Reader, cancellationTokenSource.Token);
-            }
-            catch (Exception e)
-            {
-                if (e is not OperationCanceledException)
-                {
-                    _logger.LogError("Error in peer manager: {}", e);
-                }
-            }
-        }).Start();
+        _ = SpawnDownload(peerManager, peerAdditionChannel.Reader, removalChannel.Reader, cancellationTokenSource.Token).ConfigureAwait(false);
+
     }
 
-    public async Task RemoveDownload(int id)
+    private async Task SpawnDownload(PeerManager download, ChannelReader<IdentifiedPeerWireStream> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
+    {
+        await using var _ = download;
+        try
+        {
+            await download.ListenAsync(peerAdditionReader, removalReader, cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogError("Error in peer manager: {}", e);
+        }
+    }
+
+    public async Task StopDownloadAsync(int id)
     {
         var download = _downloads[id];
         _downloads.RemoveAt(id);
-        await download.CancellationTokenSource.CancelAsync();
+        await download.Canceller.CancelAsync();
         await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
     }
 
@@ -87,7 +90,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
     {
         while (_downloads.Count != 0)
         {
-            await RemoveDownload(_downloads.Count - 1);
+            await StopDownloadAsync(_downloads.Count - 1);
         }
     }
 
@@ -95,32 +98,27 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
     {
         while (_downloads.Count != 0)
         {
-            _ = RemoveDownload(_downloads.Count - 1);
+            _ = StopDownloadAsync(_downloads.Count - 1);
         }
     }
 
-    async Task ICommandContext.AddTorrent(string torrentPath, string targetPath)
+    async Task ICommandContext.AddTorrentAsync(string torrentPath, string targetPath)
     {
-        await using var file = File.Open(torrentPath, FileMode.Open);
+        await using var file = File.Open(torrentPath, new FileStreamOptions()
+        {
+            Options = FileOptions.Asynchronous,
+        });
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);
-        var files = await Task.Run(() =>
-        {
-            if (torrent.Files is not null)
-            {
-                return DownloadStorage.CreateFiles(targetPath, torrent.Files, (int)torrent.PieceSize);
-            }
-            else
-            {
-                return DownloadStorage.CreateFile(targetPath, torrent.File, (int)torrent.PieceSize);
-            }
-        });
-        await StartDownload(torrent, files);
+        DownloadStorage storage = torrent.Files is not null
+            ? _storageFactory.CreateMultiFileStorage(targetPath, torrent.Files, (int)torrent.PieceSize)
+            : _storageFactory.CreateSingleFileStorage(targetPath, torrent.File, (int)torrent.PieceSize);
+        await StartDownloadAsync(torrent, storage);
     }
 
-    async Task ICommandContext.RemoveTorrent(int index)
+    async Task ICommandContext.RemoveTorrentAsync(int index)
     {
-        await RemoveDownload(index);
+        await StopDownloadAsync(index);
     }
 }

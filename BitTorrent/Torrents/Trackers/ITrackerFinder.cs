@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Trackers;
+namespace BitTorrentClient.Torrents.Trackers;
 public interface ITrackerFinder
 {
     Task<ITrackerFetcher> FindTrackerAsync(IEnumerable<IList<string>> urls);

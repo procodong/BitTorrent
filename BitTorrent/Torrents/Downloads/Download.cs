@@ -1,11 +1,11 @@
 ﻿
 using BencodeNET.Torrents;
-using BitTorrent.Models.Application;
-using BitTorrent.Models.Messages;
-using BitTorrent.Models.Peers;
-using BitTorrent.Storage;
-using BitTorrent.Torrents.Peers.Errors;
-using BitTorrent.Utils;
+using BitTorrentClient.Models.Application;
+using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Storage;
+using BitTorrentClient.Torrents.Peers.Errors;
+using BitTorrentClient.Utils;
 using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Channels;
 
-namespace BitTorrent.Torrents.Downloads;
+namespace BitTorrentClient.Torrents.Downloads;
 public class Download : IDisposable, IAsyncDisposable
 {
     private readonly Torrent _torrent;
@@ -22,11 +22,10 @@ public class Download : IDisposable, IAsyncDisposable
     private readonly DataTransferCounter _recentDataTransfer = new();
     private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
     private readonly DownloadStorage _storage;
-    private readonly List<PieceSegmentHandle> _pieceRegisters = [];
+    private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
     private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
-    private readonly object _haveWritersLock = new();
-    private List<int> _rarestPieces = [];
+    private readonly List<int> _rarestPieces = [];
     private int _downloadedPiecesCount = 0;
     private int _requestedPiecesOffset = 0;
 
@@ -45,11 +44,7 @@ public class Download : IDisposable, IAsyncDisposable
     public Config Config => _config;
     public int MaxMessageLength => int.Max(_config.RequestSize + 13, _downloadedPieces.Buffer.Length + 5);
     public bool FinishedDownloading => _downloadedPiecesCount >= _torrent.NumberOfPieces;
-    public List<int> RarestPieces
-    {
-        get => _rarestPieces;
-        set => _rarestPieces = value;
-    }
+    public List<int> RarestPieces => _rarestPieces;
     public DataTransferVector RecentlyTransfered => _recentDataTransfer.Fetch();
     public long UploadRate
     {
@@ -77,7 +72,7 @@ public class Download : IDisposable, IAsyncDisposable
 
     public int AddPeer(ChannelWriter<int> communicator)
     {
-        lock (_haveWritersLock)
+        lock (_haveWriters)
         {
             return _haveWriters.Add(communicator);
         }
@@ -85,7 +80,7 @@ public class Download : IDisposable, IAsyncDisposable
 
     public void RemovePeer(int index)
     {
-        lock (_haveWritersLock)
+        lock (_haveWriters)
         {
             _haveWriters.Remove(index);
         }
@@ -104,20 +99,20 @@ public class Download : IDisposable, IAsyncDisposable
         }
         return _recentDataTransfer.FetchReplace(new());
     }
-
+    
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
         var files = _storage.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(block.Length);
         await stream.ReadExactlyAsync(buffer.AsMemory(..block.Length), cancellationToken);
-        await files.WriteAsync(buffer, cancellationToken);
+        await files.WriteAsync(buffer.AsMemory(..block.Length), cancellationToken);
         lock (block.Piece.Hasher)
         {
-            block.Piece.Hasher.Hash(buffer, block.Begin / Config.RequestSize);
+            block.Piece.Hasher.Hash(buffer, block.Length, block.Begin / Config.RequestSize);
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         Interlocked.Add(ref _recentDataTransfer.Downloaded, block.Length);
-        if (newDownloaded < block.Piece.Size || block.Piece.Size != PieceSize(block.Piece.PieceIndex))
+        if (newDownloaded < block.Piece.Size)
         {
             return;
         }
@@ -127,12 +122,15 @@ public class Download : IDisposable, IAsyncDisposable
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
-        lock (_haveWritersLock)
+        lock (_haveWriters)
         {
             _downloadedPieces[block.Piece.PieceIndex] = true;
             foreach (var peer in _haveWriters)
             {
-                peer.WriteAsync(block.Piece.PieceIndex).AsTask();
+                if (!peer.TryWrite(block.Piece.PieceIndex))
+                {
+                    _ = peer.WriteAsync(block.Piece.PieceIndex).AsTask();
+                }
             }
         }
     }
@@ -146,7 +144,7 @@ public class Download : IDisposable, IAsyncDisposable
 
     public void Cancel(Block block)
     {
-        _pieceRegisters.Add(new(block.Piece, block.Begin, block.Length));
+        _pieceRegisters.Add(new(block));
     }
 
     private void ValidateRequest(PieceRequest request)
@@ -159,10 +157,12 @@ public class Download : IDisposable, IAsyncDisposable
         }
     }
 
-    public PieceSegmentHandle? AssignSegment(BitArray ownedPieces)
+    public Block? AssignBlock(BitArray ownedPieces)
     {
-        if (DownloadRate > Config.TargetDownload || FinishedDownloading) 
+        if (DownloadRate > Config.TargetDownload || FinishedDownloading)
+        {
             return null;
+        }
         var slot = SeachPiece(ownedPieces);
         if (!slot.HasValue)
         {
@@ -175,7 +175,7 @@ public class Download : IDisposable, IAsyncDisposable
         {
             _pieceRegisters.SwapRemove(index);
         }
-        if (download.Position == PieceSize(download.Piece.PieceIndex))
+        if (download.Position == download.Piece.Size)
         {
             _requestedPieces[download.Piece.PieceIndex] = true;
             while (_requestedPieces[_requestedPiecesOffset])
@@ -183,22 +183,17 @@ public class Download : IDisposable, IAsyncDisposable
                 _requestedPiecesOffset++;
             }
         }
-        return new(download.Piece, request.Begin, request.Length);
+        return request;
     }
 
     private int? SeachPiece(BitArray ownedPieces)
     {
-        foreach (var (index, pieceDownload) in _pieceRegisters.Indexed())
-        {
-            if (ownedPieces[pieceDownload.Piece.PieceIndex])
-            {
-                return index;
-            }
-        }
+        int index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.PieceIndex]);
+        if (index != -1) return index;
         var creation = CreateDownload(ownedPieces);
         if (creation is null) return default;
-        var i = _pieceRegisters.Count;
-        _pieceRegisters.Add(new(creation, 0, creation.Size));
+        int i = _pieceRegisters.Count;
+        _pieceRegisters.Add(new(new(creation, 0, creation.Size)));
         return i;
     }
 
@@ -228,15 +223,10 @@ public class Download : IDisposable, IAsyncDisposable
 
     private PieceDownload? FindNextPiece(IEnumerable<int> pieces, BitArray ownedPieces)
     {
-        foreach (var piece in pieces)
-        {
-            if (CanBeRequested(piece, ownedPieces))
-            {
-                int size = PieceSize(piece);
-                return new PieceDownload(size, piece, new((int)(size / Config.RequestSize) + 1));
-            }
-        }
-        return default;
+        int? piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
+        if (piece is null) return default;
+        int size = PieceSize(piece.Value);
+        return new PieceDownload(size, piece.Value, new(size / Config.RequestSize + 1));
     }
 
     private int PieceSize(int piece)

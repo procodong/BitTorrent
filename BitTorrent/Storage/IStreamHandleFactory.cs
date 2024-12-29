@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Storage;
+namespace BitTorrentClient.Storage;
 public interface IStreamHandleFactory
 {
     StreamHandle CreateStream();

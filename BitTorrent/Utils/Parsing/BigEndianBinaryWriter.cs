@@ -5,16 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils.Parsing;
 public class BigEndianBinaryWriter
 {
-    private readonly byte[] _buffer;
+    private readonly BufferCursor _cursor;
 
-    public int Position { get; set; }
+    public ref int Position => ref _cursor.Position;
+    public BufferCursor Cursor => _cursor;
 
     public BigEndianBinaryWriter(byte[] buffer)
     {
-        _buffer = buffer;
+        _cursor = new(buffer, 0, buffer.Length);
     }
 
     public BigEndianBinaryWriter(byte[] buffer, int position) : this(buffer)
@@ -22,7 +23,7 @@ public class BigEndianBinaryWriter
         Position = position;
     }
 
-    private Span<byte> Remaining => _buffer.AsSpan(Position);
+    private Span<byte> Remaining => _cursor.Buffer.AsSpan(Position);
 
     public void Write(ReadOnlySpan<byte> bytes)
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Files.Streams;
+namespace BitTorrentClient.Files.Streams;
 public class LimitedStream : Stream
 {
     private readonly Stream _stream;

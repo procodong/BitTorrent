@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Models.Peers;
+namespace BitTorrentClient.Models.Peers;
 public class DataTransferCounter
 {
     public long Downloaded = 0;
@@ -27,7 +27,7 @@ public class DataTransferCounter
             );
     }
 
-    public void FetchAdd(DataTransferVector vector)
+    public void AtomicAdd(DataTransferVector vector)
     {
         Interlocked.Add(ref Downloaded, vector.Download);
         Interlocked.Add(ref Uploaded, vector.Upload);

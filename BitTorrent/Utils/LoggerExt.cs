@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
+namespace BitTorrentClient.Utils;
 public static class LoggerExt
 {
     public static void LogError(this ILogger logger, string origin, Exception error)

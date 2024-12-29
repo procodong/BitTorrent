@@ -1,4 +1,4 @@
-﻿using BitTorrent.Storage;
+﻿using BitTorrentClient.Storage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Downloads;
+namespace BitTorrentClient.Torrents.Downloads;
 public class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
     public int Downloaded;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Application.Input.Exceptions;
+namespace BitTorrentClient.Application.Input.Exceptions;
 internal class InvalidTokenException(char token, int index) : Exception($"Invalid token {token} at {index}")
 {
     public readonly char Token = token;

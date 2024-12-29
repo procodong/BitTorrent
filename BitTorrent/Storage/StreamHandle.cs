@@ -4,5 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Storage;
+namespace BitTorrentClient.Storage;
 public readonly record struct StreamHandle(SemaphoreSlim Lock, Stream Stream);

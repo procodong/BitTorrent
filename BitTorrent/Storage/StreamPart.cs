@@ -4,5 +4,5 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Storage;
+namespace BitTorrentClient.Storage;
 public readonly record struct StreamPart(StreamData StreamData, int Length, long Position);

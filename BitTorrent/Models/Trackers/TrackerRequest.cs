@@ -1,4 +1,4 @@
-﻿namespace BitTorrent.Models.Trackers;
+﻿namespace BitTorrentClient.Models.Trackers;
 public record class TrackerRequest(
     byte[] InfoHash,
     string ClientId,

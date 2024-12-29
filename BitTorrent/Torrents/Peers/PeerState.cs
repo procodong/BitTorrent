@@ -1,4 +1,4 @@
-﻿using BitTorrent.Models.Peers;
+﻿using BitTorrentClient.Models.Peers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,8 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Peers;
-public class SharedPeerState(BitArray ownedPieces)
+namespace BitTorrentClient.Torrents.Peers;
+public class PeerState(BitArray ownedPieces)
 {
     public PeerRelation RelationToMe = new();
     public PeerRelation Relation = new();

@@ -1,8 +1,8 @@
-﻿using BitTorrent.Models.Peers;
-using BitTorrent.Models.Trackers;
-using BitTorrent.Torrents.Downloads;
-using BitTorrent.Torrents.Peers;
-using BitTorrent.Torrents.Trackers;
+﻿using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Torrents.Downloads;
+using BitTorrentClient.Torrents.Peers;
+using BitTorrentClient.Torrents.Trackers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Managing;
+namespace BitTorrentClient.Torrents.Managing;
 
 public delegate void NewPeer(IdentifiedPeerWireStream stream);
 public delegate Task Update();

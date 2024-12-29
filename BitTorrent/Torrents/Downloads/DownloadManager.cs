@@ -1,9 +1,10 @@
-﻿using BitTorrent.Application.Input;
-using BitTorrent.Models.Application;
+﻿using BitTorrentClient.Application.Input;
+using BitTorrentClient.Models.Application;
+using BitTorrentClient.Utils;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
-namespace BitTorrent.Torrents.Downloads;
+namespace BitTorrentClient.Torrents.Downloads;
 public class DownloadManager : IAsyncDisposable, IDisposable
 {
     private readonly DownloadCollection _downloads;
@@ -31,7 +32,7 @@ public class DownloadManager : IAsyncDisposable, IDisposable
                 }
                 catch (Exception exc)
                 {
-                    _downloads.Logger.LogError("Error handling user command: {}", exc);
+                    _downloads.Logger.LogError("handling user command", exc);
                 }
                 commandTask = commands.ReadAsync(cancellationToken).AsTask();
             }
@@ -39,7 +40,7 @@ public class DownloadManager : IAsyncDisposable, IDisposable
             {
                 if (_downloads.HasUpdates)
                 {
-                    await _updateWriter.WriteAsync(_downloads.GetUpdates());
+                    await _updateWriter.WriteAsync(_downloads.GetUpdates(), cancellationToken);
                 }
                 intervalTask = Task.Delay(_downloads.Config.UiUpdateInterval, cancellationToken);
             }

@@ -1,4 +1,4 @@
-﻿using BitTorrent.Models.Messages;
+﻿using BitTorrentClient.Models.Messages;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Peers;
+namespace BitTorrentClient.Torrents.Peers;
 public interface IPeerEventHandler
 {
     Task OnChokeAsync(CancellationToken cancellationToken = default);
@@ -18,5 +18,4 @@ public interface IPeerEventHandler
     Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default);
     Task OnPieceAsync(Piece piece, CancellationToken cancellationToken = default);
     Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default);
-    Task OnPortAsync(ushort port, CancellationToken cancellationToken = default);
 }

@@ -5,18 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Utils;
-public class BigEndianBinaryReader
+namespace BitTorrentClient.Utils.Parsing;
+public readonly struct BigEndianBinaryReader
 {
-    private readonly byte[] _buffer;
-
-    public int Position { get; set; }
-    public int Length { get; set; }
+    private readonly BufferCursor _reader;
     public BigEndianBinaryReader(byte[] buffer)
     {
-        _buffer = buffer;
-        Length = buffer.Length;
+        _reader = new BufferCursor(buffer, 0, buffer.Length);
     }
+    public BufferCursor Cursor => _reader;
+    public ref int Position => ref Position;
+    public ref int Length => ref _reader.Length;
 
     public BigEndianBinaryReader(byte[] buffer, int position) : this(buffer)
     {
@@ -28,7 +27,7 @@ public class BigEndianBinaryReader
         Length = length;
     }
 
-    private ReadOnlySpan<byte> Remaining => _buffer.AsSpan(Position..Length);
+    private ReadOnlySpan<byte> Remaining => _reader.Buffer.AsSpan(Position..Length);
 
     public void Skip(int count)
     {
@@ -52,7 +51,7 @@ public class BigEndianBinaryReader
     public string ReadString()
     {
         int len = ReadByte();
-        var text = Encoding.UTF8.GetString(ReadBytes(len));
+        var text = System.Text.Encoding.UTF8.GetString(ReadBytes(len));
         return text;
     }
 

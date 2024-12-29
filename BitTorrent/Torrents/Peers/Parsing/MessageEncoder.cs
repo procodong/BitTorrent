@@ -1,5 +1,5 @@
-﻿using BitTorrent.Models.Messages;
-using BitTorrent.Utils;
+﻿using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Utils.Parsing;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrent.Torrents.Encoding;
+namespace BitTorrentClient.Torrents.Peers.Encoding;
 public static class MessageEncoder
 {
     public static void EncodePieceRequest(BigEndianBinaryWriter writer, PieceRequest request)
