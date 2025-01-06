@@ -3,9 +3,9 @@ using BitTorrentClient.Application.Ui;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Storage;
-using BitTorrentClient.Torrents.Downloads;
-using BitTorrentClient.Torrents.Peers;
-using BitTorrentClient.Torrents.Trackers;
+using BitTorrentClient.BitTorrent.Downloads;
+using BitTorrentClient.BitTorrent.Peers;
+using BitTorrentClient.BitTorrent.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
@@ -23,9 +23,7 @@ var config = new Config(
     UiUpdateInterval: 1000,
     PieceSegmentSize: 1 << 17,
     MaxParallelPeers: 30,
-    TransferRateResetInterval: 10,
-    HandlesPerMb: 2,
-    MaxHandleCount: 10
+    TransferRateResetInterval: 10
     );
 int port = 6881;
 ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");
@@ -54,8 +52,7 @@ _ = uiUpdater.ListenAsync(updateChannel.Reader).ConfigureAwait(false);
 var canceller = new CancellationTokenSource();
 var peerIdGenerator = new PeerIdGenerator("BT", 1001);
 var trackerFetcher = new TrackerFinder(new(), logger, port);
-var storageFactory = new DownloadStorageFactory(config.HandlesPerMb, config.MaxHandleCount);
-var downloads = new DownloadCollection(newDownloadChannel.Writer, peerIdGenerator, storageFactory, config, logger, trackerFetcher);
+var downloads = new DownloadCollection(newDownloadChannel.Writer, peerIdGenerator, config, logger, trackerFetcher);
 await using var downloadManager = new DownloadManager(downloads, updateChannel.Writer);
 
 Console.CancelKeyPress += (_, e) =>

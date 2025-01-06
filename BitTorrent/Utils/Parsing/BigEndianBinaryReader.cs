@@ -8,26 +8,18 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Utils.Parsing;
 public readonly struct BigEndianBinaryReader
 {
-    private readonly BufferCursor _reader;
-    public BigEndianBinaryReader(byte[] buffer)
-    {
-        _reader = new BufferCursor(buffer, 0, buffer.Length);
-    }
-    public BufferCursor Cursor => _reader;
-    public ref int Position => ref Position;
-    public ref int Length => ref _reader.Length;
+    private readonly BufferCursor _cursor;
 
-    public BigEndianBinaryReader(byte[] buffer, int position) : this(buffer)
+    public BufferCursor Cursor => _cursor;
+    public ref int Position => ref _cursor.Position;
+    public ref int Length => ref _cursor.Length;
+
+    public BigEndianBinaryReader(BufferCursor cursor)
     {
-        Position = position;
+        _cursor = cursor;
     }
 
-    public BigEndianBinaryReader(byte[] buffer, int position, int length) : this(buffer, position)
-    {
-        Length = length;
-    }
-
-    private ReadOnlySpan<byte> Remaining => _reader.Buffer.AsSpan(Position..Length);
+    private ReadOnlySpan<byte> Remaining => _cursor.Buffer.AsSpan(Position..Length);
 
     public void Skip(int count)
     {
@@ -48,11 +40,16 @@ public readonly struct BigEndianBinaryReader
         return bytes;
     }
 
+    public string ReadString(int len)
+    {
+        var text = Encoding.UTF8.GetString(ReadBytes(len));
+        return text;
+    }
+
     public string ReadString()
     {
         int len = ReadByte();
-        var text = System.Text.Encoding.UTF8.GetString(ReadBytes(len));
-        return text;
+        return ReadString(len);
     }
 
     public short ReadInt16()

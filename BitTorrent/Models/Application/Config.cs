@@ -19,7 +19,5 @@ public record class Config(
     int UiUpdateInterval,
     int PieceSegmentSize,
     int MaxParallelPeers,
-    int TransferRateResetInterval,
-    int HandlesPerMb,
-    int MaxHandleCount
+    int TransferRateResetInterval
     );

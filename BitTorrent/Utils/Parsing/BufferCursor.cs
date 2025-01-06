@@ -12,6 +12,9 @@ public class BufferCursor
     public int Position;
     public int Length;
 
+    public BufferCursor(byte[] buffer) : this(buffer, 0, buffer.Length)
+    {
+    }
     public BufferCursor(byte[] buffer, int position, int length)
     {
         Buffer = buffer;

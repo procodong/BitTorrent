@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Torrents.Peers.Streaming;
+﻿using BitTorrentClient.BitTorrent.Peers.Streaming;
 using System;
 using System.Collections.Generic;
 using System.Linq;

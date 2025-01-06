@@ -58,7 +58,7 @@ public class PieceStream : Stream
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!UpdateCurrentFile()) return 0;
-        var handle = await CurrentFile.StreamData.Handles.GetHandle();
+        var handle = await CurrentFile.StreamData.Handle.Value;
         await handle.Lock.WaitAsync(cancellationToken);
         UpdatePosition(handle.Stream);
         int readCount = -1;
@@ -77,7 +77,7 @@ public class PieceStream : Stream
     public override int Read(Span<byte> buffer)
     {
         if (!UpdateCurrentFile()) return 0;
-        var handle = CurrentFile.StreamData.Handles.GetHandle().GetAwaiter().GetResult();
+        var handle = CurrentFile.StreamData.Handle.Value.GetAwaiter().GetResult();
         handle.Lock.Wait();
         UpdatePosition(handle.Stream);
         int readCount = -1;
@@ -127,7 +127,7 @@ public class PieceStream : Stream
         while (writtenBytes < buffer.Length)
         {
             if (!UpdateCurrentFile()) return;
-            var handle = await CurrentFile.StreamData.Handles.GetHandle();
+            var handle = await CurrentFile.StreamData.Handle.Value;
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
             await handle.Lock.WaitAsync(cancellationToken);
             UpdatePosition(handle.Stream);

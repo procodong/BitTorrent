@@ -1,18 +1,9 @@
 ﻿using BencodeNET.Torrents;
 
 namespace BitTorrentClient.Storage;
-public class DownloadStorageFactory
+public static class DownloadStorageFactory
 {
-    private readonly int _handlesPerMb;
-    private readonly int _maxHandleCount;
-
-    public DownloadStorageFactory(int handlesPerMb, int maxHandleCount)
-    {
-        _handlesPerMb = handlesPerMb;
-        _maxHandleCount = maxHandleCount;
-    }
-
-    public DownloadStorage CreateMultiFileStorage(string path, MultiFileInfoList files, int pieceSize)
+    public static DownloadStorage CreateMultiFileStorage(string path, MultiFileInfoList files, int pieceSize)
     {
         var createdFiles = new List<StreamData>(files.Count);
         var createdDirectories = new HashSet<string>();
@@ -29,26 +20,34 @@ public class DownloadStorageFactory
                 }
             }
             var filePath = Path.Combine(path, file.FullPath);
-            var handleFactory = new FileHandleFactory(filePath, file.FileSize);
-            var handles = new StreamHandlePool(HandleCount(file.FileSize), handleFactory);
-            createdFiles.Add(new(createdBytes, file.FileSize, handles));
+            var handle = new Lazy<Task<StreamHandle>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
+            createdFiles.Add(new(createdBytes, file.FileSize, handle));
             createdBytes += file.FileSize;
         }
         return new(pieceSize, createdFiles);
     }
 
-    public DownloadStorage CreateSingleFileStorage(string path, SingleFileInfo file, int pieceSize)
+    public static DownloadStorage CreateSingleFileStorage(string path, SingleFileInfo file, int pieceSize)
     {
-        var handleFactory = new FileHandleFactory(Path.Combine(path, file.FileName), file.FileSize);
-        var pool = new StreamHandlePool(HandleCount(file.FileSize), handleFactory);
-        var streamData = new StreamData(0, file.FileSize, pool);
+        var filePath = Path.Combine(path, file.FileName);
+        var handle = new Lazy<Task<StreamHandle>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
+        var streamData = new StreamData(0, file.FileSize, handle);
         return new(pieceSize, [streamData]);
     }
 
-    private int HandleCount(long fileSize)
+    private static StreamHandle CreateStream(string path, long size)
     {
-        int handleCount = (int)(fileSize / 1_000_000 * _handlesPerMb);
-        if (handleCount == 0) handleCount = 1;
-        return int.Min(handleCount, _maxHandleCount);
+        var createdFile = File.Open(path, new FileStreamOptions()
+        {
+            Access = FileAccess.ReadWrite,
+            Share = FileShare.ReadWrite,
+            Mode = FileMode.OpenOrCreate,
+            Options = FileOptions.Asynchronous,
+        });
+        if (createdFile.Length != size)
+        {
+            createdFile.SetLength(size);
+        }
+        return new(new(1, 1), createdFile);
     }
 }

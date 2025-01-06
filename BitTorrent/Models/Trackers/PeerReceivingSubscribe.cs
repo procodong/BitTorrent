@@ -1,6 +1,6 @@
 ﻿using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Torrents.Peers;
-using BitTorrentClient.Torrents.Trackers;
+using BitTorrentClient.BitTorrent.Peers;
+using BitTorrentClient.BitTorrent.Trackers;
 using System;
 using System.Collections.Generic;
 using System.Linq;

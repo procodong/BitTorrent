@@ -5,4 +5,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Storage;
-public readonly record struct StreamData(long ByteOffset, long Size, StreamHandlePool Handles);
+public readonly record struct StreamData(long ByteOffset, long Size, Lazy<Task<StreamHandle>> Handle);

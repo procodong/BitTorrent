@@ -51,7 +51,11 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
     {
         foreach (var fileData in _saves)
         {
-            fileData.Handles.Dispose();
+            if (fileData.Handle.IsValueCreated)
+            {
+
+                fileData.Handle.Value.Result.Stream.Dispose();
+            }
         }
     }
 
@@ -59,7 +63,11 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
     {
         foreach (var fileData in _saves)
         {
-            await fileData.Handles.DisposeAsync();
+            if (fileData.Handle.IsValueCreated)
+            {
+
+                await fileData.Handle.Value.Result.Stream.DisposeAsync();
+            }
         }
     }
 }
