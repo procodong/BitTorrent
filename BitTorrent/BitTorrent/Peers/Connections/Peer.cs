@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
@@ -19,12 +20,12 @@ public class Peer : IPeer
     private readonly Download _download;
     private readonly PeerState _state;
     private readonly List<Block> _blockDownloads;
-    private readonly ChannelWriter<(int, Stream)> _blockUploadWriter;
-    private readonly ChannelWriter<int> _cancellationWriter;
+    private readonly ChannelWriter<BlockData> _blockUploadWriter;
+    private readonly ChannelWriter<PieceRequest> _cancellationWriter;
     private readonly PipeWriter _messagePipe;
     private BlockCursor? _blockCursor;
 
-    public Peer(Download download, PeerState state, PipeWriter messagePipe, ChannelWriter<(int, Stream)> blockUploader, ChannelWriter<int> cancellationWriter)
+    public Peer(Download download, PeerState state, PipeWriter messagePipe, ChannelWriter<BlockData> blockUploader, ChannelWriter<PieceRequest> cancellationWriter)
     {
         _download = download;
         _state = state;
@@ -36,7 +37,17 @@ public class Peer : IPeer
 
     private MessageWriter Writer => new(_messagePipe);
 
-    public bool Downloading { get => !_state.RelationToMe.Choked; set => _state.RelationToMe = _state.RelationToMe with { Choked = !value }; }
+    public bool Downloading { 
+        get => !_state.RelationToMe.Choked; 
+        set
+        {
+            if (!value)
+            {
+                CancelAll();
+            }
+            _state.RelationToMe = _state.RelationToMe with { Choked = !value };
+        }
+    }
     public bool WantsToDownload 
     { 
         get => _state.Relation.Interested;
@@ -76,14 +87,14 @@ public class Peer : IPeer
 
     public async Task CancelUploadAsync(PieceRequest request)
     {
-        await _cancellationWriter.WriteAsync(request.GetHashCode());
+        await _cancellationWriter.WriteAsync(request);
     }
 
-    public async Task QueueUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
         if (!BitArray[request.Index] || !Uploading) return;
         var data = _download.RequestBlock(request);
-        await _blockUploadWriter.WriteAsync((request.GetHashCode(), data), cancellationToken);
+        await _blockUploadWriter.WriteAsync(new(request, data), cancellationToken);
     }
 
     public async Task SaveBlockAsync(BlockData blockData, CancellationToken cancellationToken = default)
@@ -96,7 +107,21 @@ public class Peer : IPeer
         Interlocked.Add(ref _state.DataTransfer.Downloaded, blockData.Request.Length);
     }
     
-    private void RequestBlock()
+    public void NotifyHavePiece(int piece)
+    {
+        Writer.WriteHaveMessage(piece);
+    }
+
+    public async Task UpdateAsync(CancellationToken cancellationToken = default)
+    {
+        await _messagePipe.FlushAsync(cancellationToken);
+        while (_blockDownloads.Count < 5)
+        {
+            if (!RequestBlock()) break;
+        }
+    }
+
+    private bool RequestBlock()
     {
         Block request = _blockCursor?.GetRequest(_download.Config.RequestSize) ?? new();
         while (request.Length == 0)
@@ -113,14 +138,15 @@ public class Peer : IPeer
             else
             {
                 _blockCursor = null;
-                return;
+                return false;
             }
             request = _blockCursor.GetRequest(_download.Config.RequestSize);
         }
         _blockDownloads.Add(request);
         Writer.WritePieceRequest(request);
+        return true;
     }
-    
+
     private void CancelAll()
     {
         Block? canceledRequest = default;
@@ -151,20 +177,9 @@ public class Peer : IPeer
         }
     }
 
-    
-    public void NotifyHavePiece(int piece)
-    {
-        Writer.WriteHaveMessage(piece);
-    }
-
-    public async Task UpdateAsync(CancellationToken cancellationToken = default)
-    {
-        await _messagePipe.FlushAsync(cancellationToken);
-    }
-
     public ValueTask DisposeAsync()
     {
+        CancelAll();
         return _messagePipe.CompleteAsync();
     }
-    
 }

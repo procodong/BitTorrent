@@ -1,4 +1,5 @@
-﻿using BitTorrentClient.Models.Messages;
+﻿using BitTorrentClient.BitTorrent.Peers.Parsing;
+using BitTorrentClient.Models.Messages;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -12,22 +13,20 @@ namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public class PeerMessageWriter : IAsyncDisposable, IDisposable
 {
     private readonly PipeReader _messageReader;
-    private readonly ChannelReader<Stream> _requestReader;
-    private readonly Stream _stream;
-    private readonly ArrayBufferWriter<byte> _buffer;
+    private readonly ChannelReader<BlockData> _requestReader;
+    private readonly PipeWriter _output;
 
-    public PeerMessageWriter(Stream stream, ArrayBufferWriter<byte> buffer, PipeReader messageReader, ChannelReader<Stream> requestReader)
+    public PeerMessageWriter(PipeWriter output, PipeReader messageReader, ChannelReader<BlockData> requestReader)
     {
         _messageReader = messageReader;
         _requestReader = requestReader;
-        _stream = stream;
-        _buffer = buffer;
+        _output = output;
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<ReadResult> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        Task<Stream> pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
+        Task<BlockData> pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
 
         while (true)
         {
@@ -37,18 +36,19 @@ public class PeerMessageWriter : IAsyncDisposable, IDisposable
                 var message = await messageTask;
                 foreach (var chunk in message.Buffer)
                 {
-                    var buffer = _buffer.GetMemory(chunk.Length);
-                    chunk.CopyTo(buffer);
-                    _buffer.Advance(chunk.Length);
+                    _output.Write(chunk.Span);
                 }
-                var data = _buffer.WrittenMemory;
-                _buffer.ResetWrittenCount();
-                await _stream.WriteAsync(data, cancellationToken);
+                await _output.FlushAsync(cancellationToken);
                 messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (ready == pieceTask)
             {
-
+                var data = await pieceTask;
+                var writer = new MessageWriter(_output);
+                writer.WritePieceHeader(data.Request);
+                await data.Stream.CopyToAsync(_output, cancellationToken);
+                await _output.FlushAsync(cancellationToken);
+                pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
             }
         }
     }

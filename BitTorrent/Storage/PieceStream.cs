@@ -21,7 +21,7 @@ public class PieceStream : Stream
     public override long Length => _length;
 
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
-    public StreamPart CurrentFile => _parts.Current;
+    public StreamPart CurrentPart => _parts.Current;
 
     public PieceStream(IEnumerable<StreamPart> parts, int length)
     {
@@ -43,7 +43,7 @@ public class PieceStream : Stream
 
     private bool UpdateCurrentFile()
     {
-        if (_position >= CurrentFile.Length)
+        if (_position >= CurrentPart.Length)
         {
             return Next();
         }
@@ -52,16 +52,16 @@ public class PieceStream : Stream
 
     private int CapReadCount(int count)
     {
-        return int.Min(count, CurrentFile.Length - _position);
+        return int.Min(count, CurrentPart.Length - _position);
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!UpdateCurrentFile()) return 0;
-        var handle = await CurrentFile.StreamData.Handle.Value;
+        var handle = await CurrentPart.StreamData.Handle.Value;
         await handle.Lock.WaitAsync(cancellationToken);
         UpdatePosition(handle.Stream);
-        int readCount = -1;
+        int readCount;
         try
         {
             readCount = await handle.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
@@ -69,18 +69,18 @@ public class PieceStream : Stream
         finally
         {
             handle.Lock.Release();
-            FinalizeRead(readCount);
         }
+        _position += readCount;
         return readCount;
     }
 
     public override int Read(Span<byte> buffer)
     {
         if (!UpdateCurrentFile()) return 0;
-        var handle = CurrentFile.StreamData.Handle.Value.GetAwaiter().GetResult();
+        var handle = CurrentPart.StreamData.Handle.Value.GetAwaiter().GetResult();
         handle.Lock.Wait();
         UpdatePosition(handle.Stream);
-        int readCount = -1;
+        int readCount;
         try
         {
             readCount = handle.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
@@ -88,22 +88,14 @@ public class PieceStream : Stream
         finally
         {
             handle.Lock.Release();
-            FinalizeRead(readCount);
         }
+        _position += readCount;
         return readCount;
     }
 
     private void UpdatePosition(Stream stream)
     {
-        stream.Position = CurrentFile.Position + _position;
-    }
-
-    public void FinalizeRead(int readCount)
-    {
-        if (readCount != -1)
-        {
-            _position += readCount;
-        }
+        stream.Position = CurrentPart.Position + _position;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
@@ -127,7 +119,7 @@ public class PieceStream : Stream
         while (writtenBytes < buffer.Length)
         {
             if (!UpdateCurrentFile()) return;
-            var handle = await CurrentFile.StreamData.Handle.Value;
+            var handle = await CurrentPart.StreamData.Handle.Value;
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
             await handle.Lock.WaitAsync(cancellationToken);
             UpdatePosition(handle.Stream);

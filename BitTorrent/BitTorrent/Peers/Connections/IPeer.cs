@@ -15,7 +15,7 @@ public interface IPeer : IAsyncDisposable
     bool Uploading { get; set; }
     bool WantsToUpload { get; set; }
     LazyBitArray BitArray { get; set; }
-    Task QueueUploadAsync(PieceRequest request, CancellationToken cancellationToken = default);
+    Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default);
     Task CancelUploadAsync(PieceRequest request);
     Task SaveBlockAsync(BlockData blockData, CancellationToken cancellationToken = default);
     Task UpdateAsync(CancellationToken cancellationToken = default);

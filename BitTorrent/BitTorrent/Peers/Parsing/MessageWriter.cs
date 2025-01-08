@@ -34,4 +34,10 @@ public readonly struct MessageWriter
         MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Request));
         MessageEncoder.EncodePieceRequest(Writer, request);
     }
+
+    public void WritePieceHeader(PieceRequest request)
+    {
+        MessageEncoder.EncodeHeader(Writer, new(request.Length + 9, MessageType.Piece));
+        MessageEncoder.EncodePieceHeader(Writer, new(request.Index, request.Begin));
+    }
 }
