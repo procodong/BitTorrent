@@ -37,7 +37,7 @@ public class MessageWritingEventHandler : IMessageWritingEventHandler
                     _writer.WriteRequest(message.Data.Request);
                     break;
                 case MessageType.Piece:
-                    var header = message.Data.Piece;
+                    var header = message.Data.Block;
                     var req = new BlockRequest(header.Index, header.Begin, (int)message.Body.Length);
                     var block = new BlockData(req, message.Body);
                     await _writer.WriteBlockAsync(block, delayer, cancellationToken);

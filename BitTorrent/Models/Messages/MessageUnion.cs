@@ -7,7 +7,7 @@ public struct MessageUnion
 {
     [FieldOffset(0)] public readonly int Have;
     [FieldOffset(0)] public readonly BlockRequest Request;
-    [FieldOffset(0)] public readonly PieceShareHeader Piece;
+    [FieldOffset(0)] public readonly BlockShareHeader Block;
 
     public MessageUnion(int have)
     {
@@ -19,8 +19,8 @@ public struct MessageUnion
         Request = request;
     }
 
-    public MessageUnion(PieceShareHeader piece)
+    public MessageUnion(BlockShareHeader block)
     {
-        Piece = piece;
+        Block = block;
     }
 }

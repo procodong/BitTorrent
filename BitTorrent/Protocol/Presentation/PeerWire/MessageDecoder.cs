@@ -23,7 +23,7 @@ public static class MessageDecoder
         return new(index, begin, length);
     }
 
-    public static PieceShareHeader DecodePieceHeader(BigEndianBinaryReader reader)
+    public static BlockShareHeader DecodePieceHeader(BigEndianBinaryReader reader)
     {
         var index = reader.ReadInt32();
         var begin = reader.ReadInt32();

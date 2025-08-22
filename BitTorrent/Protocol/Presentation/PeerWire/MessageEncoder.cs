@@ -11,10 +11,10 @@ public static class MessageEncoder
         writer.Write(request.Length);
     }
 
-    public static void EncodePieceHeader(BigEndianBinaryWriter writer, PieceShareHeader piece)
+    public static void EncodePieceHeader(BigEndianBinaryWriter writer, BlockShareHeader block)
     {
-        writer.Write(piece.Index);
-        writer.Write(piece.Begin);
+        writer.Write(block.Index);
+        writer.Write(block.Begin);
     }
 
     public static void EncodeHandShake(BigEndianBinaryWriter writer, HandShake handShake)

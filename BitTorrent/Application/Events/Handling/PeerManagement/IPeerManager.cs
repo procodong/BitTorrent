@@ -6,9 +6,10 @@ namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
 public interface IPeerManager
 {
     IPeerCollection Peers { get; }
-    IEnumerable<PeerStatistics> Statistics { get; }
+    DownloadStatistics Statistics { get; }
 
     void ResetResentDataTransfer();
+    IEnumerable<PeerStatistics> GetPeerStatistics();
     Task PauseAsync(PauseType type, CancellationToken cancellationToken = default);
     Task ResumeAsync(CancellationToken cancellationToken = default);
     Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default);

@@ -3,5 +3,5 @@
 namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
 public interface IPeerRelationHandler
 {
-    IEnumerable<PeerStatistics> GetRelations(IEnumerable<PeerStatistics> peers);
+    DataTransferVector GetRelation(PeerStatistics peerStatistics, DownloadStatistics downloadStatistics);
 }

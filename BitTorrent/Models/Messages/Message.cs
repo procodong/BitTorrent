@@ -32,7 +32,7 @@ public readonly struct Message
     public Message(BlockData block)
     {
         _body = block.Stream;
-        _message = new((PieceShareHeader)block.Request);
+        _message = new((BlockShareHeader)block.Request);
     }
 }
 

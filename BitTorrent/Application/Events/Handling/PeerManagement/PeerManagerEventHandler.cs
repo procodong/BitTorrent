@@ -8,11 +8,14 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
 {
     private readonly IPeerManager _peerManager;
     private readonly IPeerRelationHandler _relationHandler;
+    private readonly int _relationUpdateInterval;
+    private int _tick;
 
-    public PeerManagerEventHandler(IPeerManager peerManager, IPeerRelationHandler relationHandler)
+    public PeerManagerEventHandler(IPeerManager peerManager, IPeerRelationHandler relationHandler, int relationUpdateInterval)
     {
         _peerManager = peerManager;
         _relationHandler = relationHandler;
+        _relationUpdateInterval = relationUpdateInterval;
     }
 
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
@@ -51,8 +54,17 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
 
     public async Task OnTickAsync(CancellationToken cancellationToken = default)
     {
-        var relations = _relationHandler.GetRelations(_peerManager.Statistics);
-        await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
+        if (_tick % _relationUpdateInterval == 0)
+        {
+            var stats = _peerManager.Statistics;
+            var relations = _peerManager.GetPeerStatistics().Select(peer => _relationHandler.GetRelation(peer, stats));
+            await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
+        }
+        _peerManager.ResetResentDataTransfer();
+        unchecked
+        {
+            _tick++;
+        }
     }
 
     public Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default)
