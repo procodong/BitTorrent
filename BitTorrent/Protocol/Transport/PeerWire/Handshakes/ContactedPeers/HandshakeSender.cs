@@ -1,6 +1,6 @@
 using BitTorrentClient.Models.Messages;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.ContactedPeers;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.ContactedPeers;
 
 public class HandshakeSender : IHandshakeSender<IBitfieldSender<IHandshakeReceiver<PeerWireStream>>>
 {
@@ -10,7 +10,7 @@ public class HandshakeSender : IHandshakeSender<IBitfieldSender<IHandshakeReceiv
     {
         _handler = handler;
     }
-    
+
     public async Task<IBitfieldSender<IHandshakeReceiver<PeerWireStream>>> SendHandShakeAsync(HandshakeData handshake, CancellationToken cancellationToken = default)
     {
         await _handler.SendHandShakeAsync(handshake, cancellationToken);

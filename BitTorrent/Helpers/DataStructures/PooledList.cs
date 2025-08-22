@@ -1,21 +1,20 @@
 using System.Buffers;
-using System.Runtime.CompilerServices;
 
 namespace BitTorrentClient.Helpers.DataStructures;
 
 public class PooledList<T>
 {
-    private T[] _buffer;
+    private IMemoryOwner<T> _buffer;
     private int _expectedCapacity;
     private int _length;
 
     public PooledList(int size)
     {
-        _expectedCapacity = size;
-        _buffer = ArrayPool<T>.Shared.Rent(size);
+        _expectedCapacity = int.Max(size, 8);
+        _buffer = MemoryPool<T>.Shared.Rent(size);
     }
 
-    public PooledList() : this(8)
+    public PooledList() : this(-1)
     {
         
     }
@@ -24,23 +23,24 @@ public class PooledList<T>
 
     public void Add(T item)
     {
-        if (_length == _buffer.Length)
+        var buffer = _buffer.Memory;
+        if (_length == buffer.Length)
         {
-            _expectedCapacity = _buffer.Length * 2;
-            var newBuffer = ArrayPool<T>.Shared.Rent(_expectedCapacity);
-            Buffer.BlockCopy(_buffer, 0, newBuffer, 0, _length);
-            ArrayPool<T>.Shared.Return(_buffer, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            _expectedCapacity = buffer.Length * 2;
+            var newBuffer = MemoryPool<T>.Shared.Rent(_expectedCapacity);
+            buffer[.._length].CopyTo(newBuffer.Memory);
+            _buffer.Dispose();
             _buffer = newBuffer;
         }
-        _buffer[_length++] = item;
+        buffer.Span[_length++] = item;
     }
 
-    public Memory<T> Take()
+    public IMemoryOwner<T> Take()
     {
-        var old = _buffer.AsMemory(0, _length);
-        int expectedCapacity = _length < _expectedCapacity ? _expectedCapacity : _buffer.Length;
+        var old = new SlicedMemoryOwner<T>(_buffer, 0.._length);
+        int expectedCapacity = _length < _expectedCapacity ? _expectedCapacity : _buffer.Memory.Length;
         _length = 0;
-        _buffer = ArrayPool<T>.Shared.Rent(expectedCapacity);
+        _buffer = MemoryPool<T>.Shared.Rent(expectedCapacity);
         return old;
     }
 }

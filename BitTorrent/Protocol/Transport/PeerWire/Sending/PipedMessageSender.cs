@@ -3,7 +3,7 @@ using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Sending;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 public class PipedMessageSender : IMessageSender
 {
     private readonly PipeWriter _pipe;

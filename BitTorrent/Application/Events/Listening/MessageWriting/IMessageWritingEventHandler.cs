@@ -1,16 +1,11 @@
 ﻿using BitTorrentClient.Models.Messages;
-using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BitTorrentClient.Application.Events.EventHandling.MessageWriting;
+using BitTorrentClient.Application.Events.Handling.MessageWriting;
 
-namespace BitTorrentClient.Application.Events.EventListening.MessageWriting;
+namespace BitTorrentClient.Application.Events.Listening.MessageWriting;
 public interface IMessageWritingEventHandler
 {
-    Task OnMessageAsync(ReadOnlyMemory<Message> message, CancellationToken cancellationToken = default);
-    Task OnBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default);
+    Task OnMessageAsync(IMemoryOwner<Message> message, IPieceDelayer delayer, CancellationToken cancellationToken = default);
     Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default);
+    Task OnDelayEnd(CancellationToken cancellationToken = default);
 }

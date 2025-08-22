@@ -1,9 +1,8 @@
 ﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
 
-namespace BitTorrentClient.Application.Events.EventHandling.PeerManagement;
+namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
 public interface IPeerManager
 {
     IPeerCollection Peers { get; }

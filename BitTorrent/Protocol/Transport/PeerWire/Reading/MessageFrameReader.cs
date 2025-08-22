@@ -2,15 +2,8 @@
 using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 public class MessageFrameReader : IMessageFrameReader
 {
     private readonly FrameReader _reader;

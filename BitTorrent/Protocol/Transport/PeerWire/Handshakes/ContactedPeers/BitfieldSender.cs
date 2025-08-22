@@ -1,6 +1,6 @@
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.ContactedPeers;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.ContactedPeers;
 
 public class BitfieldSender : IBitfieldSender<IHandshakeReceiver<PeerWireStream>>
 {
@@ -10,7 +10,7 @@ public class BitfieldSender : IBitfieldSender<IHandshakeReceiver<PeerWireStream>
     {
         _handshakeHandler = handshakeHandler;
     }
-    
+
     public async Task<IHandshakeReceiver<PeerWireStream>> SendBitfieldAsync(LazyBitArray bitfield, CancellationToken cancellationToken = default)
     {
         await _handshakeHandler.SendBitfieldAsync(bitfield, cancellationToken);

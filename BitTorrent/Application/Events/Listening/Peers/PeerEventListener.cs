@@ -1,16 +1,10 @@
 ﻿using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
-using BitTorrentClient.Application.Events.EventListening;
+using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
-namespace BitTorrentClient.Application.Events.EventListening.Peers;
+namespace BitTorrentClient.Application.Events.Listening.Peers;
 internal class PeerEventListener : IEventListener
 {
     private readonly IPeerWireReader _connection;
@@ -18,7 +12,7 @@ internal class PeerEventListener : IEventListener
     private readonly ChannelReader<int> _haveMessageReader;
     private readonly ChannelReader<PeerRelation> _relationReader;
 
-    public PeerEventListener(IPeerWireReader connection, IPeerEventHandler handler, ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader)
+    public PeerEventListener(IPeerEventHandler handler, IPeerWireReader connection, ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader)
     {
         _connection = connection;
         _handler = handler;

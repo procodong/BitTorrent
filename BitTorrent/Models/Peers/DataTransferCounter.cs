@@ -1,14 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Models.Peers;
+﻿namespace BitTorrentClient.Models.Peers;
 public class DataTransferCounter
 {
     private long _downloaded = 0;
     private long _uploaded = 0;
+
+    public DataTransferCounter(DataTransferVector vector)
+    {
+        _downloaded = vector.Download;
+        _uploaded = vector.Upload;
+    }
+
+    public DataTransferCounter() { }
     
     public long Downloaded => Interlocked.Read(ref _downloaded);
     public long Uploaded => Interlocked.Read(ref _uploaded);

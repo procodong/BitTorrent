@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Models.Peers;
+﻿namespace BitTorrentClient.Models.Peers;
 public readonly record struct DataTransferVector(long Download, long Upload)
 {
     public static DataTransferVector operator +(DataTransferVector left, DataTransferVector right) => left with { Download = left.Download + right.Download, Upload = left.Upload + right.Upload };

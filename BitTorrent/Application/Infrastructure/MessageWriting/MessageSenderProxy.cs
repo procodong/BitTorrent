@@ -1,27 +1,24 @@
 ﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using System;
-using System.Collections.Generic;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
+using System.Buffers;
+using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Application.Infrastructure.MessageWriting;
 internal class MessageSenderProxy : IMessageSender
 {
-    private readonly ChannelWriter<ReadOnlyMemory<Message>> _messageSender;
-    private readonly ChannelWriter<BlockData> _blockSender;
+    private readonly ChannelWriter<IMemoryOwner<Message>> _messageWriter;
+    private readonly ChannelWriter<PieceRequest> _cancellationWriter;
     private readonly PooledList<Message> _buffer;
-    private readonly List<BlockData> _blocks;
-    public MessageSenderProxy(ChannelWriter<ReadOnlyMemory<Message>> messageSender, ChannelWriter<BlockData> blockSender)
+    private readonly List<BlockData> _queuedUploads;
+    private readonly List<PieceRequest> _queuedUploadCancels;
+    public MessageSenderProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<PieceRequest> cancellationWriter)
     {
-        _messageSender = messageSender;
+        _messageWriter = messageSender;
+        _cancellationWriter = cancellationWriter;
         _buffer = new();
-        _blockSender = blockSender;
+        _queuedUploads = [];
+        _queuedUploadCancels = [];
     }
 
     public void SendRelation(RelationUpdate relation)
@@ -46,7 +43,7 @@ internal class MessageSenderProxy : IMessageSender
 
     public Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
     {
-        _blocks.Add(block);
+        _queuedUploads.Add(block);
         return Task.CompletedTask;
     }
 
@@ -54,12 +51,17 @@ internal class MessageSenderProxy : IMessageSender
     {
         if (_buffer.Length != 0)
         {
-            await _messageSender.WriteAsync(_buffer.Take(), cancellationToken);
+            await _messageWriter.WriteAsync(_buffer.Take(), cancellationToken);
         }
 
-        foreach (var block in _blocks)
+        foreach (var cancel in _queuedUploadCancels)
         {
-            await _blockSender.WriteAsync(block, cancellationToken);
+            await _cancellationWriter.WriteAsync(cancel, cancellationToken);
         }
+    }
+
+    public void CancelUpload(PieceRequest cancel)
+    {
+        _queuedUploadCancels.Add(cancel);
     }
 }

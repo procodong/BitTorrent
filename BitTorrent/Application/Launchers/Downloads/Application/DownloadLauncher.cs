@@ -1,16 +1,16 @@
-﻿using BitTorrentClient.Application.Events.EventHandling.PeerManagement;
-using BitTorrentClient.Application.Events.EventListening.PeerManagement;
+﻿using BitTorrentClient.Application.Events.Handling.PeerManagement;
+using BitTorrentClient.Application.Events.Listening.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
+using BitTorrentClient.Application.Launchers.Peers.Application;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using BitTorrentClient.Protocol.Networking.Trackers;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 
-namespace BitTorrentClient.Application.Launchers.Downloads.Default;
+namespace BitTorrentClient.Application.Launchers.Downloads.Application;
 public class DownloadLauncher : IDownloadLauncher
 {
     private readonly ILogger _logger;
@@ -34,17 +34,18 @@ public class DownloadLauncher : IDownloadLauncher
         {
             SingleWriter = false
         });
-        var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(download.Download.ClientId));
+        var launcher = new PeerLauncher();
+        var spawner = new PeerSpawner(download, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(download.Download.ClientId));
         var peers = new PeerCollection(spawner, download.Download.Torrent.NumberOfPieces, download.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, download);
-        var eventHandler = new PeerManagerEventHandler(peerManager, );
-        var eventListener = new PeerManagerEventListener(removalChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, eventHandler, tracker, download.Download.Config.PeerUpdateInterval);
+        var eventHandler = new PeerManagerEventHandler(peerManager, _);
+        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, download.Download.Config.PeerUpdateInterval);
         var canceller = new CancellationTokenSource();
         _ = LaunchDownload(peerManager, eventListener, canceller.Token);
         return new PeerManagerHandle(peerManager, canceller, download.Download.Torrent.OriginalInfoHashBytes, spawner);
     }
 
-    private async Task LaunchDownload(PeerManager peerManager, PeerManagerEventListener events, CancellationToken cancellationToken = default)
+    private static async Task LaunchDownload(PeerManager peerManager, PeerManagerEventListener events, CancellationToken cancellationToken = default)
     {
         await using var _ = peerManager;
         await events.ListenAsync(cancellationToken);

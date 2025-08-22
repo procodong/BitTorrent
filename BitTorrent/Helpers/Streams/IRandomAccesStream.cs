@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Helpers.Streams;
+﻿namespace BitTorrentClient.Helpers.Streams;
 public interface IRandomAccesStream : IDisposable, IAsyncDisposable
 {
     int Read(Span<byte> buffer, long fileOffset);

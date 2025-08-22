@@ -1,14 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
+using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 
-namespace BitTorrentClient.Protocol.Networking.Trackers;
+namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class TrackerFinder : ITrackerFinder
 {
     private readonly int _port;

@@ -1,4 +1,4 @@
-﻿namespace BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
+﻿namespace BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 internal class NoValidTrackerException : Exception
 {
 }

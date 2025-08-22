@@ -1,6 +1,4 @@
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.Exceptions;
-
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.ReceivedPeers;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.ReceivedPeers;
 
 public class HandshakeReceiver : IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>>
 {
@@ -10,7 +8,7 @@ public class HandshakeReceiver : IHandshakeReceiver<IRespondedHandshakeSender<IB
     {
         _handshakeHandler = handshakeHandler;
     }
-    
+
     public async Task<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
         if (_handshakeHandler.ReceivedHandShake is not null) throw new AlreadyUsedException();

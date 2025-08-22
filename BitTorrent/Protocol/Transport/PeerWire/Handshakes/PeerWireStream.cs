@@ -1,7 +1,8 @@
 using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
+using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
+using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 public class PeerWireStream
 {

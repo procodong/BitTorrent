@@ -1,13 +1,6 @@
-﻿using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Models.Trackers;
+﻿using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Helpers.Parsing;
-using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BitTorrentClient.Protocol.Presentation.UdpTracker;
 public static class UdpTrackerDecoder

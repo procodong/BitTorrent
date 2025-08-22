@@ -1,24 +1,39 @@
 using System.Buffers;
-using System.Runtime.CompilerServices;
-using BitTorrentClient.Application.Events.EventListening.MessageWriting;
+using System.Runtime.InteropServices;
+using BitTorrentClient.Application.Events.Listening.MessageWriting;
 using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
-namespace BitTorrentClient.Application.Events.EventHandling.MessageWriting;
+namespace BitTorrentClient.Application.Events.Handling.MessageWriting;
 
 public class MessageWritingEventHandler : IMessageWritingEventHandler
 {
-    public async Task OnMessageAsync(ReadOnlyMemory<Message> message, CancellationToken cancellationToken = default)
+    private readonly IMessageWriter _writer;
+    
+    public MessageWritingEventHandler(IMessageWriter sender)
     {
-        throw new NotImplementedException();
+        _writer = sender;
     }
 
-    public async Task OnBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task OnMessageAsync(IMemoryOwner<Message> messages, IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        using var _ = messages;
+        var iter = MemoryMarshal.ToEnumerable<Message>(messages.Memory);
+        foreach (var message in iter)
+        {
+            await _writer.WriteMessageAsync(message, delayer, cancellationToken);
+        }
+        await _writer.FlushAsync(cancellationToken);
     }
 
-    public async Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default)
+    public Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        _writer.RemoveQueuedBlock(cancel);
+        return Task.CompletedTask;
+    }
+
+    public async Task OnDelayEnd(CancellationToken cancellationToken = default)
+    {
+        await _writer.WriteQueuedBlock(cancellationToken);
     }
 }

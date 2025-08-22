@@ -1,6 +1,6 @@
 using BitTorrentClient.Models.Messages;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
 public interface IMessageFrameReader
 {

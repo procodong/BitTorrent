@@ -5,11 +5,9 @@ using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Protocol.Networking.PeerWire.Reading;
-using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 public class HandshakeHandler
 {

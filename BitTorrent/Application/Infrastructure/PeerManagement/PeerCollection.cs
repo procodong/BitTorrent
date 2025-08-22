@@ -1,14 +1,13 @@
 ﻿using System.Collections;
 using System.Threading.Channels;
-using BitTorrentClient.Application.Events.EventHandling.PeerManagement;
+using BitTorrentClient.Application.Events.Handling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>

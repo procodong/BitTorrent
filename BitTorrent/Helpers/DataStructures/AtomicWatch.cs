@@ -1,11 +1,4 @@
-﻿using BitTorrentClient.Models.Peers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Helpers.DataStructures;
+﻿namespace BitTorrentClient.Helpers.DataStructures;
 public class AtomicWatch
 {
 

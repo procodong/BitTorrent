@@ -1,4 +1,3 @@
-using BencodeNET.IO;
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Helpers.DataStructures;
@@ -10,15 +9,13 @@ public class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;
-    private readonly int _requestQueueSize;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(Downloader downloader, int requestQueueSize)
+    public BlockDistributor(Downloader downloader)
     {
-        _requests = new(requestQueueSize);
+        _requests = new(downloader.Config.RequestQueueSize);
         _downloader = downloader;
         _blockCursor = new(default);
-        _requestQueueSize = requestQueueSize;
     }
     
     public IEnumerable<PieceRequest> DrainRequests()
@@ -75,7 +72,7 @@ public class BlockDistributor : IBlockRequester
 
     public bool TryRequestDownload(LazyBitArray pieces, out Block block)
     {
-        if (_requests.Count == _requestQueueSize)
+        if (_requests.Count == _downloader.Config.RequestQueueSize)
         {
             block = default;
             return false;

@@ -1,14 +1,13 @@
-using System.Collections;
 using System.IO.Pipelines;
 using System.Threading.Channels;
 using BencodeNET.IO;
 using BencodeNET.Torrents;
-using BitTorrentClient.Application.Events.EventListening.Downloads;
+using BitTorrentClient.Application.Events.Listening.Downloads;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.EventHandling.Downloads;
+namespace BitTorrentClient.Application.Events.Handling.Downloads;
 
 public class DownloadEventHandler : IDownloadEventHandler
 {

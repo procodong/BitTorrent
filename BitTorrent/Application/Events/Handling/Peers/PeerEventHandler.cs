@@ -1,9 +1,9 @@
-﻿using BitTorrentClient.Application.Events.EventListening.Peers;
+﻿using BitTorrentClient.Application.Events.Listening.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 
-namespace BitTorrentClient.Application.Events.EventHandling.Peers;
+namespace BitTorrentClient.Application.Events.Handling.Peers;
 internal class PeerEventHandler : IPeerEventHandler
 {
     private readonly IPeer _peer;

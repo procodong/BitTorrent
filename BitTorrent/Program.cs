@@ -1,12 +1,10 @@
 ﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.BitTorrent.Peers;
-using BitTorrentClient.BitTorrent.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 using BitTorrentClient.UserInterface.Input;
 using BitTorrentClient.UserInterface.Output;
-using BitTorrentClient.Application.Events.EventListening.Downloads;
+using BitTorrentClient.Application.Events.Listening.Downloads;
 
 var config = new Config(
     TargetDownload: int.MaxValue,

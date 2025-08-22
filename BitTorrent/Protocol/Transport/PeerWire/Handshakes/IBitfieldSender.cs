@@ -1,6 +1,6 @@
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 public interface IBitfieldSender<TRet>
 {

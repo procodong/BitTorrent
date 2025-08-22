@@ -1,14 +1,8 @@
 ﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.EventListening.PeerManagement;
+namespace BitTorrentClient.Application.Events.Listening.PeerManagement;
 public interface IPeerManagerEventHandler
 {
     Task OnPeerCreationAsync(PeerWireStream stream, CancellationToken cancellationToken = default);

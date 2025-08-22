@@ -1,7 +1,4 @@
-﻿
-using System.Reflection.PortableExecutable;
-
-namespace BitTorrentClient.Helpers.Parsing;
+﻿namespace BitTorrentClient.Helpers.Parsing;
 public class BufferCursor : IBufferReader
 {
     private readonly byte[] _buffer;

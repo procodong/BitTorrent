@@ -1,12 +1,10 @@
 ﻿using BitTorrentClient.Models.Trackers;
 using System.Threading.Channels;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using BitTorrentClient.Protocol.Networking.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using BitTorrentClient.Application.Events.EventListening;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.Trackers;
 
-namespace BitTorrentClient.Application.Events.EventListening.PeerManagement;
+namespace BitTorrentClient.Application.Events.Listening.PeerManagement;
 
 public class PeerManagerEventListener : IEventListener
 {
@@ -17,7 +15,7 @@ public class PeerManagerEventListener : IEventListener
     private readonly int _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
 
-    public PeerManagerEventListener(ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, IPeerManagerEventHandler handler, ITrackerFetcher trackerFetcher, int updateInterval)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval)
     {
         _peerRemovalReader = peerRemovalReader;
         _stateReader = stateReader;

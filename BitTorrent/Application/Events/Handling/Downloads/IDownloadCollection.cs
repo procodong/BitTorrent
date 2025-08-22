@@ -1,9 +1,9 @@
 using BencodeNET.Torrents;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.EventHandling.Downloads;
+namespace BitTorrentClient.Application.Events.Handling.Downloads;
 
 public interface IDownloadCollection
 {

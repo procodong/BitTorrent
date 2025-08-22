@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Models.Application;
+﻿namespace BitTorrentClient.Models.Application;
 public enum PauseType
 {
     ByUser = 1,

@@ -1,10 +1,4 @@
-﻿using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 
 namespace BitTorrentClient.Models.Trackers;
 public record class TrackerResponse(

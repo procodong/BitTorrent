@@ -1,5 +1,5 @@
 ﻿using System.Threading.Channels;
-using BitTorrentClient.Application.Events.EventListening.Downloads;
+using BitTorrentClient.Application.Events.Listening.Downloads;
 using BitTorrentClient.UserInterface.Input.Parsing;
 
 namespace BitTorrentClient.UserInterface.Input;

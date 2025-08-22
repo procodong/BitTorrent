@@ -1,34 +1,19 @@
 ﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Helpers;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
-using BitTorrentClient.Application.Events.EventHandling.Peers;
+using BitTorrentClient.Application.Events.Handling.Peers;
+using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer, IDisposable
 {
     private readonly PeerState _state;
-    private readonly ChannelWriter<PieceRequest> _cancellationWriter;
     private readonly IMessageSender _sender;
     private readonly IBlockRequester _requester;
 
-    public Peer(PeerState state, IBlockRequester requester, IMessageSender sender, ChannelWriter<PieceRequest> cancellationWriter)
+    public Peer(PeerState state, IBlockRequester requester, IMessageSender sender)
     {
         _state = state;
         _sender = sender;
-        _cancellationWriter = cancellationWriter;
         _requester = requester;
     }
 
@@ -68,9 +53,10 @@ public class Peer : IPeer, IDisposable
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
     public LazyBitArray DownloadedPieces { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
 
-    public async Task CancelUploadAsync(PieceRequest request)
+    public Task CancelUploadAsync(PieceRequest request)
     {
-        await _cancellationWriter.WriteAsync(request);
+        _sender.CancelUpload(request);
+        return Task.CompletedTask;
     }
 
     public async Task RequestUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)

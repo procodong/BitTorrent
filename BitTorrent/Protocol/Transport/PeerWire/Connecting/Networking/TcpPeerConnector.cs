@@ -1,6 +1,5 @@
 ﻿using BitTorrentClient.Helpers.Parsing;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.ContactedPeers;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using System.Net;
 using System.Net.Sockets;
 

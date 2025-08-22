@@ -1,7 +1,6 @@
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using BitTorrentClient.UserInterface.Input;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.EventListening.Downloads;
+namespace BitTorrentClient.Application.Events.Listening.Downloads;
 
 public interface IDownloadEventHandler : ICommandContext
 {

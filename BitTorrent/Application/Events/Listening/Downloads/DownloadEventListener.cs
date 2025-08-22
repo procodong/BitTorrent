@@ -1,9 +1,8 @@
 using System.Threading.Channels;
-using BitTorrentClient.Application.Events.EventListening;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using Microsoft.Testing.Platform.Logging;
 
-namespace BitTorrentClient.Application.Events.EventListening.Downloads;
+namespace BitTorrentClient.Application.Events.Listening.Downloads;
 
 public class DownloadEventListener : IEventListener
 {

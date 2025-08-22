@@ -1,15 +1,8 @@
-﻿using BitTorrentClient.Application.Events.EventHandling.PeerManagement;
+﻿using BitTorrentClient.Application.Events.Handling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDisposable

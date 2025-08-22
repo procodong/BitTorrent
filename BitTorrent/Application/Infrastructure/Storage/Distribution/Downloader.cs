@@ -2,11 +2,7 @@
 using BencodeNET.Torrents;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Helpers;
 using System.Buffers;
-using System.Collections;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Threading.Channels;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
@@ -35,6 +31,7 @@ public class Downloader
     public LazyBitArray DownloadedPieces => _state.DownloadedPieces;
     public Torrent Torrent => _state.Download.Torrent;
     public Config Config => _state.Download.Config;
+    public string ClientId => _state.Download.ClientId;
     public bool FinishedDownloading => _downloadedPiecesCount >= _state.Download.Torrent.NumberOfPieces;
     
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
@@ -64,7 +61,7 @@ public class Downloader
             {
                 if (!peer.TryWrite(block.Piece.PieceIndex))
                 {
-                    _ = peer.WriteAsync(block.Piece.PieceIndex).AsTask();
+                    _ = peer.WriteAsync(block.Piece.PieceIndex, default).AsTask();
                 }
             }
         }

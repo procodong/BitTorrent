@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Application.Events.EventListening.Downloads;
+﻿using BitTorrentClient.Application.Events.Listening.Downloads;
 using BitTorrentClient.UserInterface.Input.Exceptions;
 
 namespace BitTorrentClient.UserInterface.Input.Parsing;

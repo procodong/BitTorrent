@@ -42,6 +42,22 @@ public class SlotMap<T> : IEnumerable<T>
         }
     }
 
+    public T Add(Func<int, T> func)
+    {
+        if (_freePlaces.TryPop(out int place))
+        {
+            var item = func(place);
+            _buffer[place] = new(item);
+            return item;
+        }
+        else
+        {
+            var value = func(_buffer.Count);
+            _buffer.Add(new(value));
+            return value;
+        }
+    }
+
     public IEnumerator<T> GetEnumerator()
     {
         return (IEnumerator<T>)_buffer.Where(v => v.IsSet).GetEnumerator();

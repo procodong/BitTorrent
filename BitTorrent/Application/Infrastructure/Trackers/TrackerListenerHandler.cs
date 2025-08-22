@@ -1,8 +1,7 @@
 using System.Threading.Channels;
-using BitTorrentClient.Application.Events.EventHandling.Trackers;
+using BitTorrentClient.Application.Events.Handling.Trackers;
 using BitTorrentClient.Helpers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Infrastructure.Trackers;
 

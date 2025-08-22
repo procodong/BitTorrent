@@ -1,16 +1,9 @@
 ﻿using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
-using BitTorrentClient.Application.Events.EventListening.Trackers;
+using BitTorrentClient.Application.Events.Listening.Trackers;
 
-namespace BitTorrentClient.Application.Events.EventHandling.Trackers;
+namespace BitTorrentClient.Application.Events.Handling.Trackers;
 public class TrackerListeningEventHandler : ITrackerListeningEventHandler
 {
     private readonly ITrackerListeningHandler _handler;

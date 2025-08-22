@@ -1,15 +1,11 @@
 ﻿using System.Buffers;
 using System.Net.Sockets;
-using BitTorrentClient.Application.Infrastructure.Peers;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Presentation.UdpTracker;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
 
-namespace BitTorrentClient.Protocol.Networking.Trackers;
+namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class UdpTrackerFetcher : ITrackerFetcher, IDisposable
 {
     private readonly UdpClient _client;

@@ -1,4 +1,4 @@
-namespace BitTorrentClient.Protocol.Networking.PeerWire;
+namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
 public interface IPeerWireReader
 {
