@@ -26,7 +26,6 @@ public class TrackerListeningEventHandler : ITrackerListeningEventHandler
         var stream = new NetworkStream(client.Client, true);
         var buffer = new BufferCursor(_peerBufferSize);
         var handshaker = new PeerHandshaker(stream, buffer);
-        var handshake = await handshaker.ReadHandShakeAsync(cancellationToken);
         await _handler.SendPeerAsync(handshaker, cancellationToken);
     }
 

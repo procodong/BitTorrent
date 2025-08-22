@@ -11,5 +11,5 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Application.EventHandling.PeerManagement;
 public interface IPeerRelationHandler
 {
-    IEnumerable<PeerRelation> GetRelations(IEnumerable<PeerHandle> peers);
+    IEnumerable<PeerRelation> GetRelations(IEnumerable<PeerStatistics> peers);
 }

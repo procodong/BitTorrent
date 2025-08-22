@@ -11,5 +11,5 @@ public interface ITrackerListeningHandler
 {
     void AddDownload(ReadOnlyMemory<byte> infoHash, ChannelWriter<RespondedPeerHandshaker> channel);
     void RemoveDownload(ReadOnlyMemory<byte> infoHash);
-    Task SendPeerAsync(RespondedPeerHandshaker peer, CancellationToken cancellationToken = default);
+    Task SendPeerAsync(PeerHandshaker peer, CancellationToken cancellationToken = default);
 }

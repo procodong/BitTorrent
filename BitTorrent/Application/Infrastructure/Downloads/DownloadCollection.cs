@@ -10,14 +10,18 @@ using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
+using BitTorrentClient.Application.EventHandling.Downloads;
+using BitTorrentClient.Application.Infrastructure.PeerManagement;
 using BitTorrentClient.UserInterface.Input;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
+using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Networking.PeerWire;
 using BitTorrentClient.Protocol.Networking.Trackers;
+using PeerManager = BitTorrentClient.BitTorrent.Managing.PeerManager;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
-public class DownloadCollection : IAsyncDisposable, ICommandContext
+public class DownloadCollection : IAsyncDisposable, IDownloadCollection
 {
     private readonly List<PeerManagerConnector> _downloads = [];
     private readonly PeerIdGenerator _peerIdGenerator;
@@ -37,13 +41,13 @@ public class DownloadCollection : IAsyncDisposable, ICommandContext
         _peerReceivingSubscriber = peerReceivingSubscriber;
         _trackerFinder = trackerFinder;
     }
-
-    public async Task StartDownloadAsync(Torrent torrent, DownloadStorage files)
+    
+    public async Task AddDownloadAsync(Torrent torrent, DownloadStorage storage, CancellationToken cancellationToken = default)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
-        var download = new Download(torrent, files, _config);
-        var peerAdditionChannel = Channel.CreateBounded<PeerHandshaker>(new BoundedChannelOptions(8)
+        var download = new Download(torrent, storage, _config);
+        var peerAdditionChannel = Channel.CreateBounded<RespondedPeerHandshaker>(new BoundedChannelOptions(8)
         {
             SingleWriter = false
         });
@@ -51,6 +55,7 @@ public class DownloadCollection : IAsyncDisposable, ICommandContext
         {
             SingleWriter = false
         });
+        
         var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(peerId));
         var peers = new PeerCollection(spawner, torrent.NumberOfPieces, _config.MaxParallelPeers);
         var peerManager = new PeerManager(peerId, download, peers, _logger, fetcher);
@@ -58,10 +63,9 @@ public class DownloadCollection : IAsyncDisposable, ICommandContext
         _downloads.Add(new(peerManager, cancellationTokenSource, torrent.OriginalInfoHashBytes));
         await _peerReceivingSubscriber.WriteAsync(new(torrent.OriginalInfoHashBytes, peerAdditionChannel.Writer));
         _ = SpawnDownload(peerManager, peerAdditionChannel.Reader, removalChannel.Reader, cancellationTokenSource.Token).ConfigureAwait(false);
-
     }
-
-    private async Task SpawnDownload(PeerManager download, ChannelReader<PeerHandshaker> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
+    
+    private async Task SpawnDownload(PeerManager download, ChannelReader<RespondedPeerHandshaker> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
     {
         await using var _ = download;
         try
@@ -74,10 +78,11 @@ public class DownloadCollection : IAsyncDisposable, ICommandContext
         }
     }
 
-    public async Task StopDownloadAsync(int id)
+
+    public async Task RemoveDownloadAsync(int index)
     {
-        var download = _downloads[id];
-        _downloads.RemoveAt(id);
+        var download = _downloads[index];
+        _downloads.RemoveAt(index);
         await download.Canceller.CancelAsync();
         await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
     }
@@ -91,27 +96,7 @@ public class DownloadCollection : IAsyncDisposable, ICommandContext
     {
         while (_downloads.Count != 0)
         {
-            await StopDownloadAsync(_downloads.Count - 1);
+            await RemoveDownloadAsync(_downloads.Count - 1);
         }
-    }
-
-    async Task ICommandContext.AddTorrentAsync(string torrentPath, string targetPath)
-    {
-        await using var file = File.Open(torrentPath, new FileStreamOptions()
-        {
-            Options = FileOptions.Asynchronous,
-        });
-        var parser = new TorrentParser();
-        var stream = new PipeBencodeReader(PipeReader.Create(file));
-        var torrent = await parser.ParseAsync(stream);
-        DownloadStorage storage = torrent.Files is not null
-            ? DownloadStorageFactory.CreateMultiFileStorage(targetPath, torrent.Files, (int)torrent.PieceSize)
-            : DownloadStorageFactory.CreateSingleFileStorage(targetPath, torrent.File, (int)torrent.PieceSize);
-        await StartDownloadAsync(torrent, storage);
-    }
-
-    async Task ICommandContext.RemoveTorrentAsync(int index)
-    {
-        await StopDownloadAsync(index);
     }
 }

@@ -72,7 +72,8 @@ public class HttpTrackerFetcher : ITrackerFetcher
 
         var response = await _httpClient.GetAsync(builder.ToString(), cancellationToken);
         var parser = new BencodeParser();
-        var content = await parser.ParseAsync<BDictionary>(response.Content.ReadAsStream(cancellationToken), cancellationToken: cancellationToken);
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var content = await parser.ParseAsync<BDictionary>(stream, cancellationToken: cancellationToken);
         var error = content.Get<BString?>("failure reason");
         if (error is not null)
         {
@@ -92,7 +93,7 @@ public class HttpTrackerFetcher : ITrackerFetcher
             .Select(value => new PeerAddress(
                 Ip: IPAddress.Parse(value.Get<BString>("ip").ToString()),
                 Port: value.Get<BNumber>("port")
-                )).ToList(),
+                )).ToArray(),
             Warning: content.Get<BString?>("warning message")?.ToString()
             );
     }

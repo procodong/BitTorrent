@@ -28,7 +28,6 @@
   <ItemGroup>
     <Folder Include="BitTorrent\Peers\Parsing\" />
     <Folder Include="BitTorrent\Trackers\UdpTracker\" />
-    <Folder Include="Storage\" />
   </ItemGroup>
 
 </Project>

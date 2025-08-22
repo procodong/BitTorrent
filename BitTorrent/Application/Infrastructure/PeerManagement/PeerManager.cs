@@ -24,6 +24,11 @@ public class PeerManager : IPeerManager
         _download = download;
     }
 
+    public void ResetResentDataTransfer()
+    {
+        throw new NotImplementedException();
+    }
+
     public IPeerCollection Peers => _peers;
 
     public IEnumerable<PeerStatistics> Statistics => _peers.Select(h => new PeerStatistics());

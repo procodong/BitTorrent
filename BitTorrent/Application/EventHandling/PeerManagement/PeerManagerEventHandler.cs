@@ -46,7 +46,7 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
 
     public async Task OnTickAsync(CancellationToken cancellationToken = default)
     {
-        var relations = _relationHandler.GetRelations(_peerManager.Peers);
+        var relations = _relationHandler.GetRelations(_peerManager.Statistics);
         await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
     }
 
