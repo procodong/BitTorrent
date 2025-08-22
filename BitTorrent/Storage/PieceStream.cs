@@ -53,8 +53,8 @@ public class PieceStream : Stream
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (!UpdateCurrentFile()) return 0;
-        var handle = await CurrentPart.StreamData.Handle.Value;
-        int readCount = await handle.ReadAsync(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position, cancellationToken);
+        var stream = await CurrentPart.StreamData.Handle.Value;
+        int readCount = await stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position, cancellationToken);
         _position += readCount;
         return readCount;
     }

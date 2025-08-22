@@ -32,8 +32,8 @@ public class PeerWireReader : IDisposable, IAsyncDisposable
         _stream.Dispose();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        await _stream.DisposeAsync();
+        return _stream.DisposeAsync();
     }
 }

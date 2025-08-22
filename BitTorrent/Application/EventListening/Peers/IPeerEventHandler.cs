@@ -13,7 +13,7 @@ namespace BitTorrentClient.Application.EventListening.Peers;
 public interface IPeerEventHandler
 {
     Task OnPeerRelationAsync(Relation relation, CancellationToken cancellationToken = default);
-    Task OnClientRelationAsync(Relation relation, CancellationToken cancellationToken = default);
+    Task OnClientRelationAsync(PeerRelation relation, CancellationToken cancellationToken = default);
     Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default);
     Task OnClientHaveAsync(int piece, CancellationToken cancellationToken = default);
     Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default);

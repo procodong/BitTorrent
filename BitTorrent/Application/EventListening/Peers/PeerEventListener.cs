@@ -38,8 +38,7 @@ internal class PeerEventListener
             else if (readyTask == relationTask)
             {
                 PeerRelation relation = await relationTask;
-                await _handler.OnClientRelationAsync(relation.Choked ? Relation.Choke : Relation.Unchoke, cancellationToken);
-                await _handler.OnClientRelationAsync(relation.Interested ? Relation.Interested : Relation.NotInterested, cancellationToken);
+                await _handler.OnClientRelationAsync(relation, cancellationToken);
                 relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
