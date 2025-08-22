@@ -7,11 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Models.Trackers;
-public record class TrackerResponse(
+public readonly record struct UdpTrackerData(
     int Interval,
-    int? MinInterval,
     int Complete,
     int Incomplete,
-    IPeerConnector[] Peers,
-    string? Warning
-    );
+    int PeerCount,
+    IEnumerable<PeerAddress> Peers);

@@ -4,9 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.Models.Application;
-public enum PauseType
+namespace BitTorrentClient.Application.Factories.Peers.Networking;
+internal class PeerFactory
 {
-    ByUser = 1,
-    ByMachine = 2,
 }

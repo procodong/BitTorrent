@@ -6,6 +6,7 @@ using BencodeNET.Torrents;
 using BitTorrentClient.Application.EventListening.Downloads;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.EventHandling.Downloads;
 
@@ -19,6 +20,7 @@ public class DownloadEventHandler : IDownloadEventHandler
         _downloads = downloads;
         _updateSender = updateSender;
     }
+
     public async Task AddTorrentAsync(string torrentPath, string targetPath)
     {
         await using var file = File.Open(torrentPath, new FileStreamOptions()
@@ -34,7 +36,7 @@ public class DownloadEventHandler : IDownloadEventHandler
         await _downloads.AddDownloadAsync(torrent, storage);
     }
 
-    public async Task RemoveTorrentAsync(int index)
+    public async Task RemoveTorrentAsync(ReadOnlyMemory<byte> index)
     {
         await _downloads.RemoveDownloadAsync(index);
     }
@@ -43,5 +45,10 @@ public class DownloadEventHandler : IDownloadEventHandler
     {
         var updates = _downloads.GetUpdates();
         await _updateSender.WriteAsync(updates, cancellationToken);
+    }
+
+    public async Task OnPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer, CancellationToken cancellationToken = default)
+    {
+        await _downloads.AddPeerAsync(peer);
     }
 }

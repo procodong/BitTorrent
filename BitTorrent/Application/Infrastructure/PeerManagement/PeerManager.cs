@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDisposable

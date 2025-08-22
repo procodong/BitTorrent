@@ -12,20 +12,23 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
 
 namespace BitTorrentClient.Protocol.Networking.Trackers;
 public class HttpTrackerFetcher : ITrackerFetcher
 {
     private readonly HttpClient _httpClient;
     public TrackerResponse? InitialResponse;
+    private readonly int _peerBufferSize;
     private readonly string _url;
     private readonly int _listenPort;
 
-    public HttpTrackerFetcher(HttpClient httpClient, string url, int listenPort)
+    public HttpTrackerFetcher(HttpClient httpClient, string url, int listenPort, int peerBufferSize)
     {
         _httpClient = httpClient;
         _listenPort = listenPort;
         _url = url;
+        _peerBufferSize = peerBufferSize;
     }
 
     private static string DisplayEvent(TrackerEvent trackerEvent)
@@ -93,7 +96,12 @@ public class HttpTrackerFetcher : ITrackerFetcher
             .Select(value => new PeerAddress(
                 Ip: IPAddress.Parse(value.Get<BString>("ip").ToString()),
                 Port: value.Get<BNumber>("port")
-                )).ToArray(),
+                ))
+            .Select(addr => new TcpPeerConnector(
+                addr,
+                _peerBufferSize
+                ))
+            .ToArray(),
             Warning: content.Get<BString?>("warning message")?.ToString()
             );
     }

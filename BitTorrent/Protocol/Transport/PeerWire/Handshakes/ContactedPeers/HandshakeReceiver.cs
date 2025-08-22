@@ -1,6 +1,6 @@
 namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes.ContactedPeers;
 
-public class HandshakeReceiver : IHandshakeReceiver<IHandshakeSender<IBitfieldSender>>
+public class HandshakeReceiver : IHandshakeReceiver<PeerWireStream>
 {
     private readonly HandshakeHandler _handler;
 
@@ -9,9 +9,9 @@ public class HandshakeReceiver : IHandshakeReceiver<IHandshakeSender<IBitfieldSe
         _handler = handler;
     }
     
-    public async Task<IHandshakeSender<IBitfieldSender>> ReadHandShakeAsync(CancellationToken cancellationToken = default)
+    public async Task<PeerWireStream> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
         await _handler.ReadHandShakeAsync(cancellationToken);
-        return new HandshakeSender(_handler);
+        return _handler.Finish();
     }
 }

@@ -10,22 +10,26 @@ using System.Threading.Tasks;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 
 namespace BitTorrentClient.Application.EventListening.Peers;
-internal class PeerEventListener
+internal class PeerEventListener : IEventListener
 {
     private readonly IPeerWireReader _connection;
     private readonly IPeerEventHandler _handler;
+    private readonly ChannelReader<int> _haveMessageReader;
+    private readonly ChannelReader<PeerRelation> _relationReader;
 
-    public PeerEventListener(IPeerWireReader connection, IPeerEventHandler handler)
+    public PeerEventListener(IPeerWireReader connection, IPeerEventHandler handler, ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader)
     {
         _connection = connection;
         _handler = handler;
+        _haveMessageReader = haveMessageReader;
+        _relationReader = relationReader;
     }
 
-    public async Task ListenAsync(ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
+    public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<IMessageFrameReader> receiveTask = _connection.ReceiveAsync(cancellationToken);
-        Task<PeerRelation> relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
-        Task<int> haveTask = haveMessageReader.ReadAsync(cancellationToken).AsTask();
+        Task<PeerRelation> relationTask = _relationReader.ReadAsync(cancellationToken).AsTask();
+        Task<int> haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
         while (true)
         {
             var readyTask = await Task.WhenAny(receiveTask, relationTask, haveTask);
@@ -39,13 +43,13 @@ internal class PeerEventListener
             {
                 PeerRelation relation = await relationTask;
                 await _handler.OnClientRelationAsync(relation, cancellationToken);
-                relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
+                relationTask = _relationReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
             {
                 int have = await haveTask;
                 await _handler.OnClientHaveAsync(have, cancellationToken);
-                haveTask = haveMessageReader.ReadAsync(cancellationToken).AsTask();
+                haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
             }
         }
     }

@@ -13,7 +13,6 @@ internal class FileRandomAccessStream : IRandomAccesStream
         _stream = file;
     }
 
-
     public int Read(Span<byte> buffer, long fileOffset)
     {
         return RandomAccess.Read(_stream.SafeFileHandle, buffer, fileOffset);

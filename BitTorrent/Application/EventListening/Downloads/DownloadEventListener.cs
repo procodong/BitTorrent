@@ -1,32 +1,36 @@
 using System.Threading.Channels;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.UserInterface.Input;
 using Microsoft.Testing.Platform.Logging;
 
 namespace BitTorrentClient.Application.EventListening.Downloads;
 
-public class DownloadEventListener
+public class DownloadEventListener : IEventListener
 {
     private readonly IDownloadEventHandler _hander;
+    private readonly IPeerReceiver _peerReceiver;
     private readonly ChannelReader<Func<ICommandContext, Task>> _commandReader;
     private readonly ILogger _logger;
     private readonly int _tickInterval;
     
 
-    public DownloadEventListener(IDownloadEventHandler handler, ChannelReader<Func<ICommandContext, Task>> commandReader, int tickInterval, ILogger logger)
+    public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver, ChannelReader<Func<ICommandContext, Task>> commandReader, int tickInterval, ILogger logger)
     {
         _hander = handler;
         _commandReader = commandReader;
         _tickInterval = tickInterval;
         _logger = logger;
+        _peerReceiver = peerReceiver;
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         var commandTask = _commandReader.ReadAsync(cancellationToken).AsTask();
         var intervalTask = Task.Delay(_tickInterval, cancellationToken);
+        var peerTask = _peerReceiver.ReceivePeerAsync(cancellationToken);
         while (true)
         {
-            Task ready = await Task.WhenAny(commandTask, intervalTask);
+            Task ready = await Task.WhenAny(commandTask, intervalTask, peerTask);
             if (ready == commandTask)
             {
                 var command = await commandTask;
@@ -44,6 +48,12 @@ public class DownloadEventListener
             {
                 await _hander.OnTickAsync(cancellationToken);
                 intervalTask = Task.Delay(_tickInterval, cancellationToken);
+            }
+            else if (ready == peerTask)
+            {
+                var peer = await peerTask;
+                await _hander.OnPeerAsync(peer, cancellationToken);
+                peerTask = _peerReceiver.ReceivePeerAsync(cancellationToken);
             }
         }
     }

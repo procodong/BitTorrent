@@ -9,7 +9,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Application.EventListening.MessageWriting;
-public class MessageWritingEventListener
+public class MessageWritingEventListener : IEventListener
 {
     private readonly IMessageWritingEventHandler _handler;
     private readonly ChannelReader<ReadOnlyMemory<Message>> _messageReader;

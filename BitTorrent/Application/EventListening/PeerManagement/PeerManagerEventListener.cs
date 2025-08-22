@@ -3,19 +3,20 @@ using System.Threading.Channels;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Networking.PeerWire;
 using BitTorrentClient.Protocol.Networking.Trackers;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.EventListening.PeerManagement;
 
-public class PeerManagerEventListener
+public class PeerManagerEventListener : IEventListener
 {
     private readonly ChannelReader<int?> _peerRemovalReader;
-    private readonly ChannelReader<RespondedHandshakeHandler> _peerReader;
+    private readonly ChannelReader<PeerWireStream> _peerReader;
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
 
-    public PeerManagerEventListener(ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<RespondedHandshakeHandler> peerReader, IPeerManagerEventHandler handler, ITrackerFetcher trackerFetcher, int updateInterval)
+    public PeerManagerEventListener(ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, IPeerManagerEventHandler handler, ITrackerFetcher trackerFetcher, int updateInterval)
     {
         _peerRemovalReader = peerRemovalReader;
         _stateReader = stateReader;
@@ -27,7 +28,7 @@ public class PeerManagerEventListener
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<RespondedHandshakeHandler> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
+        Task<PeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
         var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
         Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();

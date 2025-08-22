@@ -7,6 +7,8 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
@@ -15,8 +17,8 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
     private readonly HashSet<ReadOnlyMemory<byte>> _peerIds = new(new MemoryComparer<byte>());
     private readonly PeerSpawner _spawner;
     private readonly int _pieceCount;
-    private List<PeerAddress> _potentialPeers = [];
-    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor;
+    private List<IPeerConnector> _potentialPeers = [];
+    private IEnumerator<(int Index, IPeerConnector Address)> _peerCursor;
     private int _missedPeers;
 
     public int Count => _peers.Count;
@@ -26,10 +28,10 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         _spawner = spawner;
         _pieceCount = pieceCount;
         _missedPeers = maxParallelPeers;
-        _peerCursor = Enumerable.Empty<(int, PeerAddress)>().GetEnumerator();
+        _peerCursor = Enumerable.Empty<(int, IPeerConnector)>().GetEnumerator();
     }
 
-    public void Add(RespondedHandshakeHandler stream)
+    public void Add(PeerWireStream stream)
     {
         byte[] peerId = stream.ReceivedHandshake.PeerId;
         if (!_peerIds.Add(peerId))
@@ -76,7 +78,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         return _peers.GetEnumerator();
     }
 
-    public void Feed(PeerAddress[] addresses)
+    public void Feed(IPeerConnector[] addresses)
     {
         var peers = addresses.ToList();
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();

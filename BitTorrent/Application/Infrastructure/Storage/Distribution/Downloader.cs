@@ -13,6 +13,7 @@ using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
+using BitTorrentClient.Application.Infrastructure.Downloads;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 public class Downloader

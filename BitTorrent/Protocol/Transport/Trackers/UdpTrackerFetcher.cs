@@ -1,9 +1,12 @@
 ﻿using System.Buffers;
 using System.Net.Sockets;
+using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Presentation.UdpTracker;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
 
 namespace BitTorrentClient.Protocol.Networking.Trackers;
 public class UdpTrackerFetcher : ITrackerFetcher, IDisposable
@@ -12,21 +15,29 @@ public class UdpTrackerFetcher : ITrackerFetcher, IDisposable
     private readonly Random _random;
     private readonly ArrayBufferWriter<byte> _buffer;
     private readonly int _port;
+    private readonly int _peerBufferSize;
     private long _connectionId;
 
-    public UdpTrackerFetcher(UdpClient client, int port)
+    public UdpTrackerFetcher(UdpClient client, int port, int peerBufferSize)
     {
         _client = client;
         _random = new();
         _buffer = new(1 << 7);
         _port = port;
+        _peerBufferSize = peerBufferSize;
     }
 
     public async Task<TrackerResponse> FetchAsync(TrackerUpdate update, CancellationToken cancellationToken = default)
     {
         var request = new TrackerRequest(update.InfoHash, update.ClientId, _port, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
         var response = await ReceiveAsync(() => SendAnnounceAsync(request, cancellationToken), cancellationToken);
-        return UdpTrackerDecoder.ReadAnnounceResponse(new(response));
+        var data = UdpTrackerDecoder.ReadAnnounceResponse(new(response));
+        var peers = new IPeerConnector[data.PeerCount];
+        foreach (var (i, peer) in data.Peers.Indexed())
+        {
+            peers[i] = new TcpPeerConnector(peer, _peerBufferSize);
+        }
+        return new(data.Interval, default, data.Complete, data.Incomplete, peers, default);
     }
 
     private async Task<int> SendAnnounceAsync(TrackerRequest request, CancellationToken cancellationToken = default)
@@ -73,7 +84,7 @@ public class UdpTrackerFetcher : ITrackerFetcher, IDisposable
             var receive = await receiveTask;
             var cursor = new BufferCursor(receive.Buffer, receive.Buffer.Length);
             var reader = new BigEndianBinaryReader(cursor);
-            var header = UdpTrackerDecoder.DecodeHeader(reader);
+            var header = UdpTrackerDecoder.ReadHeader(reader);
             if (header.Action == 3)
             {
                 var errorMessage = reader.ReadString(cursor.RemainingInitializedBytes);

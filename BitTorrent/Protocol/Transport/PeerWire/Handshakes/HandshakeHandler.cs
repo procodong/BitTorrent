@@ -3,7 +3,10 @@ using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
+using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Protocol.Networking.PeerWire.Reading;
+using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 
 namespace BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
@@ -56,5 +59,11 @@ public class HandshakeHandler
         }
     }
 
-    public (BufferCursor, Stream, PipeWriter) Finish() => (_cursor, _stream, _writer);
+    public PeerWireStream Finish()
+    {
+        var stream = new BufferedMessageStream(_stream, _cursor);
+        var reader = new PeerWireReader(stream);
+        var sender = new PipedMessageSender(_writer);
+        return new(ReceivedHandShake!.Value, reader, sender);
+    }
 }

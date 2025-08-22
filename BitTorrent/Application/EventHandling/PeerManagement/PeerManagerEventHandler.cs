@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Application.EventListening.PeerManagement;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.EventHandling.PeerManagement;
 public class PeerManagerEventHandler : IPeerManagerEventHandler
@@ -20,9 +20,9 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
         return _peerManager.GetTrackerUpdate(trackerEvent);
     }
 
-    public Task OnPeerCreationAsync(RespondedHandshakeHandler handshaker, CancellationToken cancellationToken = default)
+    public Task OnPeerCreationAsync(PeerWireStream stream, CancellationToken cancellationToken = default)
     {
-        _peerManager.Peers.Add(handshaker);
+        _peerManager.Peers.Add(stream);
         return Task.CompletedTask;
     }
 
@@ -40,7 +40,7 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
         }
         else
         {
-            await _peerManager.PauseAsync(change == DownloadExecutionState.PausedByUser ? PauseType.ByUser : PauseType.ByMachine, cancellationToken);
+            await _peerManager.PauseAsync((PauseType)change, cancellationToken);
         }
     }
 

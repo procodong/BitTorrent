@@ -2,5 +2,5 @@
 public interface ICommandContext
 {
     Task AddTorrentAsync(string torrentPath, string targetPath);
-    Task RemoveTorrentAsync(int index);
+    Task RemoveTorrentAsync(ReadOnlyMemory<byte> index);
 }

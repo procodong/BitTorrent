@@ -12,23 +12,28 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Protocol.Presentation.UdpTracker;
 public static class UdpTrackerDecoder
 {
-    public static TrackerResponse ReadAnnounceResponse(BigEndianBinaryReader reader)
+    public static UdpTrackerData ReadAnnounceResponse(BigEndianBinaryReader reader)
     {
         var interval = reader.ReadInt32();
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
         int peerCount = reader.Remaining / 6;
-        var peers = new PeerAddress[peerCount];
-        for (int i = 0; i < peers.Length; i++)
-        {
-            var ip = reader.ReadBytes(4);
-            var port = reader.ReadUInt16();
-            peers[i] = (new(new(ip), port));
-        }
-        return new(interval, default, seeders, leechers, peers, default);
+        var peers = ReadAddresses(reader, peerCount);
+        return new(interval, seeders, leechers, peerCount, peers);
     }
 
-    public static TrackerHeader DecodeHeader(BigEndianBinaryReader reader)
+    private static IEnumerable<PeerAddress> ReadAddresses(BigEndianBinaryReader reader, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+
+            var ip = reader.ReadBytes(4);
+            var port = reader.ReadUInt16();
+            yield return (new(new(ip), port));
+        }
+    } 
+
+    public static TrackerHeader ReadHeader(BigEndianBinaryReader reader)
     {
         var action = reader.ReadInt32();
         var transactionId = reader.ReadInt32();
