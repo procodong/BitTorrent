@@ -3,7 +3,7 @@ using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
-public class PeerWireReader : IDisposable, IAsyncDisposable, IPeerWireReader
+public class PeerWireReader : IPeerWireReader
 {
     private readonly BufferedMessageStream _stream;
 

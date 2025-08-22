@@ -1,6 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
-using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
+using BitTorrentClient.Api;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Input;
@@ -74,52 +74,77 @@ public class CommandReader
             }
             if (parsed.Errors.Count != 0) continue;
             var command = parsed.CommandResult.Command;
-            if (command == _createCommand)
+            await ExecuteCommandAsync(parsed, command, cancellationToken);
+        }
+    }
+
+    private async Task ExecuteCommandAsync(ParseResult parsed, Command command, CancellationToken cancellationToken = default)
+    {
+        if (command == _createCommand)
+        {
+            var torrent = parsed.CommandResult.GetRequiredValue((Argument<FileInfo>)_createCommand.Arguments[0]);
+            var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
+            var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
+            try
             {
-                var torrent = parsed.CommandResult.GetRequiredValue((Argument<FileInfo>)_createCommand.Arguments[0]);
-                var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
-                var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
+                var download = await _downloadService.AddDownloadAsync(torrent, targetDirectory, name);
+                _downloads.Add(download);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Creating download {}", ex);
+            }
+        }
+        else if (command == _removeCommand)
+        {
+            if (TryFindDownload(parsed.CommandResult, command.Options, out var download))
+            {
                 try
                 {
-                    var download = await _downloadService.AddDownloadAsync(torrent, targetDirectory, name);
-                    _downloads.Add(download);
+                    await _downloadService.RemoveDownloadAsync(download.Download.Identifier);
+                    _downloads.Remove(download);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Creating download {}", ex);
+                    _logger.LogError(ex, "Removing download {}", ex);
                 }
             }
-            else if (command == _removeCommand)
+        }
+        else if (command == _pauseCommand)
+        {
+            if (TryFindDownload(parsed.CommandResult, command.Options, out var download))
             {
-                if (TryFindDownload(parsed.CommandResult, out var download))
-                {
-                    await _downloadService.RemoveDownloadAsync(download.Download.InfoHash);
-                    _downloads.Remove(download);
-                }
-            }
-            else if (command == _pauseCommand)
-            {
-                if (TryFindDownload(parsed.CommandResult, out var download))
+                try
                 {
                     await download.PauseAsync(cancellationToken);
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Pausing command {}", ex);
+                }
             }
-            else if (command == _continueCommand)
+        }
+        else if (command == _continueCommand)
+        {
+            if (TryFindDownload(parsed.CommandResult, command.Options, out var download))
             {
-                
-                if (TryFindDownload(parsed.CommandResult, out var download))
+                try
                 {
                     await download.ResumeAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Resuming command {}", ex);
                 }
             }
         }
     }
 
-    private bool TryFindDownload(CommandResult command, out IDownloadController download)
+    private bool TryFindDownload(CommandResult result, IList<Option> options, out IDownloadController download)
     {
 
-        var name = command.GetValue((Option<string>)_removeCommand.Options[0]);
-        var index = command.GetValue((Option<int?>)_removeCommand.Options[1]);
+        var name = result.GetValue((Option<string>)options[0]);
+        var index = result.GetValue((Option<int?>)options[1]);
         int downloadIndex = index ?? _downloads.FindIndex(d => d.Download.Name == name);
         if (downloadIndex == -1 || downloadIndex >= _downloads.Count)
         {
@@ -131,5 +156,3 @@ public class CommandReader
         return true;
     }
 }
-
-readonly record struct DownloadData(ReadOnlyMemory<byte> Id, string Name);

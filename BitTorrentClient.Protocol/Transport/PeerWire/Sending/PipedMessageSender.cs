@@ -25,6 +25,11 @@ public class PipedMessageSender : IMessageSender
         MessageEncoder.EncodePieceRequest(Writer, cancel);
     }
 
+    public void SendKeepAlive()
+    {
+        Writer.Write(0);
+    }
+
     public void TryCancelUpload(BlockRequest cancel)
     {
     }

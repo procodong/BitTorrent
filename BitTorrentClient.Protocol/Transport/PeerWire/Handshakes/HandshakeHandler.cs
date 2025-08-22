@@ -6,12 +6,13 @@ using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.Exceptions;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-public class HandshakeHandler : IAsyncDisposable
+public class HandshakeHandler : IHandshakeHandler
 {
     private const string Protocol = "BitTorrent protocol";
 
@@ -19,11 +20,10 @@ public class HandshakeHandler : IAsyncDisposable
     private readonly BufferCursor _cursor;
     private readonly Stream _stream;
     private HandshakeData? _myHandshake;
-    private HandshakeData? _otherHandshake;
     private LazyBitArray? _bitfield;
     private bool _finished;
 
-    public HandshakeData? ReceivedHandShake => _otherHandshake;
+    public HandshakeData? ReceivedHandshake { get; private set; }
 
     public HandshakeHandler(Stream stream, BufferCursor cursor)
     {
@@ -54,10 +54,10 @@ public class HandshakeHandler : IAsyncDisposable
 
     public async Task ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
-        if (_otherHandshake is not null) throw new AlreadyUsedException();
+        if (ReceivedHandshake is not null) throw new AlreadyUsedException();
         await _stream.ReadAtLeastAsync(_cursor, MessageDecoder.HandshakeLen, cancellationToken: cancellationToken);
-        HandShake receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
-        _otherHandshake = new HandshakeData(receivedHandshake.Extensions, receivedHandshake.InfoHash, receivedHandshake.PeerId);
+        var receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
+        ReceivedHandshake = new HandshakeData(receivedHandshake.Extensions, receivedHandshake.InfoHash, receivedHandshake.PeerId);
         if (receivedHandshake.Protocol != Protocol)
         {
             throw new InvalidConnectionException();
@@ -70,7 +70,15 @@ public class HandshakeHandler : IAsyncDisposable
         var reader = new PeerWireReader(stream);
         var sender = new PipedMessageSender(_writer);
         _finished = true;
-        return new(ReceivedHandShake!.Value, reader, sender);
+        return new(ReceivedHandshake!.Value, reader, sender);
+    }
+
+    public void Dispose()
+    {
+        if (!_finished)
+        {
+            _stream.Dispose();
+        }
     }
 
     public ValueTask DisposeAsync()
@@ -79,9 +87,6 @@ public class HandshakeHandler : IAsyncDisposable
         {
             return _stream.DisposeAsync();
         }
-        else
-        {
-            return ValueTask.CompletedTask;
-        }
+        return ValueTask.CompletedTask;
     }
 }

@@ -19,17 +19,11 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        if (Reader is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        Reader.Dispose();
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (Reader is IAsyncDisposable asyncDisposable)
-        {
-            await asyncDisposable.DisposeAsync();
-        }
+    public  ValueTask DisposeAsync()
+    {  
+        return Reader.DisposeAsync();
     }
 }

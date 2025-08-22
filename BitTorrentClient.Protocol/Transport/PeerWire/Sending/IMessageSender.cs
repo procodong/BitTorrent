@@ -7,6 +7,7 @@ public interface IMessageSender
     void SendHave(int piece);
     void SendRequest(BlockRequest request);
     void SendCancel(BlockRequest cancel);
+    void SendKeepAlive();
     void TryCancelUpload(BlockRequest cancel);
     Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default);
     Task FlushAsync(CancellationToken cancellationToken = default);

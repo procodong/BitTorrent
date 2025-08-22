@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Protocol.Presentation.UdpTracker;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;

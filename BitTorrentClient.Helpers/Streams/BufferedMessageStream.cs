@@ -9,7 +9,7 @@ public class BufferedMessageStream : IDisposable, IAsyncDisposable
     private readonly BufferCursor _cursor;
     private readonly Stream _stream;
 
-    public BufferedMessageStream(Stream reader, Parsing.BufferCursor cursor)
+    public BufferedMessageStream(Stream reader, BufferCursor cursor)
     {
         _stream = reader;
         _cursor = cursor;

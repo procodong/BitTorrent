@@ -3,7 +3,7 @@ using BencodeNET.Parsing;
 using System.Net;
 using System.Web;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;

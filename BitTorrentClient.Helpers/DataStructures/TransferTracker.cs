@@ -6,7 +6,7 @@ public class TransferTracker
     private readonly Stopwatch _uploadTimer;
     private long _transfer;
 
-    public long TransferRate => (long)(_transfer / (double)_uploadTimer.Elapsed.TotalSeconds);
+    public long TransferRate => (long)(_transfer / _uploadTimer.Elapsed.TotalSeconds);
 
     public TransferTracker()
     {
@@ -26,6 +26,6 @@ public class TransferTracker
 
     public int TimeUntilTransferRate(long rate)
     {
-        return (int)((_transfer / rate) - _uploadTimer.Elapsed.TotalSeconds);
+        return (int)((double)_transfer / rate - _uploadTimer.Elapsed.TotalSeconds);
     }
 }

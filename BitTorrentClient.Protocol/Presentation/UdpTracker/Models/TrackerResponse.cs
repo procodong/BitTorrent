@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
+﻿using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 
 namespace BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 public record class TrackerResponse(

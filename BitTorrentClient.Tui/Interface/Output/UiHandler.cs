@@ -1,5 +1,5 @@
-﻿using BitTorrentClient.Helpers.Utility;
-using BitTorrentClient.Models.Application;
+﻿using BitTorrentClient.Data;
+using BitTorrentClient.Helpers.Utility;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -27,7 +27,6 @@ public class UiHandler
         var uiTable = new Table();
         var downloadsTable = new Table();
         downloadsTable.AddColumns("Name", "Size", "State", "Progress", "Downloaded", "Uploaded");
-
         var messagesTable = new Table();
         messagesTable.AddColumns("Type", "Time", "Message");
         uiTable.AddColumn("BitTorrent");
@@ -49,7 +48,7 @@ public class UiHandler
             if (_downloads.TryGetValue(update.Identifier, out var downloadRow))
             {
                 _downloadsTable.UpdateCell(downloadRow, 2, update.ExecutionState.ToString());
-                _downloadsTable.UpdateCell(downloadRow, 3, progress.ToString());
+                _downloadsTable.UpdateCell(downloadRow, 3, $"{progress}%");
                 _downloadsTable.UpdateCell(downloadRow, 4, update.Transfer.Download.ToString());
                 _downloadsTable.UpdateCell(downloadRow, 5, update.Transfer.Upload.ToString());
             }
