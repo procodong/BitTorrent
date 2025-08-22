@@ -1,15 +1,14 @@
 using BencodeNET.Torrents;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
-using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.Handling.Downloads;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 
-public interface IDownloadCollection
+public interface IDownloadCollection : IDisposable, IAsyncDisposable
 {
     Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name, CancellationToken cancellationToken = default);
     Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer, CancellationToken cancellationToken = default);
-    Task RemoveDownloadAsync(Func<Download, bool> condition);
-    IEnumerable<DownloadUpdate> GetUpdates();
+    Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id);
+    IEnumerable<DownloadUpdate> GetDownloadState();
 }

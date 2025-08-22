@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Models.Peers;
+﻿using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
+namespace BitTorrentClient.Models.Peers;
 public readonly record struct PeerStatistics(DataTransferVector DataTransfer, PeerRelation PeerRelation, PeerRelation ClientRelation);

@@ -1,4 +1,4 @@
-using BitTorrentClient.Application.Events.Handling.MessageWriting;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 
 namespace BitTorrentClient.Application.Events.Listening.MessageWriting;
 

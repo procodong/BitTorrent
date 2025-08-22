@@ -1,15 +1,9 @@
-﻿using BitTorrentClient.Application.Events.Handling.MessageWriting;
-using BitTorrentClient.Application.Infrastructure.Peers;
-using BitTorrentClient.Helpers.DataStructures;
+﻿using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
-using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.MessageWriting;
 public class MessageWriter : IMessageWriter

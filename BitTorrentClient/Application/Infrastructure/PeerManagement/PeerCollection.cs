@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-using BitTorrentClient.Application.Events.Handling.PeerManagement;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Application.Launchers.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;

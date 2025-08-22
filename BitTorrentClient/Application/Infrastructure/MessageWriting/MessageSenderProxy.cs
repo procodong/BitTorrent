@@ -2,6 +2,7 @@
 using System.Threading.Channels;
 using BitTorrentClient.Helpers.DataStructures;
 using System.Buffers;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Application.Infrastructure.MessageWriting;
@@ -58,7 +59,7 @@ internal class MessageSenderProxy : IMessageSender
         }
     }
 
-    public void CancelUpload(BlockRequest cancel)
+    public void TryCancelUpload(BlockRequest cancel)
     {
         _queuedUploadCancels.Add(cancel);
     }

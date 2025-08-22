@@ -1,8 +1,9 @@
-﻿using BitTorrentClient.Models.Application;
+﻿using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 
-namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 public interface IPeerManager
 {
     IPeerCollection Peers { get; }

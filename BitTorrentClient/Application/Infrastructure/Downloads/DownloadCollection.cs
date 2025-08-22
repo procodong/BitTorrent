@@ -6,15 +6,15 @@ using BitTorrentClient.Protocol.Presentation.PeerWire;
 using System.Collections.Concurrent;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Application.Launchers.Downloads;
-using BitTorrentClient.Application.Events.Handling.Downloads;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
 using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
-public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollection
+public class DownloadCollection : IDownloadCollection
 {
-    private readonly ConcurrentDictionary<ReadOnlyMemory<byte>, PeerManagerHandle> _downloads = new(new MemoryComparer<byte>());
+    private readonly ConcurrentDictionary<ReadOnlyMemory<byte>, PeerManagerHandle> _downloads;
     private readonly PeerIdGenerator _peerIdGenerator;
     private readonly Config _config;
     private readonly ITrackerFinder _trackerFinder;
@@ -26,29 +26,30 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollec
         _config = config;
         _trackerFinder = trackerFinder;
         _launcher = launcher;
+        _downloads = new(new MemoryComparer<byte>());
     }
     
     public async Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name, CancellationToken cancellationToken = default)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var tracker = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
-        var download = new Download(_downloads.Count, peerId, name is not null ? name : torrent.DisplayName, torrent, _config);
+        var download = new Download(peerId, name ?? torrent.DisplayName, torrent, _config);
         var handle = _launcher.LaunchDownload(download, storage, tracker);
         _downloads.TryAdd(torrent.OriginalInfoHashBytes, handle);
     }
 
-    public async Task RemoveDownloadAsync(Func<Download, bool> condition)
+    public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)
     {
-        var download = _downloads.Find(v => condition(v.Value.Download));
-
-        if (download is not null)
+        if (_downloads.TryRemove(id, out var handle))
         {
-            _downloads.Remove(download.Value.Value.InfoHash, out var _);
-            await download.Value.Value.Canceller.CancelAsync();
+            await handle.Canceller.CancelAsync();
+            return true;
         }
+
+        return false;
     }
 
-    public IEnumerable<DownloadUpdate> GetUpdates()
+    public IEnumerable<DownloadUpdate> GetDownloadState()
     {
         return _downloads.Select(d => d.Value.UpdateProvider.GetUpdate());
     }

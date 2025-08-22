@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Models.Messages;
 

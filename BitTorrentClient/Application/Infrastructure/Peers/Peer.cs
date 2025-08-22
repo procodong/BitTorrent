@@ -1,8 +1,8 @@
-﻿using BitTorrentClient.Models.Messages;
+﻿using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Application.Events.Handling.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 using BitTorrentClient.Models.Peers;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer, IDisposable
@@ -56,7 +56,7 @@ public class Peer : IPeer, IDisposable
 
     public Task CancelUploadAsync(BlockRequest request)
     {
-        _sender.CancelUpload(request);
+        _sender.TryCancelUpload(request);
         return Task.CompletedTask;
     }
 

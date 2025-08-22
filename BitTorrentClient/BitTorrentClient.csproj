@@ -18,13 +18,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BencodeNET" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
-    <PackageReference Include="Spectre.Console" Version="0.50.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.6.4" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+    <Folder Include="Application\Events\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BitTorrentClient.Helpers\BitTorrentClient.Helpers.csproj" />
+    <ProjectReference Include="..\BitTorrentClient.Protocol\BitTorrentClient.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
   </ItemGroup>
 
 </Project>

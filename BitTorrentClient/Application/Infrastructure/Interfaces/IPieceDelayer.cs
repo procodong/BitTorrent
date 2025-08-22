@@ -1,4 +1,4 @@
-namespace BitTorrentClient.Application.Events.Handling.MessageWriting;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 
 public interface IPieceDelayer
 {

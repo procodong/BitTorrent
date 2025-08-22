@@ -1,7 +1,7 @@
-﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Models.Peers;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
+using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
 namespace BitTorrentClient.Application.Events.Listening.Peers;

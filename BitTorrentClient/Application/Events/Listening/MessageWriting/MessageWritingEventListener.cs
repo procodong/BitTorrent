@@ -1,6 +1,7 @@
 ﻿using BitTorrentClient.Models.Messages;
 using System.Buffers;
 using System.Threading.Channels;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Events.Listening.MessageWriting;
 public class MessageWritingEventListener : IEventListener

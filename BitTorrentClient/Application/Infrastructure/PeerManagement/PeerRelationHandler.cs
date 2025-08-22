@@ -1,4 +1,5 @@
-using BitTorrentClient.Application.Events.Handling.PeerManagement;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Models.Peers;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;

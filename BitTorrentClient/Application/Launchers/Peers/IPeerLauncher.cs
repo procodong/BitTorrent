@@ -1,6 +1,4 @@
-﻿using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
-using System.Threading.Channels;
+﻿using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
 
 namespace BitTorrentClient.Application.Launchers.Peers;

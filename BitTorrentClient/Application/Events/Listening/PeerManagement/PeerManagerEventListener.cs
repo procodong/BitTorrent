@@ -1,6 +1,6 @@
-﻿using BitTorrentClient.Models.Trackers;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using BitTorrentClient.Models.Application;
+using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;

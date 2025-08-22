@@ -1,6 +1,4 @@
-﻿using BitTorrentClient.Application.Events.Handling.MessageWriting;
-using BitTorrentClient.Application.Events.Handling.Peers;
-using BitTorrentClient.Application.Events.Listening.MessageWriting;
+﻿using BitTorrentClient.Application.Events.Listening.MessageWriting;
 using BitTorrentClient.Application.Events.Listening.Peers;
 using BitTorrentClient.Application.Infrastructure.MessageWriting;
 using BitTorrentClient.Application.Infrastructure.Peers;
@@ -10,12 +8,12 @@ using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using System.Buffers;
-using System.Net.Sockets;
 using System.Threading.Channels;
+using BitTorrentClient.Application.Events.Handling;
 using BitTorrentClient.Application.Events.Listening;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
-using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
-using BitTorrentClient.Models.Application;
+using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Application.Launchers.Peers.Default;

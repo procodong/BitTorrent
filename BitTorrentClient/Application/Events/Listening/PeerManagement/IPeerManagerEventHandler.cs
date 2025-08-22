@@ -1,5 +1,5 @@
 ﻿using BitTorrentClient.Models.Application;
-using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Events.Listening.PeerManagement;

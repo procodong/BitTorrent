@@ -1,11 +1,6 @@
-﻿using BitTorrentClient.Models.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
-namespace BitTorrentClient.Application.Events.Handling.MessageWriting;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 public interface IMessageWriter
 {
     void WriteRelation(RelationUpdate relation);

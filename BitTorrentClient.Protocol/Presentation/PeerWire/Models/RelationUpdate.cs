@@ -1,0 +1,8 @@
+﻿namespace BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+public enum RelationUpdate
+{
+    Choke,
+    Unchoke,
+    Interested,
+    NotInterested,
+}

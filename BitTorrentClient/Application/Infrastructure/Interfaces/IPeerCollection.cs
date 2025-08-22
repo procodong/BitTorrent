@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-namespace BitTorrentClient.Application.Events.Handling.PeerManagement;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 public interface IPeerCollection
 {
     void Add(PeerWireStream peer);

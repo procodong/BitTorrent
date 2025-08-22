@@ -1,3 +1,5 @@
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+
 namespace BitTorrentClient.Models.Messages;
 public readonly struct Message
 {

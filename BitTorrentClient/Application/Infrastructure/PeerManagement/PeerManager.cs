@@ -1,9 +1,10 @@
-﻿using BitTorrentClient.Application.Events.Handling.PeerManagement;
-using BitTorrentClient.Application.Infrastructure.Downloads;
+﻿using BitTorrentClient.Application.Infrastructure.Downloads;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Models.Trackers;
+using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerManager : IPeerManager, IApplicationUpdateProvider
@@ -42,13 +43,6 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
     }
 
     public IPeerCollection Peers => _peers;
-
-    public IEnumerable<PeerStatistics> Statistics => _peers.Select(peer => 
-        new PeerStatistics(
-            (peer.State.DataTransfer.Fetch() - peer.LastStatistics) / _downloadState.ElapsedSinceRecentReset,
-            peer.State.RelationToMe,
-            peer.State.Relation
-        ));
 
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {

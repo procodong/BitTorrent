@@ -1,6 +1,7 @@
 ﻿using BitTorrentClient.Models.Messages;
 using System.Buffers;
-using BitTorrentClient.Application.Events.Handling.MessageWriting;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Events.Listening.MessageWriting;
 public interface IMessageWritingEventHandler

@@ -1,5 +1,6 @@
 ﻿using BitTorrentClient.Models.Peers;
 using System.Threading.Channels;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerHandle

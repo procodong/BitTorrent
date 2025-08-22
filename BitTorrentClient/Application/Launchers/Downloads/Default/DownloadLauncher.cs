@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using BitTorrentClient.Application.Events.Handling.PeerManagement;
-using BitTorrentClient.Application.Events.Listening.PeerManagement;
+﻿using BitTorrentClient.Application.Events.Listening.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
@@ -12,6 +10,7 @@ using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Threading.Channels;
+using BitTorrentClient.Application.Events.Handling;
 
 namespace BitTorrentClient.Application.Launchers.Downloads.Default;
 public class DownloadLauncher : IDownloadLauncher
@@ -54,7 +53,7 @@ public class DownloadLauncher : IDownloadLauncher
         var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
         var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval, _logger);
         _ = LaunchDownload(storage, eventListener, canceller.Token);
-        return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner, download);
+        return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, spawner, download);
     }
 
     private static async Task LaunchDownload(StorageStream storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)

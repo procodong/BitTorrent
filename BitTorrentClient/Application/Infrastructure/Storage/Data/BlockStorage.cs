@@ -1,18 +1,10 @@
 ﻿using BencodeNET.Torrents;
-using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Models.Peers;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Channels;
-using System.Threading.Tasks;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public class BlockStorage

@@ -1,8 +1,7 @@
-﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Models.Peers;
+﻿using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
-namespace BitTorrentClient.Application.Events.Handling.Peers;
+namespace BitTorrentClient.Application.Infrastructure.Interfaces;
 public interface IPeer
 {
     bool Downloading { get; set; }
