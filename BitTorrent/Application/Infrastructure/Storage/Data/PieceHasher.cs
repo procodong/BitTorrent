@@ -36,10 +36,11 @@ public class PieceHasher
 
     public IEnumerable<(int Offset, RentedArray<byte>)> HashReadyBlocks()
     {
-        HashUnit hashUnit;
-        while ((hashUnit = _buffers[_offset]).Written == hashUnit.RentedArray.ExpectedSize)
+        for (; _offset < _buffers.Length; _offset++)
         {
-            _hasher.ComputeHash(hashUnit.RentedArray.Buffer, 0, _blockSize);
+            HashUnit hashUnit = _buffers[_offset];
+            if (hashUnit.Written != hashUnit.RentedArray.ExpectedSize) break;
+            _hasher.ComputeHash(hashUnit.RentedArray.Buffer, 0, hashUnit.RentedArray.ExpectedSize);
             _buffers[_offset] = default;
             int pieceOffset = _offset * _blockSize;
             _offset++;

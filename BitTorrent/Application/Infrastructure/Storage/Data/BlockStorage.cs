@@ -32,15 +32,16 @@ public class BlockStorage
         Task readStream;
         lock (block.Piece.Hasher) readStream = block.Piece.Hasher.SaveBlock(stream, block.Begin, cancellationToken);
         await readStream;
-        int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         lock (block.Piece.Hasher)
         {
             foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
             {
                 var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
                 _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), cancellationToken).AsTask();
+                // TODO: notify download on error
             }
         }
+        int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         if (newDownloaded < block.Piece.Size)
         {
             return;
