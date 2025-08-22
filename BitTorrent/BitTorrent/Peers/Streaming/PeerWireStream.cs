@@ -26,7 +26,6 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
     public bool Written => _writeCursor.Position != 0;
 
     private BigEndianBinaryReader Reader => new(_readCursor);
-    private BigEndianBinaryWriter Writer => new(_writeCursor);
 
     public PeerWireStream(Stream stream)
     {
@@ -62,50 +61,8 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         }
         return receivedHandshake;
     }
-
-    public void WriteUpdateRelation(Relation relation)
-    {
-        MessageEncoder.EncodeHeader(Writer, new(1, (MessageType)relation));
-    }
-
-    public void WriteKeepAlive()
-    {
-        Writer.Write(0);
-    }
-
-    public void WriteHaveMessage(int piece)
-    {
-        MessageEncoder.EncodeHeader(Writer, new(5, MessageType.Have));
-        Writer.Write(piece);
-    }
-
-    public void WritePieceRequest(PieceRequest request)
-    {
-        MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Request));
-        MessageEncoder.EncodePieceRequest(Writer, request);
-    }
-
-    public async Task WritePieceAsync(PieceShareHeader requestedPiece, Stream piece, CancellationToken cancellationToken = default)
-    {
-        MessageEncoder.EncodeHeader(Writer, new((int)piece.Length + 9, MessageType.Piece));
-        MessageEncoder.EncodePieceHeader(Writer, requestedPiece);
-        while (true)
-        {
-            int writeLen = await piece.ReadAsync(_writeCursor.Buffer.AsMemory(_writeCursor.Position), cancellationToken);
-            _writeCursor.Position += writeLen;
-            if (_writeCursor.Position == _writeCursor.Buffer.Length)
-            {
-                await _stream.WriteAsync(_writeCursor, cancellationToken);
-            }
-            else if (writeLen == 0)
-            {
-                break;
-            }
-        }
-        await _stream.WriteAsync(_writeCursor, cancellationToken);
-    }
-
-    public async Task<Message> ReceiveAsync(CancellationToken cancellationToken = default)
+    
+    private async Task<Message> ReceiveAsync(CancellationToken cancellationToken = default)
     {
         int len = 0;
         while (len == 0)
@@ -129,14 +86,10 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         return new(len - 1, (MessageType)type);
     }
 
-    public async Task ReceiveAsync(IPeerEventHandler eventHandler, long maxMessageLength, CancellationToken cancellationToken = default)
+    public async Task ReceiveAsync(IPeerEventHandler eventHandler,CancellationToken cancellationToken = default)
     {
         var message = await ReceiveAsync(cancellationToken);
         int buffered = int.Min(_readCursor.Length - _readCursor.Position, message.Length);
-        if (message.Length > maxMessageLength)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
-        }
         int startPos = _readCursor.Position;
         switch (message.Type)
         {
@@ -144,7 +97,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
                 await eventHandler.OnChokeAsync(cancellationToken);
                 break;
             case MessageType.Unchoke:
-                await eventHandler.OnUnchokedAsync(cancellationToken);
+                await eventHandler.OnUnChokedAsync(cancellationToken);
                 break;
             case MessageType.Interested:
                 await eventHandler.OnInterestedAsync(cancellationToken);

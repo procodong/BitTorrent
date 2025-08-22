@@ -6,25 +6,24 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Utils;
-public class LazyBitfield
+public class LazyBitArray
 {
-    private BitArray _bitfield;
+    private ZeroCopyBitArray _bitfield;
     private BitfieldState _state;
     private readonly int _size;
 
     public bool AllSet => _state == BitfieldState.AllSet;
     public bool NoneSet => _state == BitfieldState.NoneSet;
 
-    public LazyBitfield(BitArray bitfield)
+    public LazyBitArray(ZeroCopyBitArray bitfield)
     {
         _bitfield = bitfield;
         _state = BitfieldState.Unknown;
         _size = bitfield.Length;
     }
 
-    public LazyBitfield(int size, bool allSet = false)
+    public LazyBitArray(int size, bool allSet = false)
     {
-        _bitfield = null!;
         _state = allSet ? BitfieldState.AllSet : BitfieldState.NoneSet;
         _size = size;
     }
@@ -45,7 +44,10 @@ public class LazyBitfield
                 case BitfieldState.AllSet:
                     if (value) return;
                     _bitfield = new(_size);
-                    _bitfield.SetAll(true);
+                    for (int i = 0; i < _bitfield.Buffer.Length; i++)
+                    {
+                        _bitfield.Buffer[i] = byte.MaxValue;
+                    }
                     _state = BitfieldState.Unknown;
                     break;
                 case BitfieldState.NoneSet:

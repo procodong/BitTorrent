@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
+using BitTorrentClient.BitTorrent.Peers.Connections;
 
 namespace BitTorrentClient.BitTorrent.Downloads;
 public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext

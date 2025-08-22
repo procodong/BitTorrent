@@ -72,7 +72,7 @@ public class Peer : IPeer
         }
     }
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
-    public LazyBitfield Bitfield { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
+    public LazyBitArray BitArray { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
 
     public async Task CancelUploadAsync(PieceRequest request)
     {
@@ -81,7 +81,7 @@ public class Peer : IPeer
 
     public async Task QueueUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        if (!Bitfield[request.Index] || !Uploading) return;
+        if (!BitArray[request.Index] || !Uploading) return;
         var data = _download.RequestBlock(request);
         await _blockUploadWriter.WriteAsync((request.GetHashCode(), data), cancellationToken);
     }
@@ -95,6 +95,67 @@ public class Peer : IPeer
         await _download.SaveBlockAsync(blockData.Stream, block, cancellationToken);
         Interlocked.Add(ref _state.DataTransfer.Downloaded, blockData.Request.Length);
     }
+    
+    private void RequestBlock()
+    {
+        Block request = _blockCursor?.GetRequest(_download.Config.RequestSize) ?? new();
+        while (request.Length == 0)
+        {
+            Block? block;
+            lock (_download)
+            {
+                block = _download.AssignBlock(_state.OwnedPieces);
+            }
+            if (block is not null)
+            {
+                _blockCursor = new BlockCursor(block.Value);
+            }
+            else
+            {
+                _blockCursor = null;
+                return;
+            }
+            request = _blockCursor.GetRequest(_download.Config.RequestSize);
+        }
+        _blockDownloads.Add(request);
+        Writer.WritePieceRequest(request);
+    }
+    
+    private void CancelAll()
+    {
+        Block? canceledRequest = default;
+        foreach (var download in _blockDownloads)
+        {
+            if (canceledRequest is null)
+            {
+                canceledRequest = download;
+            }
+            else if (canceledRequest.Value.Piece == download.Piece && canceledRequest.Value.Begin + canceledRequest.Value.Length == download.Begin)
+            {
+                canceledRequest = canceledRequest.Value with
+                {
+                    Length = canceledRequest.Value.Length + download.Length
+                };
+            }
+            else
+            {
+                _download.Cancel(canceledRequest.Value);
+                canceledRequest = download;
+            }
+        }
+        _blockDownloads.Clear();
+        if (_blockCursor is not null)
+        {
+            var remaining = _blockCursor.GetRequest(_blockCursor.Remaining);
+            _download.Cancel(remaining);
+        }
+    }
+
+    
+    public void NotifyHavePiece(int piece)
+    {
+        Writer.WriteHaveMessage(piece);
+    }
 
     public async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
@@ -105,4 +166,5 @@ public class Peer : IPeer
     {
         return _messagePipe.CompleteAsync();
     }
+    
 }

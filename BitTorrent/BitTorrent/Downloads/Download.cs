@@ -155,7 +155,7 @@ public class Download : IDisposable, IAsyncDisposable
         }
     }
 
-    public Block? AssignBlock(BitArray ownedPieces)
+    public Block? AssignBlock(LazyBitArray ownedPieces)
     {
         if (DownloadRate > Config.TargetDownload || FinishedDownloading)
         {
@@ -184,7 +184,7 @@ public class Download : IDisposable, IAsyncDisposable
         return request;
     }
 
-    private int? SeachPiece(BitArray ownedPieces)
+    private int? SeachPiece(LazyBitArray ownedPieces)
     {
         int index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.PieceIndex]);
         if (index != -1) return index;
@@ -195,7 +195,7 @@ public class Download : IDisposable, IAsyncDisposable
         return i;
     }
 
-    private PieceDownload? CreateDownload(BitArray ownedPieces)
+    private PieceDownload? CreateDownload(LazyBitArray ownedPieces)
     {
         if (_rarestPieces.Count != 0)
         {
@@ -206,20 +206,15 @@ public class Download : IDisposable, IAsyncDisposable
                 return rarePiece;
             }
         }
-        var nextPiece = FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.NumberOfPieces - _requestedPiecesOffset), ownedPieces);
-        if (nextPiece is not null)
-        {
-            return nextPiece;
-        }
-        return default;
+        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.NumberOfPieces - _requestedPiecesOffset), ownedPieces);
     }
 
-    private bool CanBeRequested(int pieceIndex, BitArray ownedPieces)
+    private bool CanBeRequested(int pieceIndex, LazyBitArray ownedPieces)
     {
         return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex] && pieceIndex > _requestedPiecesOffset;
     }
 
-    private PieceDownload? FindNextPiece(IEnumerable<int> pieces, BitArray ownedPieces)
+    private PieceDownload? FindNextPiece(IEnumerable<int> pieces, LazyBitArray ownedPieces)
     {
         int? piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;
