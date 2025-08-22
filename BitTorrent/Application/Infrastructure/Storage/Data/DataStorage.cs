@@ -1,20 +1,21 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Models.Application;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 
 public class DataStorage
 {
-    private readonly FileStreamProvider _streamProvider;
+    private readonly StorageStream _stream;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private readonly CancellationToken _cancellationToken;
     private readonly ConcurrentStack<FailedWrite> _failedWrites;
 
-    public DataStorage(FileStreamProvider streamProvider, ChannelWriter<DownloadExecutionState> downloadStateWriter, CancellationToken cancellationToken)
+    public DataStorage(StorageStream stream, ChannelWriter<DownloadExecutionState> downloadStateWriter, CancellationToken cancellationToken)
     {
-        _streamProvider = streamProvider;
+        _stream = stream;
         _downloadStateWriter = downloadStateWriter;
         _cancellationToken = cancellationToken;
         _failedWrites = new();
@@ -22,27 +23,23 @@ public class DataStorage
 
     public BlockStream GetData(long offset, int length)
     {
-        return _streamProvider.GetStream(offset, length);
+        return _stream.GetStream(offset, length);
     }
 
-    public async Task WriteDataAsync(long offset, ArraySegment<byte> data, bool rented = false)
+    public async Task WriteDataAsync(long offset, MaybeRentedArray<byte> array)
     {
-        var stream = _streamProvider.GetStream(offset);
+        var stream = _stream.GetStream(offset);
         try
         {
-            await stream.WriteAsync(data, _cancellationToken);
+            await stream.WriteAsync(array.Data, _cancellationToken);
         }
         catch (IOException)
         {
-            _failedWrites.Push(new(offset, data, rented));
+            _failedWrites.Push(new(offset, array));
             await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, _cancellationToken);
             return;
         }
-
-        if (rented && data.Array is not null)
-        {
-            ArrayPool<byte>.Shared.Return(data.Array);
-        }
+        array.Dispose();
     }
 
     public void TryWritesAgain()
@@ -52,9 +49,9 @@ public class DataStorage
         for (int i = 0; i < count; i++)
         {
             ref var write = ref writes[i];
-            _ = WriteDataAsync(write.Offset, write.Data, write.Rented);
+            _ = WriteDataAsync(write.Offset, write.Array);
         }
     }
 }
 
-readonly record struct FailedWrite(long Offset, ArraySegment<byte> Data, bool Rented);
+readonly record struct FailedWrite(long Offset, MaybeRentedArray<byte> Array);

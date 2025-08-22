@@ -1,17 +1,5 @@
 ﻿using BitTorrentClient.Models.Application;
-using Microsoft.Extensions.Logging;
-using System.Threading.Channels;
-using BitTorrentClient.UserInterface.Input;
-using BitTorrentClient.UserInterface.Output;
-using BitTorrentClient.Application.Events.Listening.Downloads;
-using BitTorrentClient.Protocol.Presentation.PeerWire;
-using BitTorrentClient.Protocol.Transport.Trackers;
-using BitTorrentClient.Application.Infrastructure.Downloads;
-using BitTorrentClient.Application.Events.Handling.Downloads;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
-using System.Net.Sockets;
-using System.Net;
-using BitTorrentClient.Application.Launchers.Downloads.Default;
+using BitTorrentClient.Application.Launchers.Application;
 
 var config = new Config(
     TargetDownload: int.MaxValue,
@@ -29,35 +17,8 @@ var config = new Config(
     MaxParallelPeers: 30,
     TransferRateResetInterval: 10
     );
-int port = 6881;
-int peerBufferSize = config.RequestSize + 13;
-ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");
-
-var commandChannel = Channel.CreateBounded<Func<ICommandContext, Task>>(32);
-var updateChannel = Channel.CreateBounded<IEnumerable<DownloadUpdate>>(32);
-var identifierTableChannel = Channel.CreateBounded<byte[][]>(8);
-
-var inputHandler = new InputHandler(commandChannel.Writer, identifierTableChannel.Reader);
-
-_ = inputHandler.ListenAsync(Console.In, Console.Out);
-
-var drawer = new UiDrawer();
-var ui = new UiHandler(drawer, identifierTableChannel.Writer);
-Console.WriteLine();
-var uiUpdater = new UiUpdater(ui);
-
-_ = Task.Run(() => uiUpdater.ListenAsync(updateChannel.Reader));
-
 var canceller = new CancellationTokenSource();
-var peerIdGenerator = new PeerIdGenerator("BT", 1001);
-var trackerFetcher = new TrackerFinder(new(), logger, port, peerBufferSize);
-var downloadLauncher = new DownloadLauncher(logger);
-var downloads = new DownloadCollection(peerIdGenerator, config, trackerFetcher, downloadLauncher);
-var downloadEventHandler = new DownloadEventHandler(downloads, updateChannel.Writer);
-var peerSocket = new TcpListener(IPAddress.Any, port);
-peerSocket.Start();
-var peerReceiver = new TcpPeerReceiver(peerSocket, peerBufferSize);
-var downloadEventListener = new DownloadEventListener(downloadEventHandler, peerReceiver, commandChannel.Reader, config.UiUpdateInterval, logger);
+var launcher = new ApplicationLauncher("BitTorrentClient", new("KJ", new('0', '1', '1', '1')), config);
 
 Console.CancelKeyPress += (_, e) =>
 {
@@ -66,6 +27,6 @@ Console.CancelKeyPress += (_, e) =>
 };
 try
 {
-    await downloadEventListener.ListenAsync(canceller.Token);
+    await launcher.LaunchApplication(canceller.Token);
 }
 catch (OperationCanceledException) { }

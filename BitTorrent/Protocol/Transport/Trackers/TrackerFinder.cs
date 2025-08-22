@@ -35,15 +35,15 @@ public class TrackerFinder : ITrackerFinder
         }
         ITrackerFetcher? fetcher = null;
         var readyTasks = new HashSet<Task>();
-        while (tasks.Count != 0)
+        while (tasks.Count != readyTasks.Count)
         {
-            var tracker = await Task.WhenAny(tasks.Where(t => !readyTasks.Contains(t)));
+            var trackerTask = await Task.WhenAny(tasks.Where(t => !readyTasks.Contains(t)));
             try
             {
-                var workingTracker = await tracker;
+                var tracker = await trackerTask;
                 if (fetcher is null)
                 {
-                    fetcher = workingTracker;
+                    fetcher = tracker;
                     await canceller.CancelAsync();
                 }
                 else if (fetcher is IDisposable disposable)
@@ -57,8 +57,8 @@ public class TrackerFinder : ITrackerFinder
                 {
                     _logger.LogError("Tracker exception connecting to tracker: {}", ex.Message);
                 }
-                readyTasks.Add(tracker);
             }
+                readyTasks.Add(trackerTask);
         }
         return fetcher ?? throw new NoValidTrackerException();
     }
@@ -78,8 +78,16 @@ public class TrackerFinder : ITrackerFinder
             var udpTracker = new UdpTrackerFetcher(client, _port, _peerBufferSize);
             try
             {
-                await udpTracker.ConnectAsync(cancellationToken);
-                return udpTracker;
+                var trackerTask = udpTracker.ConnectAsync(cancellationToken);
+                var ready = await Task.WhenAny(trackerTask, Task.Delay(TimeSpan.FromSeconds(1), cancellationToken));
+                if (ready == trackerTask)
+                {
+                    return udpTracker;
+                }
+                else
+                {
+                    throw new TimeoutException();
+                }
             }
             catch
             {

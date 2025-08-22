@@ -60,7 +60,7 @@ public class SlotMap<T> : IEnumerable<T>
 
     public IEnumerator<T> GetEnumerator()
     {
-        return (IEnumerator<T>)_buffer.Where(v => v.IsSet).GetEnumerator();
+        return _buffer.Where(v => v.IsSet).Select(v => v.Value).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()

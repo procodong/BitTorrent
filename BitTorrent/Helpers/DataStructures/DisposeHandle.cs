@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.DataStructures;
-internal class DisposeHandle : IAsyncDisposable
+public struct DisposeHandle : IAsyncDisposable
 {
     private readonly IAsyncDisposable _disposable;
     public DisposeHandle(IAsyncDisposable disposable)

@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Helpers.DataStructures;
-public interface IDisposeHandleProvider
+public interface IDisposeHandleProvider<TDisposable>
+where TDisposable : IAsyncDisposable
 {
-    IAsyncDisposable GetDisposer();
+    TDisposable GetDisposer();
 }

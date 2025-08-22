@@ -23,7 +23,7 @@ public class DownloadLauncher : IDownloadLauncher
         _logger = logger;
     }
 
-    public PeerManagerHandle LaunchDownload(Download download, FileStreamProvider storage, ITrackerFetcher tracker)
+    public PeerManagerHandle LaunchDownload(Download download, StorageStream storage, ITrackerFetcher tracker)
     {
         var peerAdditionChannel = Channel.CreateBounded<PeerWireStream>(new BoundedChannelOptions(8)
         {
@@ -52,12 +52,12 @@ public class DownloadLauncher : IDownloadLauncher
         var peerManager = new PeerManager(peers, downloadState, dataStorage);
         var relationHandler = new PeerRelationHandler();
         var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
-        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval);
+        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval, _logger);
         _ = LaunchDownload(storage, eventListener, canceller.Token);
-        return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner);
+        return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner, download);
     }
 
-    private static async Task LaunchDownload(FileStreamProvider storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
+    private static async Task LaunchDownload(StorageStream storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
     {
         await using var _ = events;
         await using var __ = storage;

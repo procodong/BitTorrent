@@ -11,7 +11,7 @@ public class BitfieldSender : IBitfieldSender<IHandshakeReceiver<PeerWireStream>
         _handshakeHandler = handshakeHandler;
     }
 
-    public IAsyncDisposable GetDisposer()
+    public DisposeHandle GetDisposer()
     {
         return new DisposeHandle(_handshakeHandler);
     }

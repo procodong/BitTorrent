@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
+using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Application.Events.Listening.PeerManagement;
 
@@ -15,8 +16,9 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
+    private readonly ILogger _logger;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, ILogger logger)
     {
         _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
@@ -25,6 +27,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
         _trackerFetcher = trackerFetcher;
         _updateInterval = updateInterval;
         _handler = handler;
+        _logger = logger;
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
@@ -48,7 +51,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                 {
-                    await HandleError(cancellationToken);
+                    await HandleError(ex, cancellationToken);
                 }
                 finally
                 {
@@ -64,7 +67,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                 {
-                    await HandleError(cancellationToken);
+                    await HandleError(ex, cancellationToken);
                 }
                 finally
                 {
@@ -80,7 +83,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                 {
-                    await HandleError(cancellationToken);
+                    await HandleError(ex, cancellationToken);
                 }
                 finally
                 {
@@ -100,7 +103,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                     catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                     {
                         trackerUpdateTask = Task.Delay(5000, cancellationToken);
-                        await HandleError(cancellationToken);
+                        await HandleError(ex, cancellationToken);
                     }
                 }
                 else
@@ -117,7 +120,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                 {
-                    await HandleError(cancellationToken);
+                    await HandleError(ex, cancellationToken);
                 }
                 finally
                 {
@@ -133,7 +136,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
                 {
-                    await HandleError(cancellationToken);
+                    await HandleError(ex, cancellationToken);
                 }
                 finally
                 {
@@ -143,8 +146,9 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
         }
     }
 
-    private async Task HandleError(CancellationToken cancellationToken)
+    private async Task HandleError(Exception exception, CancellationToken cancellationToken)
     {
+        _logger.LogError(exception, "Peer manager {}", exception);
         await _handler.OnStateChange(DownloadExecutionState.PausedAutomatically, cancellationToken);
         DownloadExecutionState state;
         do

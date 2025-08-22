@@ -23,8 +23,8 @@ internal class RandomAccessStream : IRandomAccesStream
         }
         finally
         {
-            _lock.Release();
             _stream.Position = pos;
+            _lock.Release();
         }
         return read;
     }
@@ -41,8 +41,8 @@ internal class RandomAccessStream : IRandomAccesStream
         }
         finally
         {
-            _lock.Release();
             _stream.Position = pos;
+            _lock.Release();
         }
         return read;
     }
@@ -58,8 +58,8 @@ internal class RandomAccessStream : IRandomAccesStream
         }
         finally
         {
-            _lock.Release();
             _stream.Position = pos;
+            _lock.Release();
         }
     }
 
@@ -74,8 +74,8 @@ internal class RandomAccessStream : IRandomAccesStream
         }
         finally
         {
-            _lock.Release();
             _stream.Position = pos;
+            _lock.Release();
         }
     }
     public void Dispose()

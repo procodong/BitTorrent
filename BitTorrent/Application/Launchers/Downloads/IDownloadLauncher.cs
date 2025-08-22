@@ -6,5 +6,5 @@ using BitTorrentClient.Protocol.Transport.Trackers;
 namespace BitTorrentClient.Application.Launchers.Downloads;
 public interface IDownloadLauncher
 {
-    PeerManagerHandle LaunchDownload(Download download, FileStreamProvider storage, ITrackerFetcher tracker);
+    PeerManagerHandle LaunchDownload(Download download, StorageStream storage, ITrackerFetcher tracker);
 }

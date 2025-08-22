@@ -4,7 +4,7 @@ using BitTorrentClient.Helpers.Streams;
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public static class DownloadStorageFactory
 {
-    public static FileStreamProvider CreateMultiFileStorage(string path, MultiFileInfoList files)
+    public static StorageStream CreateMultiFileStorage(string path, MultiFileInfoList files)
     {
         var createdFiles = new List<StreamData>(files.Count);
         var createdDirectories = new HashSet<string>();
@@ -28,7 +28,7 @@ public static class DownloadStorageFactory
         return new(createdFiles, createdBytes);
     }
     
-    public static FileStreamProvider CreateSingleFileStorage(string path, SingleFileInfo file)
+    public static StorageStream CreateSingleFileStorage(string path, SingleFileInfo file)
     {
         var filePath = Path.Combine(path, file.FileName);
         var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
@@ -41,9 +41,8 @@ public static class DownloadStorageFactory
         var createdFile = File.Open(path, new FileStreamOptions()
         {
             Access = FileAccess.ReadWrite,
-            Share = FileShare.ReadWrite,
             Mode = FileMode.OpenOrCreate,
-            Options = FileOptions.Asynchronous,
+            Options = FileOptions.Asynchronous | FileOptions.RandomAccess,
         });
         if (createdFile.Length != size)
         {

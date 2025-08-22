@@ -35,29 +35,41 @@ public class PeerConnector : IPeerSpawner
         try
         {
             var handshake = await address.ConnectAsync(cancellationToken);
-            await using var _ = handshake.GetDisposer();
-            var bitfieldSender = await handshake.SendHandShakeAsync(new(0, _downloadState.Download.Torrent.OriginalInfoHashBytes, _peerId), cancellationToken);
-            var reader = await bitfieldSender.SendBitfieldAsync(_downloadState.DownloadedPieces, cancellationToken);
-            var responded = await reader.ReadHandShakeAsync(cancellationToken);
-            if (!responded.ReceivedHandshake.InfoHash.SequenceEqual(_downloadState.Download.Torrent.OriginalInfoHashBytes))
+            var disposer = handshake.GetDisposer();
+            try
             {
-                _logger.LogInformation("Encountered a peer with an invalid info hash");
-                return;
+                var bitfieldSender = await handshake.SendHandShakeAsync(
+                    new(0, _downloadState.Download.Torrent.OriginalInfoHashBytes, _peerId), cancellationToken);
+                var reader = await bitfieldSender.SendBitfieldAsync(_downloadState.DownloadedPieces, cancellationToken);
+                var responded = await reader.ReadHandShakeAsync(cancellationToken);
+                if (!responded.ReceivedHandshake.InfoHash.SequenceEqual(_downloadState.Download.Torrent
+                        .OriginalInfoHashBytes))
+                {
+                    _logger.LogInformation("Encountered a peer with an invalid info hash");
+                    return;
+                }
+
+                await _peerAdderWriter.WriteAsync(responded, cancellationToken);
             }
-            await _peerAdderWriter.WriteAsync(responded, cancellationToken);
+            catch
+            {
+                await disposer.DisposeAsync();
+                throw;
+            }
         }
         catch (Exception ex)
         {
             await _peerRemovalWriter.WriteAsync(default, cancellationToken);
             if (ex is not SocketException && ex is not IOException)
             {
-                _logger.LogError("connecting to peer", ex);
+                _logger.LogError("connecting to peer {}", ex);
             }
         }
     }
 
     public async Task SpawnConnect(IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>> peer, CancellationToken cancellationToken = default)
     {
+        var disposer = peer.GetDisposer();
         try
         {
             var bitfieldSender = await peer.SendHandShakeAsync(new(0, _downloadState.Download.Torrent.OriginalInfoHashBytes, Encoding.ASCII.GetBytes(_downloadState.Download.ClientId)), cancellationToken);
@@ -66,9 +78,10 @@ public class PeerConnector : IPeerSpawner
         }
         catch (Exception ex)
         {
+            await disposer.DisposeAsync();
             if (ex is not SocketException or IOException)
             {
-                _logger.LogError("connecting to peer", ex);
+                _logger.LogError("connecting to peer {}", ex);
             }
         }
     }

@@ -11,7 +11,7 @@ public class HandshakeReceiver : IHandshakeReceiver<PeerWireStream>
         _handshakeHandler = handler;
     }
 
-    public IAsyncDisposable GetDisposer()
+    public DisposeHandle GetDisposer()
     {
         return new DisposeHandle(_handshakeHandler);
     }

@@ -1,38 +1,89 @@
 ﻿using System.Text;
 using System.Threading.Channels;
+using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Models.Application;
+using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace BitTorrentClient.UserInterface.Output;
+
 public class UiHandler
 {
-    private readonly UiDrawer _drawer;
-    private readonly ChannelWriter<byte[][]> _identifierTableWriter;
-    private readonly List<byte[]> _identifiers;
+    private readonly Table _ui;
+    private readonly Table _downloadsTable;
+    private readonly Table _messages;
+    private readonly Dictionary<ReadOnlyMemory<byte>, int> _downloads;
+    private readonly int _messageLimit;
 
-    public UiHandler(UiDrawer drawer, ChannelWriter<byte[][]> identifierTableWriter)
+    public UiHandler(Table ui, Table downloadsTable, Table messagesTable, int messageLimit)
     {
-        _drawer = drawer;
-        _identifierTableWriter = identifierTableWriter;
-        _identifiers = [];
+        _ui = ui;
+        _downloadsTable = downloadsTable;
+        _messages = messagesTable;
+        _downloads = new(new MemoryComparer<byte>());
+        _messageLimit = messageLimit;
     }
 
-    public async Task UpdateAsync(IEnumerable<DownloadUpdate> updates)
+    public static UiHandler Create(Table table, int messageLimit)
     {
-        _drawer.StartDraw();
-        foreach (var (index, update) in updates.Indexed())
+        var downloadsTable = new Table();
+        downloadsTable.AddColumns("Name", "Size", "State", "Progress", "Downloaded", "Uploaded");
+
+        var messagesTable = new Table();
+        messagesTable.AddColumns("Type", "Time", "Message");
+        table.AddColumn("BitTorrent");
+        table.AddRow(downloadsTable);
+        table.AddRow(messagesTable);
+
+        var handler = new UiHandler(table, downloadsTable, messagesTable, messageLimit);
+        handler.Update();
+        return handler;
+    }
+
+    public void Update(IEnumerable<DownloadUpdate> updates)
+    {
+        bool any = false;
+        foreach (var update in updates)
         {
-            if (index >= _identifiers.Count)
+            any = true;
+            var progress = update.Transfer.Download / update.Size * 100;
+            if (_downloads.TryGetValue(update.Identifier, out var downloadRow))
             {
-                _identifiers.Add(update.Identifier);
-                await _identifierTableWriter.WriteAsync(_identifiers.ToArray());
+                _downloadsTable.UpdateCell(downloadRow, 2, update.ExecutionState.ToString());
+                _downloadsTable.UpdateCell(downloadRow, 3, progress.ToString());
+                _downloadsTable.UpdateCell(downloadRow, 4, update.Transfer.Download.ToString());
+                _downloadsTable.UpdateCell(downloadRow, 5, update.Transfer.Upload.ToString());
             }
             else
             {
-                _identifiers[index] = update.Identifier;
+                int index = _downloadsTable.Rows.Count;
+                var row = _downloadsTable.AddRow(update.DownloadName, update.Size.ToString(), update.ExecutionState.ToString(), $"{progress}%", update.Transfer.Download.ToString(), update.Transfer.Upload.ToString());
+                _downloads.Add(update.Identifier, index);
             }
-            _drawer.Draw(index, update);
         }
-        _drawer.EndDraw();
+        if (any)
+        {
+            Update();
+        }
+    }
+
+    public void AddMessage(LogLevel level, string message)
+    {
+        var time = DateTime.Now.ToString("ddd HH:mm:ss");
+        _messages.Rows.Insert(0, [new Text(level.ToString()), new Text(time), new Text(message)]);
+        if (_messages.Rows.Count == _messageLimit)
+        {
+            _messages.Rows.RemoveAt(_messages.Rows.Count - 1);
+        }
+        Update();
+    }
+
+    private void Update()
+    {
+        
+        AnsiConsole.Clear();
+        AnsiConsole.Write(_ui);
+        AnsiConsole.WriteLine();
     }
 }

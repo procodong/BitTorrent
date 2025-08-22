@@ -29,22 +29,22 @@ public class PieceHasher
         int index = offset / _bufferSize - _offset;
         int bufferOffset = offset % _bufferSize;
         HashUnit hashUnit = _buffers[_offset];
-        if (hashUnit.Buffer.Array is null) hashUnit = _buffers[index] with { Buffer = new ArraySegment<byte>(ArrayPool<byte>.Shared.Rent(_bufferSize), 0, _bufferSize) };
-        await stream.ReadExactlyAsync(hashUnit.Buffer.Array.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
+        if (hashUnit.Array.Buffer is null) hashUnit = _buffers[index] with { Array = new MaybeRentedArray<byte>(_bufferSize) };
+        await stream.ReadExactlyAsync(hashUnit.Array.Buffer.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
         Interlocked.Add(ref _buffers[index].Written, (int)stream.Length);
     }
 
-    public IEnumerable<(int Offset, ArraySegment<byte>)> HashReadyBlocks()
+    public IEnumerable<(int Offset, MaybeRentedArray<byte>)> HashReadyBlocks()
     {
         for (; _offset < _buffers.Length; _offset++)
         {
             HashUnit hashUnit = _buffers[_offset];
-            if (hashUnit.Written != hashUnit.Buffer.Count) break;
-            _hasher.TransformBlock(hashUnit.Buffer.Array!, hashUnit.Buffer.Offset, hashUnit.Buffer.Count, null, 0);
+            if (hashUnit.Written != hashUnit.Array.Size) break;
+            _hasher.TransformBlock(hashUnit.Array.Buffer, 0, hashUnit.Array.Size, null, 0);
             _buffers[_offset] = default;
             int pieceOffset = _offset * _blockSize;
             _offset++;
-            yield return (pieceOffset, hashUnit.Buffer);
+            yield return (pieceOffset, hashUnit.Array);
         }
     }
 
@@ -55,7 +55,7 @@ public class PieceHasher
     }
 }
 
-record struct HashUnit(ArraySegment<byte> Buffer)
+record struct HashUnit(MaybeRentedArray<byte> Array)
 {
     public volatile int Written;
 }

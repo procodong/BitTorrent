@@ -9,6 +9,7 @@ using BitTorrentClient.Application.Launchers.Downloads;
 using BitTorrentClient.Application.Events.Handling.Downloads;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
+using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
 public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollection
@@ -27,20 +28,23 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollec
         _launcher = launcher;
     }
     
-    public async Task AddDownloadAsync(Torrent torrent, FileStreamProvider storage, CancellationToken cancellationToken = default)
+    public async Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name, CancellationToken cancellationToken = default)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var tracker = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
-        var download = new Download(peerId, torrent.DisplayName, torrent, _config);
+        var download = new Download(_downloads.Count, peerId, name is not null ? name : torrent.DisplayName, torrent, _config);
         var handle = _launcher.LaunchDownload(download, storage, tracker);
         _downloads.TryAdd(torrent.OriginalInfoHashBytes, handle);
     }
 
-    public async Task RemoveDownloadAsync(ReadOnlyMemory<byte> id)
+    public async Task RemoveDownloadAsync(Func<Download, bool> condition)
     {
-        if (_downloads.Remove(id, out var download))
+        var download = _downloads.Find(v => condition(v.Value.Download));
+
+        if (download is not null)
         {
-            await download.Canceller.CancelAsync();
+            _downloads.Remove(download.Value.Value.InfoHash, out var _);
+            await download.Value.Value.Canceller.CancelAsync();
         }
     }
 

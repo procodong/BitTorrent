@@ -12,7 +12,7 @@ public class HandshakeSender : IHandshakeSender<IBitfieldSender<IHandshakeReceiv
         _handshakeHandler = handler;
     }
 
-    public IAsyncDisposable GetDisposer()
+    public DisposeHandle GetDisposer()
     {
         return new DisposeHandle(_handshakeHandler);
     }

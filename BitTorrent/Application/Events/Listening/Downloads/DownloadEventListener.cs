@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace BitTorrentClient.Application.Events.Listening.Downloads;
 
@@ -38,7 +39,7 @@ public class DownloadEventListener : IEventListener
                 }
                 catch (Exception exc)
                 {
-                    _logger.LogError("handling user command", exc);
+                    _logger.LogError(exc, "handling user command");
                 }
                 commandTask = _commandReader.ReadAsync(cancellationToken).AsTask();
             }

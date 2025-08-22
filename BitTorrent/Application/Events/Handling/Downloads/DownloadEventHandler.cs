@@ -6,6 +6,7 @@ using BitTorrentClient.Application.Events.Listening.Downloads;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Application.Events.Handling.Downloads;
 
@@ -13,14 +14,16 @@ public class DownloadEventHandler : IDownloadEventHandler
 {
     private readonly IDownloadCollection _downloads;
     private readonly ChannelWriter<IEnumerable<DownloadUpdate>> _updateSender;
+    private readonly ILogger _logger;
 
-    public DownloadEventHandler(IDownloadCollection downloads, ChannelWriter<IEnumerable<DownloadUpdate>> updateSender)
+    public DownloadEventHandler(IDownloadCollection downloads, ChannelWriter<IEnumerable<DownloadUpdate>> updateSender, ILogger logger)
     {
         _downloads = downloads;
         _updateSender = updateSender;
+        _logger = logger;
     }
 
-    public async Task AddTorrentAsync(string torrentPath, string targetPath)
+    public async Task AddTorrentAsync(string torrentPath, string targetPath, string? name)
     {
         await using var file = File.Open(torrentPath, new FileStreamOptions()
         {
@@ -29,15 +32,32 @@ public class DownloadEventHandler : IDownloadEventHandler
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);
-        FileStreamProvider storage = torrent.Files is not null
+        StorageStream storage = torrent.Files is not null
             ? DownloadStorageFactory.CreateMultiFileStorage(targetPath, torrent.Files)
             : DownloadStorageFactory.CreateSingleFileStorage(targetPath, torrent.File);
-        _ = _downloads.AddDownloadAsync(torrent, storage);
+        _ = AddDownloadAsync(torrent, storage, name);
     }
 
-    public Task RemoveTorrentAsync(ReadOnlyMemory<byte> identifier)
+    private async Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name)
     {
-        _ = _downloads.RemoveDownloadAsync(identifier);
+        try
+        {
+            await _downloads.AddDownloadAsync(torrent, storage, name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Adding download");
+        }
+    }
+
+    public Task RemoveTorrentAsync(string name)
+    {
+        _ = _downloads.RemoveDownloadAsync(v => v.Name == name);
+        return Task.CompletedTask;
+    }
+    public Task RemoveTorrentAsync(int index)
+    {
+        _ = _downloads.RemoveDownloadAsync(v => v.DownloadIndex == index);
         return Task.CompletedTask;
     }
 

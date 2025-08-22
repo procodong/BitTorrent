@@ -39,7 +39,7 @@ public class BlockStorage
         {
             foreach (var (offset, buffer) in block.Piece.Hasher.HashReadyBlocks())
             {
-                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer, rented: true);
+                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer);
             }
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);

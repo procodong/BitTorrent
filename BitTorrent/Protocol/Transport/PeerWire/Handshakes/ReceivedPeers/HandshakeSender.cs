@@ -12,7 +12,7 @@ public class HandshakeSender : IRespondedHandshakeSender<IBitfieldSender<PeerWir
         _handshakeHandler = handshakeHandler;
     }
 
-    public IAsyncDisposable GetDisposer()
+    public DisposeHandle GetDisposer()
     {
         return new DisposeHandle(_handshakeHandler);
     }

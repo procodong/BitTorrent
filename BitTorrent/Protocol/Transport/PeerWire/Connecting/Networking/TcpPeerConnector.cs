@@ -19,11 +19,20 @@ public class TcpPeerConnector : IPeerConnector
     public async Task<IHandshakeSender<IBitfieldSender<IHandshakeReceiver<PeerWireStream>>>> ConnectAsync(CancellationToken cancellationToken = default)
     {
         var client = new TcpClient();
-        await client.ConnectAsync(_address, cancellationToken);
-        var stream = new NetworkStream(client.Client, true);
-        var buffer = new BufferCursor(_bufferSize);
-        var handshake = new HandshakeHandler(stream, buffer);
-        return new HandshakeSender(handshake);
+        try
+        {
+
+            await client.ConnectAsync(_address, cancellationToken);
+            var stream = new NetworkStream(client.Client, true);
+            var buffer = new BufferCursor(_bufferSize);
+            var handshake = new HandshakeHandler(stream, buffer);
+            return new HandshakeSender(handshake);
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
     }
 
     public bool Equals(IPeerConnector? other)
