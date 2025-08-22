@@ -1,7 +1,8 @@
-﻿using BencodeNET.Torrents;
+﻿tuffusing BencodeNET.Torrents;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
+using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 using System;
@@ -17,11 +18,13 @@ namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
+    private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private readonly DownloadStorage _storage;
     private readonly Torrent _torrent;
 
-    public BlockStorage(ChannelWriter<int> haveWriter, Torrent torrent, DownloadStorage storage)
+    public BlockStorage(Torrent torrent, DownloadStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
     {
+        _downloadStateWriter = downloadStateWriter;
         _haveWriter = haveWriter;
         _storage = storage;
         _torrent = torrent;
@@ -37,8 +40,13 @@ public class BlockStorage
             foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
             {
                 var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
-                _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), cancellationToken).AsTask();
-                // TODO: notify download on error
+                _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), CancellationToken.None).AsTask().ContinueWith(async t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically);
+                    }
+                });
             }
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);

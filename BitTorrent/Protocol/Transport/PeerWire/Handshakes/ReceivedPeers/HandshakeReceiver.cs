@@ -13,7 +13,6 @@ public class HandshakeReceiver : IHandshakeReceiver<IRespondedHandshakeSender<IB
 
     public async Task<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
-        if (_handshakeHandler.ReceivedHandShake is not null) throw new AlreadyUsedException();
         await _handshakeHandler.ReadHandShakeAsync(cancellationToken);
         return new HandshakeSender(_handshakeHandler);
     }

@@ -13,16 +13,14 @@ public class BlockDistributor : IBlockRequester
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;
     private readonly BlockStorage _storage;
-    private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(Downloader downloader, BlockStorage storage, ChannelWriter<DownloadExecutionState> downloadStateWriter)
+    public BlockDistributor(Downloader downloader, BlockStorage storage)
     {
         _requests = new(downloader.Config.RequestQueueSize);
         _downloader = downloader;
         _storage = storage;
         _blockCursor = new(default);
-        _downloadStateWriter = downloadStateWriter;
     }
     
     public IEnumerable<BlockRequest> DrainRequests()
@@ -84,10 +82,6 @@ public class BlockDistributor : IBlockRequester
             }
 
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
-        }
-        catch (IOException)
-        {
-            await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, cancellationToken);
         }
         finally
         {

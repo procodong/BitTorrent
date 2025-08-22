@@ -6,6 +6,7 @@ using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.Exceptions;
 using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
@@ -20,6 +21,7 @@ public class HandshakeHandler
     private readonly Stream _stream;
     private HandshakeData? _myHandshake;
     private HandshakeData? _otherHandshake;
+    private LazyBitArray? _bitfield;
 
     public HandshakeData? ReceivedHandShake => _otherHandshake;
     public HandshakeData? SentHandShake => _myHandshake;
@@ -36,6 +38,7 @@ public class HandshakeHandler
 
     public async Task SendHandShakeAsync(HandshakeData handshake, CancellationToken cancellationToken = default)
     {
+        if (_myHandshake is not null) throw new AlreadyUsedException();
         _myHandshake = handshake;
         MessageEncoder.EncodeHandShake(Writer, new(Protocol, handshake.Extensions, handshake.InfoHash, handshake.PeerId));
         await _writer.FlushAsync(cancellationToken);
@@ -43,6 +46,8 @@ public class HandshakeHandler
 
     public async Task SendBitfieldAsync(LazyBitArray bitfield, CancellationToken cancellationToken = default)
     {
+        if (_bitfield is not null) throw new AlreadyUsedException();
+        _bitfield = bitfield;
         if (bitfield.NoneSet) return;
         MessageEncoder.EncodeHeader(Writer, new(bitfield.Buffer.Length + 1, MessageType.Bitfield));
         await _writer.WriteAsync(bitfield.Buffer, cancellationToken);
@@ -50,6 +55,7 @@ public class HandshakeHandler
 
     public async Task ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
+        if (_otherHandshake is not null) throw new AlreadyUsedException();
         await _stream.ReadAtLeastAsync(_cursor, MessageDecoder.HandshakeLen, cancellationToken: cancellationToken);
         HandShake receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
         _otherHandshake = new HandshakeData(receivedHandshake.Extensions, receivedHandshake.InfoHash, receivedHandshake.PeerId);

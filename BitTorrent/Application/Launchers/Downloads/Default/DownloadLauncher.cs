@@ -41,8 +41,8 @@ public class DownloadLauncher : IDownloadLauncher
             SingleWriter = false
         });
         var downloader = new Downloader(downloadState);
-        var blockStorage = new BlockStorage(haveChannel.Writer, downloadState.Download.Torrent, storage);
-        var launcher = new PeerLauncher(downloader, blockStorage, stateChannel.Writer);
+        var blockStorage = new BlockStorage(downloadState.Download.Torrent, storage, haveChannel.Writer, stateChannel.Writer);
+        var launcher = new PeerLauncher(downloader, blockStorage);
         var spawner = new PeerSpawner(downloadState, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
         var peers = new PeerCollection(spawner, downloadState.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, downloadState);
@@ -50,7 +50,7 @@ public class DownloadLauncher : IDownloadLauncher
         var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval);
         var canceller = new CancellationTokenSource();
         _ = LaunchDownload(storage, eventListener, canceller.Token);
-        return new PeerManagerHandle(peerManager, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner);
+        return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner);
     }
 
     private static async Task LaunchDownload(DownloadStorage storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
