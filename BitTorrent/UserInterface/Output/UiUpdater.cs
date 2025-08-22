@@ -1,7 +1,7 @@
-﻿using BitTorrentClient.Models.Application;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
+using BitTorrentClient.Models.Application;
 
-namespace BitTorrentClient.Application.Ui;
+namespace BitTorrentClient.UserInterface.Output;
 public class UiUpdater
 {
     private readonly IUiHandler _uiHandler;

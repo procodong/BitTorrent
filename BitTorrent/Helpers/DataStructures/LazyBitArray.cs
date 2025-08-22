@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Utils;
+﻿namespace BitTorrentClient.Helpers.DataStructures;
 public class LazyBitArray
 {
     private ZeroCopyBitArray _bitfield;
@@ -14,6 +7,7 @@ public class LazyBitArray
 
     public bool AllSet => _state == BitfieldState.AllSet;
     public bool NoneSet => _state == BitfieldState.NoneSet;
+    public byte[] Buffer => _bitfield.Buffer;
 
     public LazyBitArray(ZeroCopyBitArray bitfield)
     {

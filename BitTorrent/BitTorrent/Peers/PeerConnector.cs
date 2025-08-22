@@ -12,9 +12,9 @@ namespace BitTorrentClient.BitTorrent.Peers;
 public class PeerConnector(
     PeerState data,
     ChannelWriter<PeerRelation> relationEventWriter,
-    DataTransferVector lastStatistics,
-    DataTransferVector lastUnchokedStats,
-    CancellationTokenSource canceller
+    CancellationTokenSource canceller,
+    DataTransferVector lastStatistics = default,
+    DataTransferVector lastUnchokedStats = default
     )
 {
     public DataTransferVector LastStatistics = lastStatistics;

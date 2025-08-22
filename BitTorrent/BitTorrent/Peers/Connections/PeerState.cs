@@ -1,11 +1,12 @@
 ﻿using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public class PeerState(LazyBitArray ownedPieces)

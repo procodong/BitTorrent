@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Application.Input;
+﻿namespace BitTorrentClient.UserInterface.Input;
 public interface ICommandContext
 {
     Task AddTorrentAsync(string torrentPath, string targetPath);

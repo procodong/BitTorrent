@@ -1,6 +1,4 @@
-﻿using BitTorrentClient.Application.Input;
-using BitTorrentClient.Application.Ui;
-using BitTorrentClient.Models.Application;
+﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Storage;
 using BitTorrentClient.BitTorrent.Downloads;
@@ -8,6 +6,8 @@ using BitTorrentClient.BitTorrent.Peers;
 using BitTorrentClient.BitTorrent.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
+using BitTorrentClient.UserInterface.Input;
+using BitTorrentClient.UserInterface.Output;
 
 var config = new Config(
     TargetDownload: int.MaxValue,
@@ -38,10 +38,10 @@ _ = peerReceiver.ListenAsync(newDownloadChannel.Reader).ConfigureAwait(false);
 
 var inputHandler = new InputHandler(commandChannel.Writer);
 
-new Thread(async () =>
+_ = Task.Run(async () =>
 {
     await inputHandler.ListenAsync(Console.In, Console.Out);
-}).Start();
+});
 
 var ui = new CliHandler();
 Console.WriteLine();

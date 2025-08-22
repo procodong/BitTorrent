@@ -2,22 +2,22 @@
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Peers.Errors;
-using BitTorrentClient.BitTorrent.Peers.Streaming;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading.Channels;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 
 public class PeerEventHandler : IAsyncDisposable, IPeerEventHandler
 {
-    private readonly PeerWireStream _connection;
+    private readonly PeerWireReader _connection;
     private readonly IPeer _peer;
 
-    public PeerEventHandler(PeerWireStream connection, IPeer peer)
+    public PeerEventHandler(PeerWireReader connection, IPeer peer)
     {
         _connection = connection;
         _peer = peer;
@@ -97,7 +97,7 @@ public class PeerEventHandler : IAsyncDisposable, IPeerEventHandler
 
     public Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
     {
-        return _peer.SaveBlockAsync(piece, cancellationToken);
+        return _peer.DownloadAsync(piece, cancellationToken);
     }
 
     public Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)

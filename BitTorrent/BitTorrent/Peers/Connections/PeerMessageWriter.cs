@@ -14,12 +14,14 @@ public class PeerMessageWriter : IAsyncDisposable, IDisposable
 {
     private readonly PipeReader _messageReader;
     private readonly ChannelReader<BlockData> _requestReader;
+    private readonly ChannelReader<PieceRequest> _cancellationReader;
     private readonly PipeWriter _output;
 
-    public PeerMessageWriter(PipeWriter output, PipeReader messageReader, ChannelReader<BlockData> requestReader)
+    public PeerMessageWriter(PipeWriter output, PipeReader messageReader, ChannelReader<BlockData> requestReader, ChannelReader<PieceRequest> cancellationReader)
     {
         _messageReader = messageReader;
         _requestReader = requestReader;
+        _cancellationReader = cancellationReader;
         _output = output;
     }
 
@@ -27,6 +29,7 @@ public class PeerMessageWriter : IAsyncDisposable, IDisposable
     {
         Task<ReadResult> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
         Task<BlockData> pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
+        Task<PieceRequest> cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
 
         while (true)
         {
@@ -49,6 +52,11 @@ public class PeerMessageWriter : IAsyncDisposable, IDisposable
                 await data.Stream.CopyToAsync(_output, cancellationToken);
                 await _output.FlushAsync(cancellationToken);
                 pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
+            }
+            else if (ready == cancelledBlockTask)
+            {
+                var block = await cancelledBlockTask;
+                cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
             }
         }
     }

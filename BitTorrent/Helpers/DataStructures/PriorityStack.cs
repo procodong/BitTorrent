@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections;
 
-namespace BitTorrentClient.Utils;
+namespace BitTorrentClient.Helpers.DataStructures;
 public class PriorityStack<T>(int size, IComparer<T> comparer) : IEnumerable<T>
 {
     private readonly List<T> _stack = new(size);

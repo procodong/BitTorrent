@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Models.Peers;
 using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Peers;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using System;
 using System.Collections;
 using System.Collections.Generic;

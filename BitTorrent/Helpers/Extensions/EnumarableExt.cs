@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Utils;
+﻿namespace BitTorrentClient.Helpers.Extensions;
 public static class EnumarableExt
 {
     public static IEnumerable<(int Index, T Value)> Indexed<T>(this IEnumerable<T> source)

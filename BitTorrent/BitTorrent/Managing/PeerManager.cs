@@ -4,10 +4,13 @@ using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Trackers;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Threading.Channels;
+using BitTorrentClient.BitTorrent.Peers;
+using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.BitTorrent.Managing;
 public class PeerManager : IDisposable, IAsyncDisposable
@@ -31,7 +34,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
         _peers = peers;
     }
 
-    public async Task ListenAsync(ChannelReader<IdentifiedPeerWireStream> peerReader, ChannelReader<int?> peerRemoveReader, CancellationToken cancellationToken = default)
+    public async Task ListenAsync(ChannelReader<PeerHandshaker> peerReader, ChannelReader<int?> peerRemoveReader, CancellationToken cancellationToken = default)
     {
         var events = new PeerManagerEventHandler(peerRemoveReader, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
         {
@@ -72,8 +75,8 @@ public class PeerManager : IDisposable, IAsyncDisposable
             bool interested = peer.State.Relation.Interested;
             bool choked = peer.State.Relation.Choked;
             var stats = new DataTransferVector(
-                choked ? peer.LastUnchokedStats.Download : Interlocked.Read(ref peer.State.DataTransfer.Downloaded), 
-                !interested ? peer.LastUnchokedStats.Upload : Interlocked.Read(ref peer.State.DataTransfer.Uploaded)
+                choked ? peer.LastUnchokedStats.Download : peer.State.DataTransfer.Downloaded, 
+                !interested ? peer.LastUnchokedStats.Upload : peer.State.DataTransfer.Uploaded
                 );
             var statChange = (stats - peer.LastStatistics) / _download.SecondsSinceTimerReset;
             unchokedPeers.Include(index, (int)statChange.Upload + (int)statChange.Download, (int)statChange.Upload);
@@ -143,7 +146,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
             peer.Canceller.Cancel();
         }
         _download.Dispose();
-        _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped));
+        _trackerFetcher.FetchAsync(GetTrackerUpdate(TrackerEvent.Stopped)).GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync()

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.Utils;
+namespace BitTorrentClient.Helpers;
 public class MemoryComparer<T> : IEqualityComparer<ReadOnlyMemory<T>>
 {
     public bool Equals(ReadOnlyMemory<T> x, ReadOnlyMemory<T> y)

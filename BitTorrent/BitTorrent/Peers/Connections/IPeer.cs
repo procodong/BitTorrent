@@ -1,11 +1,12 @@
 ﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public interface IPeer : IAsyncDisposable
@@ -17,7 +18,7 @@ public interface IPeer : IAsyncDisposable
     LazyBitArray BitArray { get; set; }
     Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default);
     Task CancelUploadAsync(PieceRequest request);
-    Task SaveBlockAsync(BlockData blockData, CancellationToken cancellationToken = default);
+    Task DownloadAsync(BlockData blockData, CancellationToken cancellationToken = default);
     Task UpdateAsync(CancellationToken cancellationToken = default);
     void NotifyHavePiece(int piece);
 }

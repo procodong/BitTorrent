@@ -1,8 +1,7 @@
 ﻿using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Peers.Parsing;
-using BitTorrentClient.BitTorrent.Peers.Streaming;
 using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public class Peer : IPeer
@@ -55,14 +55,7 @@ public class Peer : IPeer
         {
             if (_state.Relation.Interested == value) return;
             _state.Relation = _state.Relation with { Interested = value };
-            if (value)
-            {
-                Writer.WriteUpdateRelation(Relation.Interested);
-            }
-            else
-            {
-                Writer.WriteUpdateRelation(Relation.NotInterested);
-            } 
+            Writer.WriteUpdateRelation(value ? Relation.Interested : Relation.NotInterested);
         }
     }
     public bool Uploading {
@@ -72,14 +65,7 @@ public class Peer : IPeer
         {
             if (_state.Relation.Choked == !value) return;
             _state.Relation = _state.Relation with { Choked = !value };
-            if (value)
-            {
-                Writer.WriteUpdateRelation(Relation.Unchoke);
-            }
-            else
-            {
-                Writer.WriteUpdateRelation(Relation.Choke);
-            }
+            Writer.WriteUpdateRelation(value ? Relation.Unchoke : Relation.Choke);
         }
     }
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
@@ -92,19 +78,19 @@ public class Peer : IPeer
 
     public async Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        if (!BitArray[request.Index] || !Uploading) return;
+        if (!_download.DownloadedPieces[request.Index] || !Uploading) return;
         var data = _download.RequestBlock(request);
         await _blockUploadWriter.WriteAsync(new(request, data), cancellationToken);
     }
 
-    public async Task SaveBlockAsync(BlockData blockData, CancellationToken cancellationToken = default)
+    public async Task DownloadAsync(BlockData blockData, CancellationToken cancellationToken = default)
     {
         var requestIndex = _blockDownloads.FindIndex(req => req == blockData.Request);
         if (requestIndex == -1) return;
         var block = _blockDownloads[requestIndex];
         _blockDownloads.RemoveAt(requestIndex);
         await _download.SaveBlockAsync(blockData.Stream, block, cancellationToken);
-        Interlocked.Add(ref _state.DataTransfer.Downloaded, blockData.Request.Length);
+        _state.DataTransfer.AtomicAddDownload(blockData.Request.Length);
     }
     
     public void NotifyHavePiece(int piece)

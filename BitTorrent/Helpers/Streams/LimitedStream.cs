@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Files.Streams;
+﻿namespace BitTorrentClient.Helpers.Streams;
 public class LimitedStream : Stream
 {
     private readonly Stream _stream;

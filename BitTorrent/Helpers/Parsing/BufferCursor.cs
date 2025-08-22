@@ -1,25 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.Utils.Parsing;
+﻿namespace BitTorrentClient.Helpers.Parsing;
 public class BufferCursor
 {
-    public byte[] Buffer;
+    public readonly byte[] Buffer;
     public int Position;
-    public int Length;
+    public int End;
 
-    public BufferCursor(byte[] buffer) : this(buffer, 0, buffer.Length)
-    {
-    }
-    public BufferCursor(byte[] buffer, int position, int length)
+    public BufferCursor(byte[] buffer, int position = 0, int end = 0)
     {
         Buffer = buffer;
         Position = position;
-        Length = length;
+        End = end;
     }
-    public int RemainingBytes => Length - Position;
+    public int RemainingInitializedBytes => End - Position;
+    public int RemainingBuffer => Buffer.Length - Position;
 }

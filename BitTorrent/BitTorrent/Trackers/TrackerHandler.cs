@@ -1,8 +1,7 @@
 ﻿using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.BitTorrent.Peers;
-using BitTorrentClient.BitTorrent.Peers.Streaming;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,11 +11,13 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitTorrentClient.BitTorrent.Peers.Connections;
+using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.BitTorrent.Trackers;
 public class TrackerHandler
 {
-    private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IdentifiedPeerWireStream>> _eventSenders = new(new MemoryComparer<byte>());
+    private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<PeerHandshaker>> _eventSenders;
     private readonly TcpListener _listener;
     private readonly ILogger _logger;
 
@@ -24,6 +25,7 @@ public class TrackerHandler
     {
         _listener = new(IPAddress.Any, port);
         _logger = logger;
+        _eventSenders = new(new MemoryComparer<byte>());
     }
 
     public async Task ListenAsync(ChannelReader<PeerReceivingSubscribe> downloadReceiver)
@@ -79,8 +81,8 @@ public class TrackerHandler
     private async Task CreateClient(TcpClient client)
     {
         var stream = new NetworkStream(client.Client, true);
-        var peerStream = new PeerWireStream(stream);
-        var handshake = await peerStream.ReadHandShakeAsync();
-        await _eventSenders[handshake.InfoHash].WriteAsync(new(handshake.PeerId, peerStream));
+        var handshaker = new PeerHandshaker(stream, 1 << 14 + 13);
+        var handshake = await handshaker.ReadHandShakeAsync();
+        await _eventSenders[handshake.InfoHash].WriteAsync(handshaker);
     }
 }

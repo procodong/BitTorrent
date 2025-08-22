@@ -9,10 +9,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitTorrentClient.BitTorrent.Peers.Connections;
 
 namespace BitTorrentClient.BitTorrent.Managing;
 
-public delegate void NewPeer(IdentifiedPeerWireStream stream);
+public delegate void NewPeer(PeerHandshaker stream);
 public delegate Task Update();
 public delegate Task PeerRemoval(int? peerIndex);
 public delegate void TrackerResponse(Models.Trackers.TrackerResponse respose);
@@ -22,7 +23,7 @@ public delegate void Error(Exception exception);
 public class PeerManagerEventHandler
 {
     private readonly ChannelReader<int?> _peerRemovalReader;
-    private readonly ChannelReader<IdentifiedPeerWireStream> _peerReader;
+    private readonly ChannelReader<PeerHandshaker> _peerReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
     public NewPeer PeerAddition;
@@ -32,7 +33,7 @@ public class PeerManagerEventHandler
     private readonly Func<TrackerEvent, TrackerUpdate> _trackerUpdateProvider;
     public Error Error;
 
-    public PeerManagerEventHandler(ChannelReader<int?> peerRemovalReader, ChannelReader<IdentifiedPeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, Func<TrackerEvent, TrackerUpdate> trackerUpdates)
+    public PeerManagerEventHandler(ChannelReader<int?> peerRemovalReader, ChannelReader<PeerHandshaker> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, Func<TrackerEvent, TrackerUpdate> trackerUpdates)
     {
         _peerRemovalReader = peerRemovalReader;
         _peerReader = peerReader;
@@ -48,7 +49,7 @@ public class PeerManagerEventHandler
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<IdentifiedPeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
+        Task<PeerHandshaker> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
         var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
         Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();

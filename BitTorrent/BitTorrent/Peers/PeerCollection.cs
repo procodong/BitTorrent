@@ -1,22 +1,12 @@
-﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Models.Peers;
-using BitTorrentClient.BitTorrent.Downloads;
-using BitTorrentClient.BitTorrent.Peers;
-using BitTorrentClient.BitTorrent.Peers.Connections;
-using BitTorrentClient.Utils;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
-using System.Linq;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Collections;
 using System.Threading.Channels;
-using System.Threading.Tasks;
+using BitTorrentClient.BitTorrent.Peers.Connections;
+using BitTorrentClient.Helpers;
+using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Models.Peers;
 
-namespace BitTorrentClient.BitTorrent.Peers.Connections;
+namespace BitTorrentClient.BitTorrent.Peers;
 public class PeerCollection : IEnumerable<PeerConnector>
 {
     private readonly SlotMap<PeerConnector> _peers = [];
@@ -24,7 +14,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
     private readonly PeerSpawner _spawner;
     private readonly int _pieceCount;
     private List<PeerAddress> _potentialPeers = [];
-    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor = Enumerable.Empty<(int, PeerAddress)>().GetEnumerator();
+    private IEnumerator<(int Index, PeerAddress Address)> _peerCursor;
     private int _missedPeers;
 
     public int Count => _peers.Count;
@@ -34,21 +24,27 @@ public class PeerCollection : IEnumerable<PeerConnector>
         _spawner = spawner;
         _pieceCount = pieceCount;
         _missedPeers = maxParallelPeers;
+        _peerCursor = Enumerable.Empty<(int, PeerAddress)>().GetEnumerator();
     }
 
-    public void Add(IdentifiedPeerWireStream stream)
+    public void Add(PeerHandshaker stream)
     {
-        if (_peerIds.Contains(stream.PeerId))
+        if (stream.ReceivedHandShake is null)
+        {
+            throw new InvalidDataException("peer has to have received the hand shake");
+        }
+
+        byte[] peerId = stream.ReceivedHandShake.Value.PeerId;
+        if (!_peerIds.Add(peerId))
         {
             ConnectNext();
             return;
         }
-        _peerIds.Add(stream.PeerId);
         var eventChannel = Channel.CreateBounded<PeerRelation>(16);
         var state = new PeerState(new(_pieceCount));
-        var peerConnector = new PeerConnector(state, eventChannel.Writer, new(), new(), new());
+        var peerConnector = new PeerConnector(state, eventChannel.Writer, new());
         int index = _peers.Add(peerConnector);
-        _ = _spawner.SpawnListener(stream.Stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token).ConfigureAwait(false);
+        _ = _spawner.SpawnListener(stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token).ConfigureAwait(false);
     }
 
     public async Task RemoveAsync(int? index)
@@ -78,6 +74,7 @@ public class PeerCollection : IEnumerable<PeerConnector>
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
         addresses.RemoveAll(oldPeers.Contains);
         _potentialPeers = addresses;
+        _peerCursor.Dispose();
         _peerCursor = addresses.Indexed().GetEnumerator();
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)

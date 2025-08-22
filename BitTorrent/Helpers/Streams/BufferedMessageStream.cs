@@ -1,6 +1,39 @@
+using System.Buffers;
+using System.Buffers.Binary;
+using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Helpers.Parsing;
+
 namespace BitTorrentClient.Helpers.Streams;
 
-public class BufferedMessageStream
+public class BufferedMessageStream : IDisposable, IAsyncDisposable
 {
-    
+    private readonly BufferCursor _cursor;
+    private readonly Stream _stream;
+
+    public BufferedMessageStream(Stream reader, BufferCursor cursor)
+    {
+        _stream = reader;
+        _cursor = cursor;
+    }
+
+    public async Task<FrameReader> ReadMessageAsync(CancellationToken cancellationToken = default)
+    {
+        while (_cursor.RemainingInitializedBytes < 4)
+        {
+            await _stream.ReadAsync(_cursor, cancellationToken);
+        }
+        int size = BinaryPrimitives.ReadInt32BigEndian(_cursor.Buffer.AsSpan(_cursor.Position));
+        _cursor.Position += 4;
+        return new(_stream, _cursor, size);
+    }
+
+    public void Dispose()
+    {
+        _stream.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _stream.DisposeAsync();
+    }
 }

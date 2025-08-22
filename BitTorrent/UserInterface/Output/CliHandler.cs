@@ -1,12 +1,8 @@
-﻿using BitTorrentClient.Models.Application;
-using BitTorrentClient.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
+using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Models.Application;
 
-namespace BitTorrentClient.Application.Ui;
+namespace BitTorrentClient.UserInterface.Output;
 public class CliHandler : IUiHandler
 {
     private (int Left, int Top) _displayPosition = Console.GetCursorPosition();

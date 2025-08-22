@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public interface IPeerEventHandler

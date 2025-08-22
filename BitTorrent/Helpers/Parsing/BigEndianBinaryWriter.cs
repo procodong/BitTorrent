@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.Utils.Parsing;
+namespace BitTorrentClient.Helpers.Parsing;
 public readonly struct BigEndianBinaryWriter
 {
     private readonly IBufferWriter<byte> _writer;

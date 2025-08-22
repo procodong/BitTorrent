@@ -1,11 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BitTorrentClient.Utils;
+namespace BitTorrentClient.Helpers.Extensions;
 public static class LoggerExt
 {
     public static void LogError(this ILogger logger, string origin, Exception error)

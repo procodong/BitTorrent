@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace BitTorrentClient.Utils;
+namespace BitTorrentClient.Helpers.DataStructures;
 public class SlotMap<T> : IEnumerable<T>
 {
     private readonly List<Slot<T>> _buffer;

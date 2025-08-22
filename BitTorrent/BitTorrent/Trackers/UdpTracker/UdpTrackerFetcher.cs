@@ -1,17 +1,7 @@
 ﻿using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.BitTorrent.Trackers.Errors;
-using BitTorrentClient.Utils;
-using BitTorrentClient.Utils.Parsing;
-using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
+using BitTorrentClient.Helpers.Parsing;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using System.Transactions;
 using System.Buffers;
 
 namespace BitTorrentClient.BitTorrent.Trackers.UdpTracker;
@@ -44,6 +34,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
         var writer = new BigEndianBinaryWriter(_buffer);
         UdpTrackerEncoder.WriteAnnounce(writer, _connectionId, transactionId, request);
         await _client.SendAsync(_buffer.WrittenMemory, cancellationToken);
+        _buffer.ResetWrittenCount();
         return transactionId;
     }
 
@@ -60,10 +51,11 @@ public class UdpTrackerFetcher : ITrackerFetcher
         var writer = new BigEndianBinaryWriter(_buffer);
         UdpTrackerEncoder.WriteConnect(writer, transactionId);
         await _client.SendAsync(_buffer.WrittenMemory, cancellationToken);
+        _buffer.ResetWrittenCount();
         return transactionId;
     }
 
-    private async Task<BufferCursor> ReceiveAsync(Func<Task<int>> send, CancellationToken cancellationToken = default)
+    private async Task<IBufferReader> ReceiveAsync(Func<Task<int>> send, CancellationToken cancellationToken = default)
     {
         int transactionId = await send();
         int resends = 0;
@@ -78,17 +70,18 @@ public class UdpTrackerFetcher : ITrackerFetcher
                 continue;
             }
             var receive = await receiveTask;
-            var cursor = new BufferCursor(receive.Buffer);
-            var reader = new BigEndianBinaryReader(cursor);
+            var cursor = new BufferCursor(receive.Buffer, end: receive.Buffer.Length);
+            var buffer = new ArrayBufferReader(cursor);
+            var reader = new BigEndianBinaryReader(buffer);
             var header = UdpTrackerDecoder.DecodeHeader(reader);
             if (header.Action == 3)
             {
-                var errorMessage = reader.ReadString(cursor.RemainingBytes);
+                var errorMessage = reader.ReadString(cursor.RemainingInitializedBytes);
                 throw new TrackerException(errorMessage);
             }
             else if (header.TransactionId == transactionId)
             {
-                return cursor;
+                return buffer;
             }
         }
     }

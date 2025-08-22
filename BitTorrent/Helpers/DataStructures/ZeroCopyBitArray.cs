@@ -1,4 +1,4 @@
-namespace BitTorrentClient.Utils;
+namespace BitTorrentClient.Helpers.DataStructures;
 
 public readonly struct ZeroCopyBitArray
 {
@@ -11,6 +11,12 @@ public readonly struct ZeroCopyBitArray
         int realLength = length / 8;
         if (length % 8 != 0) realLength++;
         _buffer = new byte[realLength];
+    }
+
+    public ZeroCopyBitArray(byte[] buffer)
+    {
+        _buffer = buffer;
+        _bitLength = buffer.Length * 8;
     }
 
     public byte[] Buffer => _buffer;

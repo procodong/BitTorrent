@@ -1,5 +1,5 @@
 ﻿using BitTorrentClient.Models.Messages;
-using BitTorrentClient.Utils.Parsing;
+using BitTorrentClient.Helpers.Parsing;
 using System;
 using System.Buffers;
 using System.Collections.Generic;

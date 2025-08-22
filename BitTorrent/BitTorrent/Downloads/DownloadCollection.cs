@@ -1,6 +1,5 @@
 ﻿using BencodeNET.IO;
 using BencodeNET.Torrents;
-using BitTorrentClient.Application.Input;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
@@ -10,12 +9,14 @@ using BitTorrentClient.BitTorrent.Peers;
 using BitTorrentClient.BitTorrent.Trackers;
 using Microsoft.Extensions.Logging;
 using System.IO.Pipelines;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using BitTorrentClient.BitTorrent.Peers.Connections;
+using BitTorrentClient.UserInterface.Input;
 
 namespace BitTorrentClient.BitTorrent.Downloads;
-public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
+public class DownloadCollection : IAsyncDisposable, ICommandContext
 {
     private readonly List<PeerManagerConnector> _downloads = [];
     private readonly PeerIdGenerator _peerIdGenerator;
@@ -41,7 +42,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
         string peerId = _peerIdGenerator.GeneratePeerId();
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(torrent, files, _config);
-        var peerAdditionChannel = Channel.CreateBounded<IdentifiedPeerWireStream>(new BoundedChannelOptions(8)
+        var peerAdditionChannel = Channel.CreateBounded<PeerHandshaker>(new BoundedChannelOptions(8)
         {
             SingleWriter = false
         });
@@ -49,7 +50,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
         {
             SingleWriter = false
         });
-        var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, System.Text.Encoding.ASCII.GetBytes(peerId));
+        var spawner = new PeerSpawner(download, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(peerId));
         var peers = new PeerCollection(spawner, torrent.NumberOfPieces, _config.MaxParallelPeers);
         var peerManager = new PeerManager(peerId, download, peers, _logger, fetcher);
         var cancellationTokenSource = new CancellationTokenSource();
@@ -59,7 +60,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
 
     }
 
-    private async Task SpawnDownload(PeerManager download, ChannelReader<IdentifiedPeerWireStream> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
+    private async Task SpawnDownload(PeerManager download, ChannelReader<PeerHandshaker> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
     {
         await using var _ = download;
         try
@@ -90,14 +91,6 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
         while (_downloads.Count != 0)
         {
             await StopDownloadAsync(_downloads.Count - 1);
-        }
-    }
-
-    public void Dispose()
-    {
-        while (_downloads.Count != 0)
-        {
-            _ = StopDownloadAsync(_downloads.Count - 1);
         }
     }
 

@@ -5,19 +5,21 @@ using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Storage;
 using BitTorrentClient.BitTorrent.Peers.Errors;
-using BitTorrentClient.Utils;
+using BitTorrentClient.Helpers;
 using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Threading.Channels;
+using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.BitTorrent.Downloads;
 public class Download : IDisposable, IAsyncDisposable
 {
     private readonly Torrent _torrent;
     private readonly Config _config;
-    private readonly ZeroCopyBitArray _downloadedPieces;
+    private readonly LazyBitArray _downloadedPieces;
     private readonly DataTransferCounter _recentDataTransfer = new();
     private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
     private readonly DownloadStorage _storage;
@@ -39,7 +41,7 @@ public class Download : IDisposable, IAsyncDisposable
         _pieceBufferPool = ArrayPool<byte>.Create((int)torrent.PieceSize, 3);
     }
 
-    public ZeroCopyBitArray DownloadedPieces => _downloadedPieces;
+    public LazyBitArray DownloadedPieces => _downloadedPieces;
     public bool HasDownloadedPieces => _downloadedPiecesCount != 0;
     public Torrent Torrent => _torrent;
     public Config Config => _config;
@@ -53,7 +55,7 @@ public class Download : IDisposable, IAsyncDisposable
         {
             lock (_recentTransferUpdateWatch)
             {
-                return (long)(Interlocked.Read(ref _recentDataTransfer.Uploaded) / _recentTransferUpdateWatch.Elapsed.TotalSeconds);
+                return (long)(_recentDataTransfer.Uploaded / _recentTransferUpdateWatch.Elapsed.TotalSeconds);
             }
         }
     }
@@ -64,12 +66,21 @@ public class Download : IDisposable, IAsyncDisposable
         {
             lock (_recentTransferUpdateWatch)
             {
-                return (long)(Interlocked.Read(ref _recentDataTransfer.Downloaded) / _recentTransferUpdateWatch.Elapsed.TotalSeconds);
+                return (long)(_recentDataTransfer.Downloaded / _recentTransferUpdateWatch.Elapsed.TotalSeconds);
             }
         }
     }
 
-    public double SecondsSinceTimerReset => _recentTransferUpdateWatch.Elapsed.TotalSeconds;
+    public double SecondsSinceTimerReset
+    {
+        get
+        {
+            lock (_recentTransferUpdateWatch)
+            {
+                return _recentTransferUpdateWatch.Elapsed.TotalSeconds;
+            }
+        }
+    }
 
     public int AddPeer(ChannelWriter<int> communicator)
     {
@@ -89,7 +100,7 @@ public class Download : IDisposable, IAsyncDisposable
 
     public void FinishUpload(long upload)
     {
-        Interlocked.Add(ref _recentDataTransfer.Uploaded, upload);
+        _recentDataTransfer.AtomicAddUpload(upload);
     }
 
     public DataTransferVector ResetRecentTransfer()
@@ -105,7 +116,7 @@ public class Download : IDisposable, IAsyncDisposable
     {
         await stream.ReadExactlyAsync(block.Piece.Buffer.AsMemory(block.Begin, block.Length), cancellationToken);
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
-        Interlocked.Add(ref _recentDataTransfer.Downloaded, block.Length);
+        _recentDataTransfer.AtomicAddDownload(block.Length);
         if (newDownloaded < block.Piece.Size)
         {
             return;

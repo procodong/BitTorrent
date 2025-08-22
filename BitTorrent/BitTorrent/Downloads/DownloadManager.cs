@@ -1,11 +1,12 @@
-﻿using BitTorrentClient.Application.Input;
-using BitTorrentClient.Models.Application;
-using BitTorrentClient.Utils;
+﻿using BitTorrentClient.Models.Application;
+using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
+using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.UserInterface.Input;
 
 namespace BitTorrentClient.BitTorrent.Downloads;
-public class DownloadManager : IAsyncDisposable, IDisposable
+public class DownloadManager : IAsyncDisposable
 {
     private readonly DownloadCollection _downloads;
     private readonly ChannelWriter<IEnumerable<DownloadUpdate>> _updateWriter;
@@ -45,11 +46,6 @@ public class DownloadManager : IAsyncDisposable, IDisposable
                 intervalTask = Task.Delay(_downloads.Config.UiUpdateInterval, cancellationToken);
             }
         }
-    }
-
-    public void Dispose()
-    {
-        _downloads.Dispose();
     }
 
     public ValueTask DisposeAsync()

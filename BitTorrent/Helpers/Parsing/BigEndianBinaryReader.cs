@@ -5,38 +5,29 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.Utils.Parsing;
+namespace BitTorrentClient.Helpers.Parsing;
 public readonly struct BigEndianBinaryReader
 {
-    private readonly BufferCursor _cursor;
+    private readonly IBufferReader _reader;
 
-    public BufferCursor Cursor => _cursor;
-    public ref int Position => ref _cursor.Position;
-    public ref int Length => ref _cursor.Length;
-
-    public BigEndianBinaryReader(BufferCursor cursor)
+    public BigEndianBinaryReader(IBufferReader reader)
     {
-        _cursor = cursor;
+        _reader = reader;
     }
 
-    private ReadOnlySpan<byte> Remaining => _cursor.Buffer.AsSpan(Position..Length);
-
-    public void Skip(int count)
-    {
-        Position += count;
-    }
+    public int Remaining => _reader.GetSpan().Length;
 
     public byte ReadByte()
     {
-        var b = Remaining[0];
-        Position++;
+        var b = _reader.GetSpan()[0];
+        _reader.Advance(1);
         return b;
     }
 
     public ReadOnlySpan<byte> ReadBytes(int count)
     {
-        var bytes = Remaining[..count];
-        Position += count;
+        var bytes = _reader.GetSpan()[..count];
+        _reader.Advance(count);
         return bytes;
     }
 
@@ -54,40 +45,40 @@ public readonly struct BigEndianBinaryReader
 
     public short ReadInt16()
     {
-        var num = BinaryPrimitives.ReadInt16BigEndian(Remaining);
-        Position += sizeof(short);
+        var num = BinaryPrimitives.ReadInt16BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(short));
         return num;
     }
     public ushort ReadUInt16()
     {
-        var num = BinaryPrimitives.ReadUInt16BigEndian(Remaining);
-        Position += sizeof(ushort);
+        var num = BinaryPrimitives.ReadUInt16BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(ushort));
         return num;
     }
 
     public int ReadInt32()
     {
-        var num = BinaryPrimitives.ReadInt32BigEndian(Remaining);
-        Position += sizeof(int);
+        var num = BinaryPrimitives.ReadInt32BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(int));
         return num;
     }
     public uint ReadUInt32()
     {
-        var num = BinaryPrimitives.ReadUInt32BigEndian(Remaining);
-        Position += sizeof(uint);
+        var num = BinaryPrimitives.ReadUInt32BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(uint));
         return num;
     }
 
     public long ReadInt64()
     {
-        var num = BinaryPrimitives.ReadInt64BigEndian(Remaining);
-        Position += sizeof(long);
+        var num = BinaryPrimitives.ReadInt64BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(long));
         return num;
     }
     public ulong ReadUInt64()
     {
-        var num = BinaryPrimitives.ReadUInt64BigEndian(Remaining);
-        Position += sizeof(ulong);
+        var num = BinaryPrimitives.ReadUInt64BigEndian(_reader.GetSpan());
+        _reader.Advance(sizeof(ulong));
         return num;
     }
 }

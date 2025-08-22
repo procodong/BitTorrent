@@ -1,12 +1,7 @@
-﻿using BitTorrentClient.Application.Input.Parsing;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
+﻿using System.Threading.Channels;
+using BitTorrentClient.UserInterface.Input.Parsing;
 
-namespace BitTorrentClient.Application.Input;
+namespace BitTorrentClient.UserInterface.Input;
 public class InputHandler
 {
     private readonly ChannelWriter<Func<ICommandContext, Task>> _commandWriter;
