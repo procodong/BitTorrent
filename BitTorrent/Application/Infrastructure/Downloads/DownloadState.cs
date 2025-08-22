@@ -14,7 +14,7 @@ public class DownloadState
     public DataTransferCounter DataTransfer { get; }
     public Download Download { get; }
     public DataTransferCounter RecentDataTransfer { get; }
-    public DownloadExecutionState ExectutionState { get; set; }
+    public DownloadExecutionState ExecutionState { get; set; }
 
     private readonly AtomicWatch _recentTransferWatch;
     public DownloadState(Download download)

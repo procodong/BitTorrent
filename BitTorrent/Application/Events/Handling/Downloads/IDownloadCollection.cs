@@ -9,7 +9,7 @@ namespace BitTorrentClient.Application.Events.Handling.Downloads;
 public interface IDownloadCollection
 {
     Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name, CancellationToken cancellationToken = default);
-    Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer);
+    Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer, CancellationToken cancellationToken = default);
     Task RemoveDownloadAsync(Func<Download, bool> condition);
     IEnumerable<DownloadUpdate> GetUpdates();
 }

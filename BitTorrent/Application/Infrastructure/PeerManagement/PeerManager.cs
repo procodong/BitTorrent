@@ -57,7 +57,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
 
     public async Task PauseAsync(PauseType type, CancellationToken cancellationToken = default)
     {
-        _downloadState.ExectutionState = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
+        _downloadState.ExecutionState = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
         foreach (var peer in _peers)
         {
             await peer.RelationEventWriter.WriteAsync(default, cancellationToken);
@@ -66,7 +66,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
 
     public async Task ResumeAsync(CancellationToken cancellationToken = default)
     {
-        _downloadState.ExectutionState = DownloadExecutionState.Running;
+        _downloadState.ExecutionState = DownloadExecutionState.Running;
         foreach (var peer in _peers)
         {
             await peer.RelationEventWriter.WriteAsync(new(long.MaxValue, long.MaxValue), cancellationToken);
@@ -84,7 +84,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
 
     public DownloadUpdate GetUpdate()
     {
-        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExectutionState, _downloadState.Download.Torrent.OriginalInfoHashBytes);
+        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExecutionState, _downloadState.Download.Torrent.OriginalInfoHashBytes);
     }
 
     public async Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default)

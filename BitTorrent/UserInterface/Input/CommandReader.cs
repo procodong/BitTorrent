@@ -36,7 +36,7 @@ public class CommandReader
             new Option<string>("--name", "-n"),
             new Option<int?>("--index", "-i")
         };
-        var commands = new RootCommand()
+        var commands = new RootCommand
         {
             createCommand,
             removeCommand
@@ -63,7 +63,7 @@ public class CommandReader
                 var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
                 var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
 
-                await _actionWriter.WriteAsync(ctx => ctx.AddTorrentAsync(torrent.FullName, targetDirectory.FullName, name));
+                await _actionWriter.WriteAsync(ctx => ctx.AddTorrentAsync(torrent.FullName, targetDirectory.FullName, name), cancellationToken);
             }
             else if (command == _removeCommand)
             {

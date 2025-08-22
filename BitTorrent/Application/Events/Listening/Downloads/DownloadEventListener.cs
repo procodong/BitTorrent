@@ -39,7 +39,7 @@ public class DownloadEventListener : IEventListener
                 }
                 catch (Exception exc)
                 {
-                    _logger.LogError(exc, "handling user command");
+                    _logger.LogError(exc, "handling user command {}", exc);
                 }
                 commandTask = _commandReader.ReadAsync(cancellationToken).AsTask();
             }

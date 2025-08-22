@@ -46,7 +46,7 @@ public class DownloadEventHandler : IDownloadEventHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Adding download");
+            _logger.LogError(ex, "Adding download {}", ex);
         }
     }
 
@@ -69,7 +69,7 @@ public class DownloadEventHandler : IDownloadEventHandler
 
     public Task OnPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer, CancellationToken cancellationToken = default)
     {
-        _ = _downloads.AddPeerAsync(peer);
+        _ = _downloads.AddPeerAsync(peer, cancellationToken);
         return Task.CompletedTask;
     }
 }

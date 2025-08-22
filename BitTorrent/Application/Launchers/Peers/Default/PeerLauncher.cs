@@ -68,7 +68,7 @@ public class PeerLauncher : IPeerLauncher
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError("peer connection {}", ex);
+            _logger.LogError(ex, "peer connection {}", ex);
         }
         finally
         {

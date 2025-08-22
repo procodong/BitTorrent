@@ -53,12 +53,13 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollec
         return _downloads.Select(d => d.Value.UpdateProvider.GetUpdate());
     }
 
-    public async Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer)
+    public async Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer,
+        CancellationToken cancellationToken = default)
     {
-        var sender = await peer.ReadHandShakeAsync();
+        var sender = await peer.ReadHandShakeAsync(cancellationToken);
         if (_downloads.TryGetValue(sender.ReceiveHandshake.InfoHash, out var download))
         {
-            await download.PeerSpawner.SpawnConnect(sender);
+            await download.PeerSpawner.SpawnConnect(sender, cancellationToken);
         }
     }
 

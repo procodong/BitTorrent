@@ -55,10 +55,10 @@ public class TrackerFinder : ITrackerFinder
             {
                 if (ex is TrackerException)
                 {
-                    _logger.LogError("Tracker exception connecting to tracker: {}", ex.Message);
+                    _logger.LogError(ex, "Tracker exception connecting to tracker: {}", ex);
                 }
             }
-                readyTasks.Add(trackerTask);
+            readyTasks.Add(trackerTask);
         }
         return fetcher ?? throw new NoValidTrackerException();
     }

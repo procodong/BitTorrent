@@ -62,7 +62,7 @@ public class PeerConnector : IPeerSpawner
             await _peerRemovalWriter.WriteAsync(default, cancellationToken);
             if (ex is not SocketException && ex is not IOException)
             {
-                _logger.LogError("connecting to peer {}", ex);
+                _logger.LogError(ex, "connecting to peer {}", ex);
             }
         }
     }
@@ -81,7 +81,7 @@ public class PeerConnector : IPeerSpawner
             await disposer.DisposeAsync();
             if (ex is not SocketException or IOException)
             {
-                _logger.LogError("connecting to peer {}", ex);
+                _logger.LogError(ex, "connecting to peer {}", ex);
             }
         }
     }
