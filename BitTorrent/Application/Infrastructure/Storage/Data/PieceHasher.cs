@@ -30,14 +30,14 @@ public class PieceHasher
         int bufferOffset = offset % _bufferSize;
         HashUnit hashUnit = _buffers[_offset];
         if (hashUnit.RentedArray.Buffer is null) hashUnit = _buffers[index] with { RentedArray = new(ArrayPool<byte>.Shared.Rent(_bufferSize), _bufferSize) };
-        await stream.ReadAsync(hashUnit.RentedArray.Buffer.AsMemory(bufferOffset), cancellationToken);
+        await stream.ReadExactlyAsync(hashUnit.RentedArray.Buffer.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
         _buffers[index] = hashUnit with { Written = hashUnit.Written + _blockSize };
     }
 
     public IEnumerable<(int Offset, RentedArray<byte>)> HashReadyBlocks()
     {
         HashUnit hashUnit;
-        while ((hashUnit = _buffers[_offset]).Written == _bufferSize)
+        while ((hashUnit = _buffers[_offset]).Written == hashUnit.RentedArray.ExpectedSize)
         {
             _hasher.ComputeHash(hashUnit.RentedArray.Buffer, 0, _blockSize);
             _buffers[_offset] = default;

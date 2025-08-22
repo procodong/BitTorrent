@@ -66,7 +66,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
         _downloadState.ExectutionState = DownloadExecutionState.Running;
         foreach (var peer in _peers)
         {
-            await peer.RelationEventWriter.WriteAsync(new(true, false), cancellationToken);
+            await peer.RelationEventWriter.WriteAsync(new(long.MaxValue, long.MaxValue), cancellationToken);
         }
     }
 
