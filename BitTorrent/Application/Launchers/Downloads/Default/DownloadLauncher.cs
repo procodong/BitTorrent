@@ -1,4 +1,5 @@
-﻿using BitTorrentClient.Application.Events.Handling.PeerManagement;
+﻿using System.Collections.Concurrent;
+using BitTorrentClient.Application.Events.Handling.PeerManagement;
 using BitTorrentClient.Application.Events.Listening.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
@@ -22,7 +23,7 @@ public class DownloadLauncher : IDownloadLauncher
         _logger = logger;
     }
 
-    public PeerManagerHandle LaunchDownload(DownloadState downloadState, DownloadStorage storage, ITrackerFetcher tracker)
+    public PeerManagerHandle LaunchDownload(Download download, FileStreamProvider storage, ITrackerFetcher tracker)
     {
         var peerAdditionChannel = Channel.CreateBounded<PeerWireStream>(new BoundedChannelOptions(8)
         {
@@ -40,20 +41,23 @@ public class DownloadLauncher : IDownloadLauncher
         {
             SingleWriter = false
         });
-        var downloader = new Downloader(downloadState);
-        var blockStorage = new BlockStorage(downloadState.Download.Torrent, storage, haveChannel.Writer, stateChannel.Writer);
-        var launcher = new PeerLauncher(downloader, blockStorage);
-        var spawner = new PeerSpawner(downloadState, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
-        var peers = new PeerCollection(spawner, downloadState.Download.Config.MaxParallelPeers);
-        var peerManager = new PeerManager(peers, downloadState);
-        var eventHandler = new PeerManagerEventHandler(peerManager, _, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
-        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval);
+        var downloadState = new DownloadState(download);
         var canceller = new CancellationTokenSource();
+        var downloader = new Downloader(downloadState);
+        var dataStorage = new DataStorage(storage, stateChannel.Writer, canceller.Token);
+        var blockStorage = new BlockStorage(downloadState.Download.Torrent, dataStorage, haveChannel.Writer, stateChannel.Writer);
+        var launcher = new PeerLauncher(downloader, removalChannel.Writer, blockStorage, _logger);
+        var spawner = new PeerConnector(downloadState, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
+        var peers = new PeerCollection(spawner, launcher, downloadState.Download.Config.MaxParallelPeers);
+        var peerManager = new PeerManager(peers, downloadState, dataStorage);
+        var relationHandler = new PeerRelationHandler();
+        var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
+        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval);
         _ = LaunchDownload(storage, eventListener, canceller.Token);
         return new PeerManagerHandle(peerManager, stateChannel.Writer, canceller, downloadState.Download.Torrent.OriginalInfoHashBytes, spawner);
     }
 
-    private static async Task LaunchDownload(DownloadStorage storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
+    private static async Task LaunchDownload(FileStreamProvider storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
     {
         await using var _ = events;
         await using var __ = storage;

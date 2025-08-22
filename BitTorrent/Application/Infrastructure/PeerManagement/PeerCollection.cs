@@ -2,6 +2,7 @@
 using System.Threading.Channels;
 using BitTorrentClient.Application.Events.Handling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Peers;
+using BitTorrentClient.Application.Launchers.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
@@ -14,16 +15,18 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
 {
     private readonly SlotMap<PeerHandle> _peers = [];
     private readonly HashSet<ReadOnlyMemory<byte>> _peerIds = new(new MemoryComparer<byte>());
-    private readonly PeerSpawner _spawner;
+    private readonly PeerConnector _connector;
+    private readonly IPeerLauncher _launcher;
     private IEnumerable<IPeerConnector> _potentialPeers = [];
     private IEnumerator<(int Index, IPeerConnector Address)> _peerCursor;
     private int _missedPeers;
 
     public int Count => _peers.Count;
 
-    public PeerCollection(PeerSpawner spawner, int maxParallelPeers)
+    public PeerCollection(PeerConnector connector, IPeerLauncher launcher, int maxParallelPeers)
     {
-        _spawner = spawner;
+        _connector = connector;
+        _launcher = launcher;
         _missedPeers = maxParallelPeers;
         _peerCursor = Enumerable.Empty<(int, IPeerConnector)>().GetEnumerator();
     }
@@ -36,7 +39,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
             ConnectNext();
             return;
         }
-        _peers.Add(i => _spawner.SpawnListener(stream, i));
+        _peers.Add(i => _launcher.LaunchPeer(stream, i));
     }
 
     public void Remove(int? index)
@@ -53,7 +56,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
     {
         if (_peerCursor.MoveNext())
         {
-            _ = _spawner.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
+            _ = _connector.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
         }
         else
         {
@@ -80,7 +83,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
         {
-            _ = _spawner.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
+            _ = _connector.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
         }
         _missedPeers -= i;
     }

@@ -29,9 +29,9 @@ public class DownloadEventHandler : IDownloadEventHandler
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);
-        DownloadStorage storage = torrent.Files is not null
-            ? DownloadStorageFactory.CreateMultiFileStorage(targetPath, torrent.Files, (int)torrent.PieceSize)
-            : DownloadStorageFactory.CreateSingleFileStorage(targetPath, torrent.File, (int)torrent.PieceSize);
+        FileStreamProvider storage = torrent.Files is not null
+            ? DownloadStorageFactory.CreateMultiFileStorage(targetPath, torrent.Files)
+            : DownloadStorageFactory.CreateSingleFileStorage(targetPath, torrent.File);
         _ = _downloads.AddDownloadAsync(torrent, storage);
     }
 

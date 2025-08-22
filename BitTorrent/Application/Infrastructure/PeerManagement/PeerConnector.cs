@@ -13,7 +13,7 @@ using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using System;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
-public class PeerSpawner : IPeerSpawner
+public class PeerConnector : IPeerSpawner
 {
     private readonly DownloadState _downloadState;
     private readonly ILogger _logger;
@@ -22,7 +22,7 @@ public class PeerSpawner : IPeerSpawner
     private readonly IPeerLauncher _launcher;
     private readonly byte[] _peerId;
 
-    public PeerSpawner(DownloadState downloader, IPeerLauncher launcher, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, byte[] peerId)
+    public PeerConnector(DownloadState downloader, IPeerLauncher launcher, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, byte[] peerId)
     {
         _downloadState = downloader;
         _launcher = launcher;
@@ -71,39 +71,6 @@ public class PeerSpawner : IPeerSpawner
             {
                 _logger.LogError("connecting to peer", ex);
             }
-        }
-    }
-
-    public PeerHandle SpawnListener(PeerWireStream stream, int index)
-    {
-        var haveChannel = Channel.CreateBounded<int>(16);
-        var relationChannel = Channel.CreateBounded<DataTransferVector>(16);
-        var state = new PeerState(new(_downloadState.Download.Torrent.NumberOfPieces), default);
-        var handle = new PeerHandle(state, haveChannel.Writer, relationChannel.Writer, new());
-        _ = StartPeer(stream, state, relationChannel.Reader, haveChannel.Reader, index, handle.Canceller.Token);
-        return handle;
-    }
-
-    private async Task StartPeer(PeerWireStream stream, PeerState state, ChannelReader<DataTransferVector> relationReader, ChannelReader<int> haveReader, int peerIndex, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await _launcher.LaunchPeer(stream, state, relationReader, haveReader, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            if (ex is BadPeerException)
-            {
-                _logger.LogError("peer connection", ex);
-            }
-            else if (ex is not SocketException or IOException)
-            {
-                _logger.LogError("peer connection", ex);
-            }
-        }
-        finally
-        {
-            await _peerRemovalWriter.WriteAsync(peerIndex, cancellationToken);
         }
     }
 }

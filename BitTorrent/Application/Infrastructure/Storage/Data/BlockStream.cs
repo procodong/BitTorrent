@@ -2,8 +2,8 @@
 public class BlockStream : Stream
 {
     private readonly IEnumerator<StreamPart> _parts;
-    private int _position = 0;
-    private readonly int _length;
+    private int _position;
+    private readonly long _length;
 
     public override bool CanRead => true;
 
@@ -13,10 +13,10 @@ public class BlockStream : Stream
 
     public override long Length => _length;
 
-    public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
+    public override long Position { set => throw new NotSupportedException(); get => _position; }
     public StreamPart CurrentPart => _parts.Current;
 
-    public BlockStream(IEnumerable<StreamPart> parts, int length)
+    public BlockStream(IEnumerable<StreamPart> parts, long length)
     {
         _parts = parts.GetEnumerator();
         _length = length;

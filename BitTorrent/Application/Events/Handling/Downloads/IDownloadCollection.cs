@@ -7,7 +7,7 @@ namespace BitTorrentClient.Application.Events.Handling.Downloads;
 
 public interface IDownloadCollection
 {
-    Task AddDownloadAsync(Torrent torrent, DownloadStorage storage, CancellationToken cancellationToken = default);
+    Task AddDownloadAsync(Torrent torrent, FileStreamProvider storage, CancellationToken cancellationToken = default);
     Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer);
     Task RemoveDownloadAsync(ReadOnlyMemory<byte> index);
     IEnumerable<DownloadUpdate> GetUpdates();

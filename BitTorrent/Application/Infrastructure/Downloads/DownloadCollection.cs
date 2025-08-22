@@ -27,13 +27,12 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollec
         _launcher = launcher;
     }
     
-    public async Task AddDownloadAsync(Torrent torrent, DownloadStorage storage, CancellationToken cancellationToken = default)
+    public async Task AddDownloadAsync(Torrent torrent, FileStreamProvider storage, CancellationToken cancellationToken = default)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var tracker = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(peerId, torrent.DisplayName, torrent, _config);
-        var downloadState = new DownloadState(download);
-        var handle = _launcher.LaunchDownload(downloadState, storage, tracker);
+        var handle = _launcher.LaunchDownload(download, storage, tracker);
         _downloads.TryAdd(torrent.OriginalInfoHashBytes, handle);
     }
 

@@ -1,4 +1,4 @@
-﻿tuffusing BencodeNET.Torrents;
+﻿using BencodeNET.Torrents;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
@@ -19,10 +19,10 @@ public class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
-    private readonly DownloadStorage _storage;
+    private readonly DataStorage _storage;
     private readonly Torrent _torrent;
 
-    public BlockStorage(Torrent torrent, DownloadStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
+    public BlockStorage(Torrent torrent, DataStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
     {
         _downloadStateWriter = downloadStateWriter;
         _haveWriter = haveWriter;
@@ -37,16 +37,9 @@ public class BlockStorage
         await readStream;
         lock (block.Piece.Hasher)
         {
-            foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
+            foreach (var (offset, buffer) in block.Piece.Hasher.HashReadyBlocks())
             {
-                var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
-                _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), CancellationToken.None).AsTask().ContinueWith(async t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically);
-                    }
-                });
+                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer, true);
             }
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
@@ -65,7 +58,7 @@ public class BlockStorage
     public BlockStream RequestBlock(BlockRequest request)
     {
         ValidateRequest(request);
-        return _storage.GetStream(request.Index, request.Begin, request.Length);
+        return _storage.GetData(request.Index * _torrent.PieceSize + request.Begin, request.Length);
     }
 
     private void ValidateRequest(BlockRequest request)

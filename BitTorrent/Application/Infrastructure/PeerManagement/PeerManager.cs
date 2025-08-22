@@ -1,5 +1,6 @@
 ﻿using BitTorrentClient.Application.Events.Handling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
+using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
@@ -9,14 +10,16 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
 {
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
+    private readonly DataStorage _storage;
 
-    public PeerManager(PeerCollection peers, DownloadState downloadState)
+    public PeerManager(PeerCollection peers, DownloadState downloadState, DataStorage storage)
     {
         _peers = peers;
         _downloadState = downloadState;
+        _storage = storage;
     }
 
-    DownloadStatistics IPeerManager.Statistics => new(_downloadState.TransferRate, _peers.Count);
+    DownloadStatistics IPeerManager.Statistics => new(_downloadState.TransferRate, new(_downloadState.Download.Config.TargetDownload, _downloadState.Download.Config.TargetUpload), _peers.Count);
 
     public void ResetResentDataTransfer()
     {
@@ -68,6 +71,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
         {
             await peer.RelationEventWriter.WriteAsync(new(long.MaxValue, long.MaxValue), cancellationToken);
         }
+        _storage.TryWritesAgain();
     }
 
     public async Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default)

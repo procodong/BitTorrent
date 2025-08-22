@@ -1,20 +1,27 @@
 ﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposable, IAsyncDisposable
+public class FileStreamProvider : IDisposable, IAsyncDisposable
 {
-    private readonly int _pieceSize = pieceSize;
-    private readonly List<StreamData> _saves = saves;
+    private readonly List<StreamData> _saves;
+    private readonly long _size;
 
-    public BlockStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
-
-    private IEnumerable<StreamPart> GetParts(int length, int pieceIndex, int offset)
+    public FileStreamProvider(List<StreamData> saves, long size)
     {
-        long byteOffset = pieceIndex * _pieceSize + offset;
+        _saves = saves;
+        _size = size;
+    }
+
+    public BlockStream GetStream(long offset, long length) => new(GetParts(offset, length), length);
+
+    public BlockStream GetStream(long offset) => GetStream(offset, _size - offset);
+
+    private IEnumerable<StreamPart> GetParts(long offset, long length)
+    {
         int bytesRead = 0;
-        int start = Search(byteOffset);
+        int start = Search(offset);
         for (int i = start; bytesRead < length; i++)
         {
             StreamData file = _saves[i];
-            long position = i == start ? byteOffset - file.ByteOffset : 0;
+            long position = i == start ? offset - file.ByteOffset : 0;
             int readLen = (int)long.Min(length - bytesRead, file.Size - position);
             yield return new(file, readLen, position);
             bytesRead += readLen;
@@ -53,7 +60,6 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
         {
             if (fileData.Handle.IsValueCreated)
             {
-
                 fileData.Handle.Value.Result.Dispose();
             }
         }
@@ -65,7 +71,6 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
         {
             if (fileData.Handle.IsValueCreated)
             {
-
                 await fileData.Handle.Value.Result.DisposeAsync();
             }
         }

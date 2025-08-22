@@ -1,3 +1,3 @@
 namespace BitTorrentClient.Models.Peers;
 
-public readonly record struct DownloadStatistics(DataTransferVector TransferRate, int PeerCount);
+public readonly record struct DownloadStatistics(DataTransferVector TransferRate, DataTransferVector MaxTransferRate, int PeerCount);

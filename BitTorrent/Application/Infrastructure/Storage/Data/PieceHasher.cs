@@ -29,23 +29,22 @@ public class PieceHasher
         int index = offset / _bufferSize - _offset;
         int bufferOffset = offset % _bufferSize;
         HashUnit hashUnit = _buffers[_offset];
-        if (hashUnit.RentedArray.Buffer is null) hashUnit = _buffers[index] with { RentedArray = new(ArrayPool<byte>.Shared.Rent(_bufferSize), _bufferSize) };
-        await stream.ReadExactlyAsync(hashUnit.RentedArray.Buffer.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
+        if (hashUnit.Buffer.Array is null) hashUnit = _buffers[index] with { Buffer = new ArraySegment<byte>(ArrayPool<byte>.Shared.Rent(_bufferSize), 0, _bufferSize) };
+        await stream.ReadExactlyAsync(hashUnit.Buffer.Array.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
         Interlocked.Add(ref _buffers[index].Written, (int)stream.Length);
     }
 
-    public IEnumerable<(int Offset, RentedArray<byte>)> HashReadyBlocks()
+    public IEnumerable<(int Offset, ArraySegment<byte>)> HashReadyBlocks()
     {
         for (; _offset < _buffers.Length; _offset++)
         {
             HashUnit hashUnit = _buffers[_offset];
-            if (hashUnit.Written != hashUnit.RentedArray.ExpectedSize) break;
-            _hasher.ComputeHash(hashUnit.RentedArray.Buffer, 0, hashUnit.RentedArray.ExpectedSize);
+            if (hashUnit.Written != hashUnit.Buffer.Count) break;
+            _hasher.ComputeHash(hashUnit.Buffer.Array!, hashUnit.Buffer.Offset, hashUnit.Buffer.Count);
             _buffers[_offset] = default;
             int pieceOffset = _offset * _blockSize;
             _offset++;
-            yield return (pieceOffset, hashUnit.RentedArray);
-            ArrayPool<byte>.Shared.Return(hashUnit.RentedArray.Buffer);
+            yield return (pieceOffset, hashUnit.Buffer);
         }
     }
 
@@ -56,7 +55,7 @@ public class PieceHasher
     }
 }
 
-record struct HashUnit(RentedArray<byte> RentedArray)
+record struct HashUnit(ArraySegment<byte> Buffer)
 {
     public volatile int Written;
 }
