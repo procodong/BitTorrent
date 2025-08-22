@@ -12,7 +12,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-public class HandshakeHandler
+public class HandshakeHandler : IAsyncDisposable
 {
     private const string Protocol = "BitTorrent protocol";
 
@@ -22,9 +22,11 @@ public class HandshakeHandler
     private HandshakeData? _myHandshake;
     private HandshakeData? _otherHandshake;
     private LazyBitArray? _bitfield;
+    private bool _finished;
 
     public HandshakeData? ReceivedHandShake => _otherHandshake;
     public HandshakeData? SentHandShake => _myHandshake;
+    public Stream Stream => _stream;
 
     public HandshakeHandler(Stream stream, BufferCursor cursor)
     {
@@ -70,6 +72,19 @@ public class HandshakeHandler
         var stream = new BufferedMessageStream(_stream, _cursor);
         var reader = new PeerWireReader(stream);
         var sender = new PipedMessageSender(_writer);
+        _finished = true;
         return new(ReceivedHandShake!.Value, reader, sender);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (!_finished)
+        {
+            return _stream.DisposeAsync();
+        }
+        else
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

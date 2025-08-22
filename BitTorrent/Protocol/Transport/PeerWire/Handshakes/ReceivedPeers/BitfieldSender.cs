@@ -11,6 +11,11 @@ public class BitfieldSender : IBitfieldSender<PeerWireStream>
         _handshakeHandler = handshakeHandler;
     }
 
+    public IAsyncDisposable GetDisposer()
+    {
+        return new DisposeHandle(_handshakeHandler);
+    }
+
     public async Task<PeerWireStream> SendBitfieldAsync(LazyBitArray bitfield, CancellationToken cancellationToken = default)
     {
         await _handshakeHandler.SendBitfieldAsync(bitfield, cancellationToken);

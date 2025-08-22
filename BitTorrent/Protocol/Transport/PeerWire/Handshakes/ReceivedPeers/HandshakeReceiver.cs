@@ -1,3 +1,4 @@
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.Exceptions;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.ReceivedPeers;
@@ -9,6 +10,11 @@ public class HandshakeReceiver : IHandshakeReceiver<IRespondedHandshakeSender<IB
     public HandshakeReceiver(HandshakeHandler handshakeHandler)
     {
         _handshakeHandler = handshakeHandler;
+    }
+
+    public IAsyncDisposable GetDisposer()
+    {
+        return new DisposeHandle(_handshakeHandler);
     }
 
     public async Task<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> ReadHandShakeAsync(CancellationToken cancellationToken = default)

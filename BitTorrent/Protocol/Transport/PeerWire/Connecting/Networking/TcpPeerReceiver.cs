@@ -23,8 +23,8 @@ public class TcpPeerReceiver : IPeerReceiver
 
     public async Task<IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>>> ReceivePeerAsync(CancellationToken cancellationToken = default)
     {
-        var connection = await _listener.AcceptTcpClientAsync(cancellationToken);
-        var stream = new NetworkStream(connection.Client, true);
+        var socket = await _listener.AcceptSocketAsync(cancellationToken);
+        var stream = new NetworkStream(socket, true);
         var buffer = new BufferCursor(_peerBufferSize);
         var handler = new HandshakeHandler(stream, buffer);
         return new HandshakeReceiver(handler);

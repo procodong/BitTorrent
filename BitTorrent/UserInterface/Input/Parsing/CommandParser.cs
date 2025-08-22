@@ -4,7 +4,7 @@ using BitTorrentClient.UserInterface.Input.Exceptions;
 namespace BitTorrentClient.UserInterface.Input.Parsing;
 public static class CommandParser
 {
-    public static Func<ICommandContext, Task> ParseCommand(string line)
+    public static Func<ICommandContext, Task> ParseCommand(string line, byte[][] identifierTable)
     {
         var parser = new Parser(line);
         var command = parser.ParseIdentifier();
@@ -17,7 +17,8 @@ public static class CommandParser
         else if (command.SequenceEqual("remove"))
         {
             int index = parser.ParseInteger();
-            return (ctx) => ctx.RemoveTorrentAsync(index);
+            var identifier = identifierTable[index];
+            return (ctx) => ctx.RemoveTorrentAsync(identifier);
         }
         throw new InvalidCommandException(command.ToString());
     }

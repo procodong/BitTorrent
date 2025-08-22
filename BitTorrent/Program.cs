@@ -1,5 +1,4 @@
 ﻿using BitTorrentClient.Models.Application;
-using BitTorrentClient.Models.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 using BitTorrentClient.UserInterface.Input;
@@ -36,19 +35,18 @@ ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLog
 
 var commandChannel = Channel.CreateBounded<Func<ICommandContext, Task>>(32);
 var updateChannel = Channel.CreateBounded<IEnumerable<DownloadUpdate>>(32);
+var identifierTableChannel = Channel.CreateBounded<byte[][]>(8);
 
-var inputHandler = new InputHandler(commandChannel.Writer);
+var inputHandler = new InputHandler(commandChannel.Writer, identifierTableChannel.Reader);
 
-_ = Task.Run(async () =>
-{
-    await inputHandler.ListenAsync(Console.In, Console.Out);
-});
+_ = inputHandler.ListenAsync(Console.In, Console.Out);
 
-var ui = new CliHandler();
+var drawer = new UiDrawer();
+var ui = new UiHandler(drawer, identifierTableChannel.Writer);
 Console.WriteLine();
 var uiUpdater = new UiUpdater(ui);
 
-_ = Task.Run(() => uiUpdater.ListenAsync(updateChannel.Reader).ConfigureAwait(false));
+_ = Task.Run(() => uiUpdater.ListenAsync(updateChannel.Reader));
 
 var canceller = new CancellationTokenSource();
 var peerIdGenerator = new PeerIdGenerator("BT", 1001);

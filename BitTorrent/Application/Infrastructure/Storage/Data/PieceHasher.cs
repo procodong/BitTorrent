@@ -40,7 +40,7 @@ public class PieceHasher
         {
             HashUnit hashUnit = _buffers[_offset];
             if (hashUnit.Written != hashUnit.Buffer.Count) break;
-            _hasher.ComputeHash(hashUnit.Buffer.Array!, hashUnit.Buffer.Offset, hashUnit.Buffer.Count);
+            _hasher.TransformBlock(hashUnit.Buffer.Array!, hashUnit.Buffer.Offset, hashUnit.Buffer.Count, null, 0);
             _buffers[_offset] = default;
             int pieceOffset = _offset * _blockSize;
             _offset++;

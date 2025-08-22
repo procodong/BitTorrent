@@ -39,7 +39,7 @@ public class BlockStorage
         {
             foreach (var (offset, buffer) in block.Piece.Hasher.HashReadyBlocks())
             {
-                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer, true);
+                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer, rented: true);
             }
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
@@ -47,8 +47,7 @@ public class BlockStorage
         {
             return;
         }
-        var correctHash = _torrent.Pieces.AsMemory(block.Piece.Index * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes);
-        if (!block.Piece.Hasher.Finish().AsSpan().SequenceEqual(correctHash.Span))
+        if (!block.Piece.Hasher.Finish().AsSpan().SequenceEqual(_torrent.Pieces.AsSpan(block.Piece.Index * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes)))
         {
             throw new InvalidDataException();
         }

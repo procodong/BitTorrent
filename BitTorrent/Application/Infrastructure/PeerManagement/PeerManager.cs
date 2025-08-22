@@ -84,7 +84,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
 
     public DownloadUpdate GetUpdate()
     {
-        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExectutionState);
+        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExectutionState, _downloadState.Download.Torrent.OriginalInfoHashBytes);
     }
 
     public async Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default)

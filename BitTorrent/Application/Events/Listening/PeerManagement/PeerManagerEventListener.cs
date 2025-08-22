@@ -27,30 +27,6 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
         _handler = handler;
     }
 
-    public void Dispose()
-    {
-        if (_trackerFetcher is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-        if (_handler is IDisposable handlerDisposable)
-        {
-            handlerDisposable.Dispose();
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_trackerFetcher is IAsyncDisposable disposable)
-        {
-            await disposable.DisposeAsync();
-        }
-        if (_handler is IAsyncDisposable handlerDisposable)
-        {
-            await handlerDisposable.DisposeAsync();
-        }
-    }
-
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<PeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
@@ -176,5 +152,29 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
             state = await _stateReader.ReadAsync(cancellationToken);
         }
         while (state != DownloadExecutionState.Running);
+    }
+
+    public void Dispose()
+    {
+        if (_trackerFetcher is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        if (_handler is IDisposable handlerDisposable)
+        {
+            handlerDisposable.Dispose();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_trackerFetcher is IAsyncDisposable disposable)
+        {
+            await disposable.DisposeAsync();
+        }
+        if (_handler is IAsyncDisposable handlerDisposable)
+        {
+            await handlerDisposable.DisposeAsync();
+        }
     }
 }

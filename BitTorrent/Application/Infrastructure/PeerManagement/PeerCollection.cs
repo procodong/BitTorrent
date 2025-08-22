@@ -1,12 +1,9 @@
 ﻿using System.Collections;
-using System.Threading.Channels;
 using BitTorrentClient.Application.Events.Handling.PeerManagement;
-using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Launchers.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
-using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
@@ -56,7 +53,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
     {
         if (_peerCursor.MoveNext())
         {
-            _ = _connector.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
+            _ = _connector.SpawnConnect(_peerCursor.Current.Address);
         }
         else
         {
@@ -83,7 +80,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
         {
-            _ = _connector.SpawnConnect(_peerCursor.Current.Address).ConfigureAwait(false);
+            _ = _connector.SpawnConnect(_peerCursor.Current.Address);
         }
         _missedPeers -= i;
     }

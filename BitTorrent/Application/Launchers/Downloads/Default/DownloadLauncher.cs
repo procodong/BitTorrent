@@ -46,8 +46,8 @@ public class DownloadLauncher : IDownloadLauncher
         var downloader = new Downloader(downloadState);
         var dataStorage = new DataStorage(storage, stateChannel.Writer, canceller.Token);
         var blockStorage = new BlockStorage(downloadState.Download.Torrent, dataStorage, haveChannel.Writer, stateChannel.Writer);
-        var launcher = new PeerLauncher(downloader, removalChannel.Writer, blockStorage, _logger);
-        var spawner = new PeerConnector(downloadState, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
+        var launcher = new PeerLauncher(downloader, removalChannel.Writer, download.Torrent.NumberOfPieces, blockStorage, _logger);
+        var spawner = new PeerConnector(downloadState, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
         var peers = new PeerCollection(spawner, launcher, downloadState.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, downloadState, dataStorage);
         var relationHandler = new PeerRelationHandler();

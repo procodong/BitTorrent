@@ -19,13 +19,11 @@ public class PeerConnector : IPeerSpawner
     private readonly ILogger _logger;
     private readonly ChannelWriter<int?> _peerRemovalWriter;
     private readonly ChannelWriter<PeerWireStream> _peerAdderWriter;
-    private readonly IPeerLauncher _launcher;
     private readonly byte[] _peerId;
 
-    public PeerConnector(DownloadState downloader, IPeerLauncher launcher, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, byte[] peerId)
+    public PeerConnector(DownloadState downloader, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, byte[] peerId)
     {
         _downloadState = downloader;
-        _launcher = launcher;
         _logger = logger;
         _peerRemovalWriter = peerRemovalWriter;
         _peerAdderWriter = peerWriter;
@@ -37,6 +35,7 @@ public class PeerConnector : IPeerSpawner
         try
         {
             var handshake = await address.ConnectAsync(cancellationToken);
+            await using var _ = handshake.GetDisposer();
             var bitfieldSender = await handshake.SendHandShakeAsync(new(0, _downloadState.Download.Torrent.OriginalInfoHashBytes, _peerId), cancellationToken);
             var reader = await bitfieldSender.SendBitfieldAsync(_downloadState.DownloadedPieces, cancellationToken);
             var responded = await reader.ReadHandShakeAsync(cancellationToken);

@@ -35,9 +35,9 @@ public class DownloadEventHandler : IDownloadEventHandler
         _ = _downloads.AddDownloadAsync(torrent, storage);
     }
 
-    public Task RemoveTorrentAsync(ReadOnlyMemory<byte> index)
+    public Task RemoveTorrentAsync(ReadOnlyMemory<byte> identifier)
     {
-        _ = _downloads.RemoveDownloadAsync(index);
+        _ = _downloads.RemoveDownloadAsync(identifier);
         return Task.CompletedTask;
     }
 

@@ -27,54 +27,53 @@ public class PeerLauncher : IPeerLauncher
     private readonly ILogger _logger;
     private readonly int _pieceCount;
 
-    public PeerLauncher(Downloader downloader, ChannelWriter<int?> peerRemovalWriter, BlockStorage storage, ILogger logger)
+    public PeerLauncher(Downloader downloader, ChannelWriter<int?> peerRemovalWriter, int pieceCount, BlockStorage storage, ILogger logger)
     {
         _downloader = downloader;
         _peerRemovalWriter = peerRemovalWriter;
         _storage = storage;
         _logger = logger;
-    }
-    
-    private async Task StartPeer(IEventListener peerEventListener, CancellationToken cancellationToken)
-    {
-        try
-        {
-            
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            if (ex is BadPeerException)
-            {
-                _logger.LogError("peer connection {}", ex);
-            }
-            else if (ex is not SocketException or IOException)
-            {
-                _logger.LogError("peer connection {}", ex);
-            }
-        }
-        finally
-        {
-            await _peerRemovalWriter.WriteAsync(peerIndex, cancellationToken);
-        }
+        _pieceCount = pieceCount;
     }
 
     public PeerHandle LaunchPeer(PeerWireStream stream, int peerIndex)
     {
-        var state = new PeerState(new(new(_pieceCount)), new(long.MaxValue, long.MaxValue));
-        var haveChannel = Channel.CreateBounded<int>(16);
-        var relationChannel = Channel.CreateBounded<DataTransferVector>(16);
+        var haveChannel = Channel.CreateBounded<int>(8);
+        var relationChannel = Channel.CreateBounded<DataTransferVector>(8);
         var messageChannel = Channel.CreateBounded<IMemoryOwner<Message>>(8);
         var cancellationCannel = Channel.CreateBounded<BlockRequest>(8);
+
+        var state = new PeerState(new(_pieceCount), new(long.MaxValue, long.MaxValue));
+
         var sender = new MessageSenderProxy(messageChannel.Writer, cancellationCannel.Writer);
         var writer = new MessageWriter(stream.Sender, state);
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader);
+
         var distributor = new BlockDistributor(_downloader, _storage);
         var peer = new Peer(state, distributor, sender);
         var eventHandler = new PeerEventHandler(peer, _downloader.Torrent.PieceSize);
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveChannel.Reader, relationChannel.Reader);
+
         var canceller = new CancellationTokenSource();
-        _ = StartPeer(stream, state, relationChannel.Reader, haveChannel.Reader, peerIndex, canceller.Token);
+        _ = StartPeer(stream, eventListener, writingEventListener, peerIndex, canceller.Token);
         return new(state, haveChannel.Writer, relationChannel.Writer, canceller);
+    }
+
+    private async Task StartPeer(PeerWireStream stream, IEventListener peerEventListener, IEventListener writingEventListener, int peerIndex, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.WhenAll(peerEventListener.ListenAsync(cancellationToken), writingEventListener.ListenAsync(cancellationToken));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError("peer connection {}", ex);
+        }
+        finally
+        {
+            await stream.DisposeAsync();
+            await _peerRemovalWriter.WriteAsync(peerIndex, cancellationToken);
+        }
     }
 }

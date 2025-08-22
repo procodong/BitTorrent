@@ -4,9 +4,9 @@ using BitTorrentClient.Models.Application;
 namespace BitTorrentClient.UserInterface.Output;
 public class UiUpdater
 {
-    private readonly IUiHandler _uiHandler;
+    private readonly UiHandler _uiHandler;
 
-    public UiUpdater(IUiHandler uiHandler)
+    public UiUpdater(UiHandler uiHandler)
     {
         _uiHandler = uiHandler;
     }
@@ -15,7 +15,7 @@ public class UiUpdater
     {
         await foreach (var updates in updateReader.ReadAllAsync())
         {
-            _uiHandler.Update(updates);
+            await _uiHandler.UpdateAsync(updates);
         }
     }
 }

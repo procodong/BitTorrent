@@ -48,12 +48,12 @@ public class DataStorage
     public void TryWritesAgain()
     {
         var writes = new FailedWrite[_failedWrites.Count];
-        _failedWrites.TryPopRange(writes);
-        foreach (var write in writes)
+        int count = _failedWrites.TryPopRange(writes);
+        for (int i = 0; i < count; i++)
         {
+            ref var write = ref writes[i];
             _ = WriteDataAsync(write.Offset, write.Data, write.Rented);
         }
-        _failedWrites.Clear();
     }
 }
 
