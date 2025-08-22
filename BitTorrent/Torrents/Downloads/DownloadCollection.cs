@@ -73,7 +73,7 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
     {
         var download = _downloads[id];
         _downloads.RemoveAt(id);
-        download.CancellationTokenSource.Cancel();
+        await download.CancellationTokenSource.CancelAsync();
         await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
     }
 
@@ -104,15 +104,22 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, ICommandContext
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
         var torrent = await parser.ParseAsync(stream);
-        var files = DownloadStorage.CreateFiles(targetPath, torrent.Files, (int)torrent.PieceSize);
+        var files = await Task.Run(() =>
+        {
+            if (torrent.Files is not null)
+            {
+                return DownloadStorage.CreateFiles(targetPath, torrent.Files, (int)torrent.PieceSize);
+            }
+            else
+            {
+                return DownloadStorage.CreateFile(targetPath, torrent.File, (int)torrent.PieceSize);
+            }
+        });
         await StartDownload(torrent, files);
     }
 
     async Task ICommandContext.RemoveTorrent(int index)
     {
-        var download = _downloads[index];
-        _downloads.RemoveAt(index);
-        download.CancellationTokenSource.Cancel();
-        await _peerReceivingSubscriber.WriteAsync(new(download.InfoHash, null));
+        await RemoveDownload(index);
     }
 }

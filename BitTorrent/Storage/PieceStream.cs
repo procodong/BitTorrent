@@ -21,7 +21,7 @@ public class PieceStream : Stream
     public override long Length => _length;
 
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
-    private StreamPart Current => _parts.Current;
+    public StreamPart Current => _parts.Current;
 
     public PieceStream(IEnumerable<StreamPart> parts, int length)
     {

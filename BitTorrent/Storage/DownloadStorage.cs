@@ -1,6 +1,5 @@
 ﻿using BencodeNET.Torrents;
 using BitTorrent.Storage;
-using BitTorrent.Storage.DownloadFiles;
 using BitTorrent.Utils;
 
 namespace BitTorrent.Storage;
@@ -30,6 +29,12 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
             createdBytes += file.FileSize;
         }
         return new(pieceSize, createdFiles);
+    }
+
+    public static DownloadStorage CreateFile(string path, SingleFileInfo file, int pieceSize)
+    {
+        var createdFile = File.Create(Path.Combine(path, file.FileName));
+        return new(pieceSize, [new(createdFile, 0, new(1, 1))]);
     }
 
     public PieceStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
