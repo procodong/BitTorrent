@@ -1,5 +1,4 @@
 ﻿using BitTorrentClient.BitTorrent.Downloads;
-using BitTorrentClient.BitTorrent.Peers.Parsing;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Helpers;
 using System;
@@ -13,6 +12,8 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Protocol.Presentation.PeerWire;
+using BitTorrentClient.Application.EventHandling.Peers;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 public class Peer : IPeer
@@ -69,7 +70,7 @@ public class Peer : IPeer
         }
     }
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
-    public LazyBitArray BitArray { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
+    public LazyBitArray DownloadedPieces { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
 
     public async Task CancelUploadAsync(PieceRequest request)
     {

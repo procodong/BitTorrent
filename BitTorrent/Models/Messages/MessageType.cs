@@ -16,5 +16,4 @@ public enum MessageType
     Request,
     Piece,
     Cancel,
-    Port,
 }

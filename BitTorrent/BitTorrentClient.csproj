@@ -19,4 +19,9 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Infrastructure\Peers\" />
+    <Folder Include="BitTorrent\Peers\Parsing\" />
+  </ItemGroup>
+
 </Project>

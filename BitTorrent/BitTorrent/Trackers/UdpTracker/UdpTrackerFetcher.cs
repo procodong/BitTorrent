@@ -70,7 +70,7 @@ public class UdpTrackerFetcher : ITrackerFetcher
                 continue;
             }
             var receive = await receiveTask;
-            var cursor = new BufferCursor(receive.Buffer, end: receive.Buffer.Length);
+            var cursor = new Helpers.Parsing.Buffer(receive.Buffer, end: receive.Buffer.Length);
             var buffer = new ArrayBufferReader(cursor);
             var reader = new BigEndianBinaryReader(buffer);
             var header = UdpTrackerDecoder.DecodeHeader(reader);

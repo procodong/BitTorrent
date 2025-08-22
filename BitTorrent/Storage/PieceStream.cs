@@ -30,11 +30,6 @@ public class PieceStream : Stream
         _parts.MoveNext();
     }
 
-    public override void Flush()
-    {
-        throw new NotSupportedException();
-    }
-
     private bool Next()
     {
         _position = 0;
@@ -59,17 +54,7 @@ public class PieceStream : Stream
     {
         if (!UpdateCurrentFile()) return 0;
         var handle = await CurrentPart.StreamData.Handle.Value;
-        await handle.Lock.WaitAsync(cancellationToken);
-        UpdatePosition(handle.Stream);
-        int readCount;
-        try
-        {
-            readCount = await handle.Stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], cancellationToken);
-        }
-        finally
-        {
-            handle.Lock.Release();
-        }
+        int readCount = await handle.ReadAsync(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position, cancellationToken);
         _position += readCount;
         return readCount;
     }
@@ -78,34 +63,9 @@ public class PieceStream : Stream
     {
         if (!UpdateCurrentFile()) return 0;
         var handle = CurrentPart.StreamData.Handle.Value.GetAwaiter().GetResult();
-        handle.Lock.Wait();
-        UpdatePosition(handle.Stream);
-        int readCount;
-        try
-        {
-            readCount = handle.Stream.Read(buffer[..CapReadCount(buffer.Length)]);
-        }
-        finally
-        {
-            handle.Lock.Release();
-        }
+        int readCount = handle.Read(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position);
         _position += readCount;
         return readCount;
-    }
-
-    private void UpdatePosition(Stream stream)
-    {
-        stream.Position = CurrentPart.Position + _position;
-    }
-
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        throw new NotSupportedException();
-    }
-
-    public override void SetLength(long value)
-    {
-        throw new NotSupportedException();
     }
 
     public override void Write(byte[] buffer, int offset, int count)
@@ -121,16 +81,7 @@ public class PieceStream : Stream
             if (!UpdateCurrentFile()) return;
             var handle = await CurrentPart.StreamData.Handle.Value;
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
-            await handle.Lock.WaitAsync(cancellationToken);
-            UpdatePosition(handle.Stream);
-            try
-            {
-                await handle.Stream.WriteAsync(buffer.Slice(writtenBytes, writeLen), cancellationToken);
-            }
-            finally
-            {
-                handle.Lock.Release();
-            }
+            await handle.WriteAsync(buffer.Slice(writtenBytes, writeLen), CurrentPart.Position, cancellationToken);
             _position += writeLen;
             writtenBytes += writeLen;
         }
@@ -139,5 +90,20 @@ public class PieceStream : Stream
     public override int Read(byte[] buffer, int offset, int count)
     {
         return Read(buffer.AsSpan(offset, count));
+    }
+
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        throw new NotSupportedException();
+    }
+
+    public override void SetLength(long value)
+    {
+        throw new NotSupportedException();
+    }
+
+    public override void Flush()
+    {
+        throw new NotSupportedException();
     }
 }

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.BitTorrent.Peers.Parsing;
+namespace BitTorrentClient.Protocol.Presentation.PeerWire;
 public readonly struct MessageWriter
 {
     private readonly IBufferWriter<byte> _buffer;

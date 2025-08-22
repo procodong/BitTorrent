@@ -9,11 +9,12 @@ public class FrameReader : IBufferReader
     private readonly Stream _stream;
     private readonly int _size;
     private int _bytesRead;
-    private int _bufferedEnd;
+    private int _remainingBuffered;
     
     public int RemainingUnbuffered => _size - _bytesRead;
-    public int Buffered => _bufferedEnd - _cursor.Position;
+    public int Buffered => _remainingBuffered;
     public int Remaining => RemainingUnbuffered + Buffered;
+    public int AvailableBuffer => _cursor.AvailableBuffer;
 
     public FrameReader(Stream stream, BufferCursor cursor, int size)
     {
@@ -21,17 +22,17 @@ public class FrameReader : IBufferReader
         _cursor = cursor;
         _size = size;
         _bytesRead = int.Min(size, cursor.RemainingInitializedBytes);
-        _bufferedEnd = cursor.Position + _bytesRead;
+        _remainingBuffered = _bytesRead;
     }
     
     public ReadOnlySpan<byte> GetSpan()
     {
-        return _cursor.Buffer.AsSpan(_cursor.Position.._bufferedEnd);
+        return _cursor.GetSpan()[.._remainingBuffered];
     }
 
     public ReadOnlyMemory<byte> GetMemory()
     {
-        return _cursor.Buffer.AsMemory(_cursor.Position.._bufferedEnd);
+        return _cursor.GetMemory()[.._remainingBuffered];
     }
 
     public Stream GetStream()
@@ -41,7 +42,8 @@ public class FrameReader : IBufferReader
 
     public void Advance(int count)
     {
-        _cursor.Position += count;
+        _cursor.Advance(count);
+        _remainingBuffered -= count;
     }
 
     public async Task<byte[]> ReadToEndAsync(CancellationToken cancellationToken = default)
@@ -60,7 +62,7 @@ public class FrameReader : IBufferReader
 
     public async Task EnsureReadAtleastAsync(int count, CancellationToken cancellationToken = default)
     {
-        int cappedCount = int.Min(count, _cursor.Buffer.Length - _cursor.RemainingInitializedBytes);
+        int cappedCount = int.Min(count, _cursor.AvailableBuffer);
         while (Buffered < cappedCount)
         {
             await ReadAsync(cancellationToken);
@@ -75,7 +77,7 @@ public class FrameReader : IBufferReader
         {
             throw new EndOfStreamException();
         }
-        _bufferedEnd = int.Min(_cursor.End, RemainingUnbuffered);
         _bytesRead = int.Min(_bytesRead + read, _size);
+        _remainingBuffered = _bytesRead;
     }
 }

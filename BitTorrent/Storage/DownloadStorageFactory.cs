@@ -1,4 +1,5 @@
 ﻿using BencodeNET.Torrents;
+using BitTorrentClient.Helpers.Streams;
 
 namespace BitTorrentClient.Storage;
 public static class DownloadStorageFactory
@@ -20,7 +21,7 @@ public static class DownloadStorageFactory
                 }
             }
             var filePath = Path.Combine(path, file.FullPath);
-            var handle = new Lazy<Task<StreamHandle>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
+            var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
             createdFiles.Add(new(createdBytes, file.FileSize, handle));
             createdBytes += file.FileSize;
         }
@@ -30,12 +31,12 @@ public static class DownloadStorageFactory
     public static DownloadStorage CreateSingleFileStorage(string path, SingleFileInfo file, int pieceSize)
     {
         var filePath = Path.Combine(path, file.FileName);
-        var handle = new Lazy<Task<StreamHandle>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
+        var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
         var streamData = new StreamData(0, file.FileSize, handle);
         return new(pieceSize, [streamData]);
     }
 
-    private static StreamHandle CreateStream(string path, long size)
+    private static IRandomAccesStream CreateStream(string path, long size)
     {
         var createdFile = File.Open(path, new FileStreamOptions()
         {
@@ -48,6 +49,6 @@ public static class DownloadStorageFactory
         {
             createdFile.SetLength(size);
         }
-        return new(new(1, 1), createdFile);
+        return new FileRandomAccessStream(createdFile);
     }
 }

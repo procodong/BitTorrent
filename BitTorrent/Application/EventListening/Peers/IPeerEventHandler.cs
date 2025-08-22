@@ -7,16 +7,16 @@ using System.Text;
 using System.Threading.Tasks;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Models.Peers;
 
-namespace BitTorrentClient.BitTorrent.Peers.Connections;
+namespace BitTorrentClient.Application.EventListening.Peers;
 public interface IPeerEventHandler
 {
-    Task OnChokeAsync(CancellationToken cancellationToken = default);
-    Task OnUnChokedAsync(CancellationToken cancellationToken = default);
-    Task OnInterestedAsync(CancellationToken cancellationToken = default);
-    Task OnNotInterestedAsync(CancellationToken cancellationToken = default);
-    Task OnHaveAsync(int piece, CancellationToken cancellationToken = default);
-    Task OnBitfieldAsync(ZeroCopyBitArray bitfield, CancellationToken cancellationToken = default);
+    Task OnPeerRelationAsync(Relation relation, CancellationToken cancellationToken = default);
+    Task OnClientRelationAsync(Relation relation, CancellationToken cancellationToken = default);
+    Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default);
+    Task OnClientHaveAsync(int piece, CancellationToken cancellationToken = default);
+    Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default);
     Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default);
     Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default);
     Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default);

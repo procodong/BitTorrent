@@ -9,6 +9,9 @@ using System.Net.Sockets;
 using System.Threading.Channels;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Application.EventListening.Peers;
+using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Application.EventHandling.Peers;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 
@@ -78,15 +81,15 @@ public class PeerEventHandler : IAsyncDisposable, IPeerEventHandler
         return Task.CompletedTask;
     }
 
-    public Task OnHaveAsync(int piece, CancellationToken cancellationToken = default)
+    public Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default)
     {
-        _peer.BitArray[piece] = true;
+        _peer.DownloadedPieces[piece] = true;
         return Task.CompletedTask;
     }
 
     public Task OnBitfieldAsync(ZeroCopyBitArray bitfield, CancellationToken cancellationToken = default)
     {
-        _peer.BitArray = new(bitfield);
+        _peer.DownloadedPieces = new(bitfield);
         return Task.CompletedTask;
     }
 

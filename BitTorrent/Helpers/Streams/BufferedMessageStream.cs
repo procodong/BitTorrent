@@ -7,10 +7,10 @@ namespace BitTorrentClient.Helpers.Streams;
 
 public class BufferedMessageStream : IDisposable, IAsyncDisposable
 {
-    private readonly BufferCursor _cursor;
+    private readonly Parsing.BufferCursor _cursor;
     private readonly Stream _stream;
 
-    public BufferedMessageStream(Stream reader, BufferCursor cursor)
+    public BufferedMessageStream(Stream reader, Parsing.BufferCursor cursor)
     {
         _stream = reader;
         _cursor = cursor;

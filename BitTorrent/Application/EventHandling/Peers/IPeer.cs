@@ -8,14 +8,14 @@ using System.Text;
 using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.BitTorrent.Peers.Connections;
+namespace BitTorrentClient.Application.EventHandling.Peers;
 public interface IPeer : IAsyncDisposable
 {
     bool Downloading { get; set; }
     bool WantsToDownload { get; set; }
     bool Uploading { get; set; }
     bool WantsToUpload { get; set; }
-    LazyBitArray BitArray { get; set; }
+    LazyBitArray DownloadedPieces { get; set; }
     Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default);
     Task CancelUploadAsync(PieceRequest request);
     Task DownloadAsync(BlockData blockData, CancellationToken cancellationToken = default);

@@ -1,10 +1,10 @@
 using System.IO.Pipelines;
 using BitTorrentClient.BitTorrent.Peers.Errors;
-using BitTorrentClient.BitTorrent.Peers.Parsing;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Protocol.Presentation.PeerWire;
 
 namespace BitTorrentClient.BitTorrent.Peers.Connections;
 
@@ -13,7 +13,7 @@ public class PeerHandshaker
     private const string Protocol = "BitTorrent protocol";
     
     private readonly PipeWriter _writer;
-    private readonly BufferCursor _cursor;
+    private readonly Helpers.Parsing.BufferCursor _cursor;
     private readonly ArrayBufferReader _reader;
     private readonly Stream _stream;
     private HandShakeData? _myHandshake;
@@ -25,7 +25,7 @@ public class PeerHandshaker
     public PeerHandshaker(Stream stream, int bufferSize)
     {
         var buffer = new byte[bufferSize];
-        var cursor = new BufferCursor(buffer);
+        var cursor = new Helpers.Parsing.Buffer(buffer);
         _stream = stream;
         _cursor = cursor;
         _writer = PipeWriter.Create(stream);
@@ -60,5 +60,5 @@ public class PeerHandshaker
         return receivedHandshake;
     }
 
-    public (BufferCursor, Stream, PipeWriter) Finish() => (_cursor, _stream, _writer);
+    public (Buffer, Stream, PipeWriter) Finish() => (_cursor, _stream, _writer);
 }

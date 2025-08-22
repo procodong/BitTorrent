@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.BitTorrent.Peers.Parsing;
+namespace BitTorrentClient.Protocol.Presentation.PeerWire;
 public static class MessageDecoder
 {
     public const int HandshakeLen = 49 + 19;
