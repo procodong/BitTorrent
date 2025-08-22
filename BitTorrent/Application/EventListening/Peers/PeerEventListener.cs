@@ -78,7 +78,7 @@ internal class PeerEventListener
                 await _handler.OnRequestAsync(request, cancellationToken);
                 break;
             case MessageType.Piece:
-                var piece = await message.ReadPieceHeaderAsync(cancellationToken);
+                var piece = await message.ReadRequestAsync(cancellationToken);
                 await _handler.OnPieceAsync(new(piece, message.ReadStream()), cancellationToken);
                 break;
             case MessageType.Cancel:

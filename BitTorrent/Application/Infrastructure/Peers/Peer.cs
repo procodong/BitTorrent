@@ -14,8 +14,9 @@ using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Application.EventHandling.Peers;
+using BitTorrentClient.BitTorrent.Peers.Connections;
 
-namespace BitTorrentClient.BitTorrent.Peers.Connections;
+namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer
 {
     private readonly Download _download;
@@ -38,8 +39,9 @@ public class Peer : IPeer
 
     private MessageWriter Writer => new(_messagePipe);
 
-    public bool Downloading { 
-        get => !_state.RelationToMe.Choked; 
+    public bool Downloading
+    {
+        get => !_state.RelationToMe.Choked;
         set
         {
             if (!value)
@@ -49,8 +51,8 @@ public class Peer : IPeer
             _state.RelationToMe = _state.RelationToMe with { Choked = !value };
         }
     }
-    public bool WantsToDownload 
-    { 
+    public bool WantsToDownload
+    {
         get => _state.Relation.Interested;
         set
         {
@@ -59,9 +61,10 @@ public class Peer : IPeer
             Writer.WriteUpdateRelation(value ? Relation.Interested : Relation.NotInterested);
         }
     }
-    public bool Uploading {
-        
-        get => !_state.Relation.Choked; 
+    public bool Uploading
+    {
+
+        get => !_state.Relation.Choked;
         set
         {
             if (_state.Relation.Choked == !value) return;
@@ -77,14 +80,14 @@ public class Peer : IPeer
         await _cancellationWriter.WriteAsync(request);
     }
 
-    public async Task UploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task RequestUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
         if (!_download.DownloadedPieces[request.Index] || !Uploading) return;
         var data = _download.RequestBlock(request);
         await _blockUploadWriter.WriteAsync(new(request, data), cancellationToken);
     }
 
-    public async Task DownloadAsync(BlockData blockData, CancellationToken cancellationToken = default)
+    public async Task RequestDownloadAsync(BlockData blockData, CancellationToken cancellationToken = default)
     {
         var requestIndex = _blockDownloads.FindIndex(req => req == blockData.Request);
         if (requestIndex == -1) return;
@@ -93,7 +96,7 @@ public class Peer : IPeer
         await _download.SaveBlockAsync(blockData.Stream, block, cancellationToken);
         _state.DataTransfer.AtomicAddDownload(blockData.Request.Length);
     }
-    
+
     public void NotifyHavePiece(int piece)
     {
         Writer.WriteHaveMessage(piece);
@@ -101,11 +104,11 @@ public class Peer : IPeer
 
     public async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
-        await _messagePipe.FlushAsync(cancellationToken);
         while (_blockDownloads.Count < 5)
         {
             if (!RequestBlock()) break;
         }
+        await _messagePipe.FlushAsync(cancellationToken);
     }
 
     private bool RequestBlock()

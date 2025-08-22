@@ -95,12 +95,12 @@ public class PeerEventHandler : IAsyncDisposable, IPeerEventHandler
 
     public Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        return _peer.UploadAsync(request, cancellationToken);
+        return _peer.RequestUploadAsync(request, cancellationToken);
     }
 
     public Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
     {
-        return _peer.DownloadAsync(piece, cancellationToken);
+        return _peer.RequestDownloadAsync(piece, cancellationToken);
     }
 
     public Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
