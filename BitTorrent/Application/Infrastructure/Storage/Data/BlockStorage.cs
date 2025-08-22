@@ -29,13 +29,17 @@ public class BlockStorage
 
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
-        await block.Piece.Hasher.SaveBlock(stream, block.Begin, cancellationToken);
+        Task readStream;
+        lock (block.Piece.Hasher) readStream = block.Piece.Hasher.SaveBlock(stream, block.Begin, cancellationToken);
+        await readStream;
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
-        // FIXME: synchronisation
-        foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
+        lock (block.Piece.Hasher)
         {
-            var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
-            _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), cancellationToken).AsTask();
+            foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
+            {
+                var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
+                _ = file.WriteAsync(array.Buffer.AsMemory(..array.ExpectedSize), cancellationToken).AsTask();
+            }
         }
         if (newDownloaded < block.Piece.Size)
         {
@@ -46,7 +50,7 @@ public class BlockStorage
         {
             throw new InvalidDataException();
         }
-        await _haveWriter.WriteAsync(block.Piece.Index);
+        await _haveWriter.WriteAsync(block.Piece.Index, CancellationToken.None);
     }
 
     public BlockStream RequestBlock(BlockRequest request)

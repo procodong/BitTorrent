@@ -31,7 +31,7 @@ public class PieceHasher
         HashUnit hashUnit = _buffers[_offset];
         if (hashUnit.RentedArray.Buffer is null) hashUnit = _buffers[index] with { RentedArray = new(ArrayPool<byte>.Shared.Rent(_bufferSize), _bufferSize) };
         await stream.ReadExactlyAsync(hashUnit.RentedArray.Buffer.AsMemory(bufferOffset, (int)stream.Length), cancellationToken);
-        _buffers[index] = hashUnit with { Written = hashUnit.Written + _blockSize };
+        Interlocked.Add(ref _buffers[index].Written, (int)stream.Length);
     }
 
     public IEnumerable<(int Offset, RentedArray<byte>)> HashReadyBlocks()
@@ -55,5 +55,8 @@ public class PieceHasher
     }
 }
 
-record struct HashUnit(RentedArray<byte> RentedArray, int Written);
+record struct HashUnit(RentedArray<byte> RentedArray)
+{
+    public volatile int Written;
+}
 
