@@ -11,18 +11,16 @@ public class DownloadState
 {
     public LazyBitArray DownloadedPieces { get; }
     public DataTransferCounter DataTransfer { get; }
-    public DownloadStorage Storage { get; }
     public Download Download { get; }
     public DataTransferCounter RecentDataTransfer { get; }
     public DownloadExecutionState ExectutionState { get; set; }
 
     private readonly AtomicWatch _recentTransferWatch;
-    public DownloadState(Download download, DownloadStorage storage)
+    public DownloadState(Download download)
     {
         Download = download;
         DataTransfer = new();
         RecentDataTransfer = new();
-        Storage = storage;
         DownloadedPieces = new(download.Torrent.NumberOfPieces);
         _recentTransferWatch = new();
     }

@@ -1,5 +1,6 @@
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
+using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Models.Messages;
 
@@ -9,12 +10,14 @@ public class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;
+    private readonly BlockStorage _storage;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(Downloader downloader)
+    public BlockDistributor(Downloader downloader, BlockStorage storage)
     {
         _requests = new(downloader.Config.RequestQueueSize);
         _downloader = downloader;
+        _storage = storage;
         _blockCursor = new(default);
     }
     
@@ -52,7 +55,7 @@ public class BlockDistributor : IBlockRequester
             stream = null!;
             return false;
         }
-        stream = _downloader.RequestBlock(request);
+        stream = _storage.RequestBlock(request);
         return true;
     }
 
@@ -63,8 +66,20 @@ public class BlockDistributor : IBlockRequester
         {
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
-        await _downloader.SaveBlockAsync(data.Stream, _requests[blockIndex], cancellationToken);
-        _requests.RemoveAt(blockIndex);
+        var block = _requests[blockIndex];
+        try
+        {
+            await _storage.SaveBlockAsync(data.Stream, block, cancellationToken);
+        }
+        catch (InvalidDataException)
+        {
+            _downloader.Cancel(block);
+            throw new BadPeerException(PeerErrorReason.InvalidPiece);
+        }
+        finally
+        {
+            _requests.RemoveAt(blockIndex);
+        }
     }
 
     public bool TryRequestDownload(LazyBitArray pieces, out Block block)

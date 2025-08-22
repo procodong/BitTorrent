@@ -12,7 +12,7 @@ using BitTorrentClient.Application.Events.Handling.Downloads;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
 using System.Net.Sockets;
 using System.Net;
-using BitTorrentClient.Application.Launchers.Downloads.Application;
+using BitTorrentClient.Application.Launchers.Downloads.Default;
 
 var config = new Config(
     TargetDownload: int.MaxValue,

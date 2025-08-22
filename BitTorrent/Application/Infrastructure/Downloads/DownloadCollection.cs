@@ -32,8 +32,8 @@ public class DownloadCollection : IAsyncDisposable, IDisposable, IDownloadCollec
         string peerId = _peerIdGenerator.GeneratePeerId();
         var tracker = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
         var download = new Download(peerId, torrent.DisplayName, torrent, _config);
-        var downloadState = new DownloadState(download, storage);
-        var handle = _launcher.LaunchDownload(downloadState, tracker);
+        var downloadState = new DownloadState(download);
+        var handle = _launcher.LaunchDownload(downloadState, storage, tracker);
         _downloads.TryAdd(torrent.OriginalInfoHashBytes, handle);
     }
 

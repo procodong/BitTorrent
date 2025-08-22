@@ -6,7 +6,7 @@ using BitTorrentClient.Protocol.Transport.Trackers;
 
 namespace BitTorrentClient.Application.Events.Listening.PeerManagement;
 
-public class PeerManagerEventListener : IEventListener
+public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDisposable
 {
     private readonly ChannelReader<int?> _peerRemovalReader;
     private readonly ChannelReader<int> _pieceCompletionReader;
@@ -25,6 +25,30 @@ public class PeerManagerEventListener : IEventListener
         _trackerFetcher = trackerFetcher;
         _updateInterval = updateInterval;
         _handler = handler;
+    }
+
+    public void Dispose()
+    {
+        if (_trackerFetcher is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        if (_handler is IDisposable handlerDisposable)
+        {
+            handlerDisposable.Dispose();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_trackerFetcher is IAsyncDisposable disposable)
+        {
+            await disposable.DisposeAsync();
+        }
+        if (_handler is IAsyncDisposable handlerDisposable)
+        {
+            await handlerDisposable.DisposeAsync();
+        }
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)

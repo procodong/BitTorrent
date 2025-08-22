@@ -41,6 +41,6 @@ public class TcpPeerConnector : IPeerConnector
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_address, _bufferSize);
+        return _address.GetHashCode();
     }
 }

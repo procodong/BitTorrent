@@ -5,7 +5,7 @@ using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
-public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDisposable
+public class PeerManager : IPeerManager, IApplicationUpdateProvider
 {
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
@@ -69,11 +69,6 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDispo
     public DownloadUpdate GetUpdate()
     {
         return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExectutionState);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _downloadState.Storage.DisposeAsync();
     }
 
     public async Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default)
