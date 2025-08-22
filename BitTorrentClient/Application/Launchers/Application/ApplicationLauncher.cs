@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using BitTorrentClient.Application.Events.Handling.Downloads;
 using BitTorrentClient.Application.Events.Listening.Downloads;
 using BitTorrentClient.Application.Infrastructure.Downloads;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Application.Launchers.Downloads.Default;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Models.Application;
@@ -11,8 +12,6 @@ using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
 using BitTorrentClient.Protocol.Transport.Trackers;
-using BitTorrentClient.UserInterface.Input;
-using BitTorrentClient.UserInterface.Output;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -35,7 +34,7 @@ public class ApplicationLauncher
     {
         int peerBufferSize = _config.RequestSize + 13;
 
-        var commandChannel = Channel.CreateBounded<Func<ICommandContext, Task>>(8);
+        var commandChannel = Channel.CreateBounded<Func<IDownloadRepository, Task>>(8);
         var updateChannel = Channel.CreateBounded<IEnumerable<DownloadUpdate>>(8);
         var messageChannel = Channel.CreateBounded<(LogLevel, string)>(8);
 
@@ -49,14 +48,6 @@ public class ApplicationLauncher
         });
         logFile.Seek(0, SeekOrigin.End);
         await using var logger = new ChannelLogger(messageChannel, new(logFile));
-
-        var ui = new Table();
-        var handler = UiHandler.Create(ui, 10);
-        var updater = new UiUpdater(handler, messageChannel.Reader, updateChannel.Reader);
-        _ = updater.ListenAsync(cancellationToken);
-
-        var commandReader = CommandReader.Create(commandChannel.Writer, logger);
-        _ = Task.Run(() => commandReader.ReadAsync(cancellationToken), cancellationToken);
         logger.LogInformation("Logs are at {}", logPath);
 
         var (port, socket) = FindPort();

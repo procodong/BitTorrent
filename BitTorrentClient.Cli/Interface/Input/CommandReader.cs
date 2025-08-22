@@ -2,28 +2,29 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Threading.Channels;
 using BitTorrentClient.Application.Events.Listening.Downloads;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace BitTorrentClient.UserInterface.Input;
+namespace BitTorrentClient.Cli.Interface.Input;
 
 public class CommandReader
 {
     private readonly RootCommand _commands;
     private readonly Command _createCommand;
     private readonly Command _removeCommand;
-    private readonly ChannelWriter<Func<ICommandContext, Task>> _actionWriter;
+    private readonly IDownloadRepository _downloadRepository;
     private readonly ILogger _logger;
 
-    public CommandReader(RootCommand commands, Command createCommand, Command removeCommand, ChannelWriter<Func<ICommandContext, Task>> actionWriter, ILogger logger)
+    public CommandReader(RootCommand commands, Command createCommand, Command removeCommand, ChannelWriter<Func<IDownloadRepository, Task>> actionWriter, ILogger logger)
     {
         _commands = commands;
         _createCommand = createCommand;
         _removeCommand = removeCommand;
-        _actionWriter = actionWriter;
+        _downloadRepository = actionWriter;
         _logger = logger;
     }
 
-    public static CommandReader Create(ChannelWriter<Func<ICommandContext, Task>> actionWriter, ILogger logger)
+    public static CommandReader Create(ChannelWriter<Func<IDownloadRepository, Task>> actionWriter, ILogger logger)
     {
         var createCommand = new Command("download")
         {
@@ -63,7 +64,7 @@ public class CommandReader
                 var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
                 var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
 
-                await _actionWriter.WriteAsync(ctx => ctx.AddTorrentAsync(torrent.FullName, targetDirectory.FullName, name), cancellationToken);
+                await _downloadRepository.WriteAsync(ctx => ctx.AddTorrentAsync(torrent, targetDirectory, name), cancellationToken);
             }
             else if (command == _removeCommand)
             {
@@ -71,11 +72,11 @@ public class CommandReader
                 var index = parsed.CommandResult.GetValue((Option<int?>)_removeCommand.Options[1]);
                 if (name is not null)
                 {
-                    await _actionWriter.WriteAsync(ctx => ctx.RemoveTorrentAsync(name), cancellationToken);
+                    await _downloadRepository.WriteAsync(ctx => ctx.RemoveTorrentAsync(name), cancellationToken);
                 }
                 else if (index is not null)
                 {
-                    await _actionWriter.WriteAsync(ctx => ctx.RemoveTorrentAsync(index.Value), cancellationToken);
+                    await _downloadRepository.WriteAsync(ctx => ctx.RemoveTorrentAsync(index.Value), cancellationToken);
                 }
             }
         }

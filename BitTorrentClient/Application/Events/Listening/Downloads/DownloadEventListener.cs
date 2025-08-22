@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
@@ -9,11 +10,11 @@ public class DownloadEventListener : IEventListener
 {
     private readonly IDownloadEventHandler _hander;
     private readonly IPeerReceiver _peerReceiver;
-    private readonly ChannelReader<Func<ICommandContext, Task>> _commandReader;
+    private readonly ChannelReader<Func<IDownloadRepository, Task>> _commandReader;
     private readonly ILogger _logger;
     private readonly int _tickInterval;
 
-    public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver, ChannelReader<Func<ICommandContext, Task>> commandReader, int tickInterval, ILogger logger)
+    public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver, ChannelReader<Func<IDownloadRepository, Task>> commandReader, int tickInterval, ILogger logger)
     {
         _hander = handler;
         _commandReader = commandReader;
