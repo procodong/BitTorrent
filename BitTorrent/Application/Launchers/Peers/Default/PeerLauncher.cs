@@ -30,13 +30,13 @@ public class PeerLauncher : IPeerLauncher
     public async Task LaunchPeer(PeerWireStream stream, PeerState state, ChannelReader<DataTransferVector> relationReader, ChannelReader<int> haveReader, CancellationToken cancellationToken = default)
     {
         await using var _ = stream;
-        var distributor = new BlockDistributor(_downloader, _storage, _downloadStateWriter);
         var messageChannel = Channel.CreateBounded<IMemoryOwner<Message>>(16);
         var cancellationCannel = Channel.CreateBounded<BlockRequest>(16);
         var sender = new MessageSenderProxy(messageChannel.Writer, cancellationCannel.Writer);
         var writer = new MessageWriter(stream.Sender, state);
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader);
+        var distributor = new BlockDistributor(_downloader, _storage, _downloadStateWriter);
         var peer = new Peer(state, distributor, sender);
         var eventHandler = new PeerEventHandler(peer, _downloader.Torrent.PieceSize);
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveReader, relationReader);

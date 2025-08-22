@@ -4,7 +4,7 @@ public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposabl
     private readonly int _pieceSize = pieceSize;
     private readonly List<StreamData> _saves = saves;
 
-    public PieceStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
+    public BlockStream GetStream(int pieceIndex, int offset, int length) => new(GetParts(length, pieceIndex, offset), length);
 
     private IEnumerable<StreamPart> GetParts(int length, int pieceIndex, int offset)
     {

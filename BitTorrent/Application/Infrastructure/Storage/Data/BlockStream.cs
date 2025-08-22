@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public class PieceStream : Stream
+public class BlockStream : Stream
 {
     private readonly IEnumerator<StreamPart> _parts;
     private int _position = 0;
@@ -16,7 +16,7 @@ public class PieceStream : Stream
     public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
     public StreamPart CurrentPart => _parts.Current;
 
-    public PieceStream(IEnumerable<StreamPart> parts, int length)
+    public BlockStream(IEnumerable<StreamPart> parts, int length)
     {
         _parts = parts.GetEnumerator();
         _length = length;

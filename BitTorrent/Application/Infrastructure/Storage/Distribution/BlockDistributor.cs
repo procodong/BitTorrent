@@ -74,6 +74,7 @@ public class BlockDistributor : IBlockRequester
         try
         {
             await _storage.SaveBlockAsync(data.Stream, block, cancellationToken);
+            _downloader.RegisterDownloaded(data.Request.Length);
         }
         catch (InvalidDataException)
         {

@@ -30,6 +30,11 @@ public class Downloader
     public Torrent Torrent => _state.Download.Torrent;
     public Config Config => _state.Download.Config;
 
+    public void RegisterDownloaded(long download)
+    {
+        _state.DataTransfer.AtomicAddDownload(download);
+    }
+
     public void Cancel(Block block)
     {
         _pieceRegisters.Add(new(block));
@@ -57,7 +62,7 @@ public class Downloader
         }
         if (download.Position == download.Piece.Size)
         {
-            _requestedPieces[download.Piece.PieceIndex] = true;
+            _requestedPieces[download.Piece.Index] = true;
             while (_requestedPieces[_requestedPiecesOffset])
             {
                 _requestedPiecesOffset++;
@@ -69,7 +74,7 @@ public class Downloader
 
     private int? SearchPiece(LazyBitArray ownedPieces)
     {
-        int index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.PieceIndex]);
+        int index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.Index]);
         if (index != -1) return index;
         var creation = CreateDownload(ownedPieces);
         if (creation is null) return default;
@@ -85,7 +90,7 @@ public class Downloader
             var rarePiece = FindNextPiece(_rarestPieces, ownedPieces);
             if (rarePiece is not null)
             {
-                _rarestPieces.Remove(rarePiece.PieceIndex);
+                _rarestPieces.Remove(rarePiece.Index);
                 return rarePiece;
             }
         }
@@ -102,8 +107,9 @@ public class Downloader
         int? piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;
         int size = PieceSize(piece.Value);
-        var buffer = ArrayPool<byte>.Shared.Rent(size);
-        return new(size, piece.Value, buffer);
+        int blockSize = _state.Download.Config.RequestSize;
+        var hasher = new PieceHasher(blockSize, 4, size / blockSize);
+        return new(size, piece.Value, hasher);
     }
 
     private int PieceSize(int piece)

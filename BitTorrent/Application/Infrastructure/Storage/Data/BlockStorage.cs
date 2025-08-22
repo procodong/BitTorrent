@@ -3,6 +3,7 @@ using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Models.Peers;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -17,37 +18,37 @@ public class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
     private readonly DownloadStorage _storage;
-    private readonly DownloadState _state;
+    private readonly Torrent _torrent;
 
-    public BlockStorage(ChannelWriter<int> haveWriter, DownloadState state, DownloadStorage storage)
+    public BlockStorage(ChannelWriter<int> haveWriter, Torrent torrent, DownloadStorage storage)
     {
         _haveWriter = haveWriter;
         _storage = storage;
-        _state = state;
+        _torrent = torrent;
     }
 
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
-        await stream.ReadExactlyAsync(block.Piece.Buffer.AsMemory(block.Begin, block.Length), cancellationToken);
+        await block.Piece.Hasher.SaveBlock(stream, block.Begin, cancellationToken);
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
-        _state.RecentDataTransfer.AtomicAddDownload(block.Length);
+        foreach (var (offset, array) in block.Piece.Hasher.HashReadyBlocks())
+        {
+            var file = _storage.GetStream(block.Piece.Index, offset, array.ExpectedSize);
+            await file.WriteAsync(array.Buffer.AsMemory(), cancellationToken);
+        }
         if (newDownloaded < block.Piece.Size)
         {
             return;
         }
-        var correctHash = _state.Download.Torrent.Pieces.AsMemory(block.Piece.PieceIndex * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes);
-        var hash = SHA1.HashData(block.Piece.Buffer);
-        if (!hash.AsSpan().SequenceEqual(correctHash.Span))
+        var correctHash = _torrent.Pieces.AsMemory(block.Piece.Index * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes);
+        if (!block.Piece.Hasher.Finish().AsSpan().SequenceEqual(correctHash.Span))
         {
             throw new InvalidDataException();
         }
-        var files = _storage.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
-        await files.WriteAsync(block.Piece.Buffer.AsMemory(..block.Piece.Size), cancellationToken);
-        ArrayPool<byte>.Shared.Return(block.Piece.Buffer);
-        await _haveWriter.WriteAsync(block.Piece.PieceIndex, default);
+        await _haveWriter.WriteAsync(block.Piece.Index, default);
     }
 
-    public PieceStream RequestBlock(BlockRequest request)
+    public BlockStream RequestBlock(BlockRequest request)
     {
         ValidateRequest(request);
         return _storage.GetStream(request.Index, request.Begin, request.Length);
@@ -65,6 +66,6 @@ public class BlockStorage
 
     private int PieceSize(int piece)
     {
-        return (int)long.Min(_state.Download.Torrent.PieceSize, _state.Download.Torrent.TotalSize - piece * _state.Download.Torrent.PieceSize);
+        return (int)long.Min(_torrent.PieceSize, _torrent.TotalSize - piece * _torrent.PieceSize);
     }
 }

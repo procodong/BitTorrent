@@ -1,10 +1,12 @@
-﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
-public class PieceDownload(int size, int pieceIndex, byte[] buffer)
+﻿using BitTorrentClient.Application.Infrastructure.Storage.Data;
+
+namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
+public class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
     public int Downloaded;
-    public readonly int PieceIndex = pieceIndex;
-    public readonly int Size = size;
-    public readonly byte[] Buffer = buffer;
+    public int Index { get; }  = pieceIndex;
+    public int Size { get; } = size;
+    public PieceHasher Hasher { get; } = hasher;
 
     public static implicit operator Block(PieceDownload pieceDownload) => new(pieceDownload, 0, pieceDownload.Size);
 }
