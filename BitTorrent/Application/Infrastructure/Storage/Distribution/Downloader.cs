@@ -57,7 +57,7 @@ public class Downloader
         await _haveWriter.WriteAsync(block.Piece.PieceIndex, default);
     }
 
-    public PieceStream RequestBlock(PieceRequest request)
+    public PieceStream RequestBlock(BlockRequest request)
     {
         ValidateRequest(request);
         return _state.Storage.GetStream(request.Index, request.Begin, request.Length);
@@ -68,7 +68,7 @@ public class Downloader
         _pieceRegisters.Add(new(block));
     }
 
-    private void ValidateRequest(PieceRequest request)
+    private void ValidateRequest(BlockRequest request)
     {
         int size = PieceSize(request.Index);
         int end = request.Begin + request.Length;

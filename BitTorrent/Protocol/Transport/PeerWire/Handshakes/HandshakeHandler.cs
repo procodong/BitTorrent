@@ -6,6 +6,8 @@ using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
+using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
+using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 

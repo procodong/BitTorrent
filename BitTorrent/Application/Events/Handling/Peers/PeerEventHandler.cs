@@ -26,7 +26,7 @@ internal class PeerEventHandler : IPeerEventHandler
         _peer.DownloadedPieces = new(new(buffer));
     }
 
-    public async Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task OnCancelAsync(BlockRequest request, CancellationToken cancellationToken = default)
     {
         await _peer.CancelUploadAsync(request);
     }
@@ -75,7 +75,7 @@ internal class PeerEventHandler : IPeerEventHandler
         await _peer.RequestDownloadAsync(piece, cancellationToken);
     }
 
-    public async Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task OnRequestAsync(BlockRequest request, CancellationToken cancellationToken = default)
     {
         await _peer.RequestUploadAsync(request, cancellationToken);
     }

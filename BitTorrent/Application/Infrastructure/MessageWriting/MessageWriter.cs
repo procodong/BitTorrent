@@ -1,4 +1,5 @@
 ﻿using BitTorrentClient.Application.Events.Handling.MessageWriting;
+using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Models.Messages;
@@ -6,7 +7,6 @@ using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,50 +32,32 @@ public class MessageWriter : IMessageWriter
         await _sender.FlushAsync(cancellationToken);
     }
 
-    public void RemoveQueuedBlock(PieceRequest request)
+    public void WriteRelation(RelationUpdate relation)
     {
-        _queuedBlocks.RemoveAll(v => v.Request == request);
+        _sender.SendRelation(relation);
     }
 
-    public async Task WriteMessageAsync(Message message, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public void WriteHave(int piece)
     {
-        switch (message.Type)
-        {
-            case MessageType.Choke:
-            case MessageType.UnChoke:
-            case MessageType.Interested:
-            case MessageType.NotInterested:
-                _sender.SendRelation((RelationUpdate)message.Type);
-                break;
-            case MessageType.Have:
-                _sender.SendHave(message.Data.Have);
-                break;
-            case MessageType.Request:
-                _sender.SendRequest(message.Data.Request);
-                break;
-            case MessageType.Piece:
-                var header = message.Data.Piece;
-                var req = new PieceRequest(header.Index, header.Begin, (int)message.Body.Length);
-                var block = new BlockData(req, message.Body);
-                await SendBlockAsync(block, delayer, cancellationToken);
-                break;
-            case MessageType.Cancel:
-                _sender.SendCancel(message.Data.Request);
-                break;
-        }
+        _sender.SendHave(piece);
     }
 
-    public async Task WriteQueuedBlock(IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public void WriteRequest(BlockRequest request)
     {
-        await SendBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken);
+        _sender.SendRequest(request);
     }
 
-    private async Task SendBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public void WriteCancel(BlockRequest cancel)
+    {
+        _sender.SendCancel(cancel);
+    }
+
+    public async Task WriteBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
         int delay = _tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded);
         if (_tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded) < 0)
         {
-            delayer.DelayNextPiece(delay);
+            delayer.DelayNextPiece(-delay);
             _queuedBlocks.Add(block);
         }
         else
@@ -84,5 +66,22 @@ public class MessageWriter : IMessageWriter
             _state.DataTransfer.AtomicAddUpload(block.Request.Length);
             _tracker.RegisterTransfer(block.Request.Length);
         }
+    }
+
+    public Task WriteBlockAsync(IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    {
+        if (_queuedBlocks.Count != 0)
+        {
+            return WriteBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken);
+        }
+        return Task.CompletedTask;
+    }
+
+    public bool TryCancelUpload(BlockRequest request)
+    {
+        int index = _queuedBlocks.FindIndex(b => b.Request == request);
+        if (index == -1) return false;
+        _queuedBlocks.SwapRemove(index);
+        return true;
     }
 }

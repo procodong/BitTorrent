@@ -6,7 +6,7 @@ namespace BitTorrentClient.Models.Messages;
 public struct MessageUnion
 {
     [FieldOffset(0)] public readonly int Have;
-    [FieldOffset(0)] public readonly PieceRequest Request;
+    [FieldOffset(0)] public readonly BlockRequest Request;
     [FieldOffset(0)] public readonly PieceShareHeader Piece;
 
     public MessageUnion(int have)
@@ -14,7 +14,7 @@ public struct MessageUnion
         Have = have;
     }
 
-    public MessageUnion(PieceRequest request)
+    public MessageUnion(BlockRequest request)
     {
         Request = request;
     }

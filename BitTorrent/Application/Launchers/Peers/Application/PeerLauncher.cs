@@ -26,7 +26,7 @@ public class PeerLauncher : IPeerLauncher
         await using var _ = stream;
         var distributor = new BlockDistributor(_downloader);
         var messageChannel = Channel.CreateBounded<IMemoryOwner<Message>>(16);
-        var cancellationCannel = Channel.CreateBounded<PieceRequest>(16);
+        var cancellationCannel = Channel.CreateBounded<BlockRequest>(16);
         var sender = new MessageSenderProxy(messageChannel.Writer, cancellationCannel.Writer);
         var writer = new MessageWriter(stream.Sender, state);
         var writingEventHandler = new MessageWritingEventHandler(writer);

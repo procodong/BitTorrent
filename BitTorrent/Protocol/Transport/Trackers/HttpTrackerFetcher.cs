@@ -4,6 +4,7 @@ using BitTorrentClient.Models.Trackers;
 using System.Net;
 using System.Web;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
+using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class HttpTrackerFetcher : ITrackerFetcher
@@ -84,9 +85,9 @@ public class HttpTrackerFetcher : ITrackerFetcher
             Incomplete: content.Get<BNumber>("incomplete"),
             Peers: content.Get<BList<BDictionary>>("peers").Value
             .Select(obj => (BDictionary)obj)
-            .Select(value => new PeerAddress(
-                Ip: IPAddress.Parse(value.Get<BString>("ip").ToString()),
-                Port: value.Get<BNumber>("port")
+            .Select(value => new IPEndPoint(
+                IPAddress.Parse(value.Get<BString>("ip").ToString()),
+                value.Get<BNumber>("port")
                 ))
             .Select(addr => new TcpPeerConnector(
                 addr,

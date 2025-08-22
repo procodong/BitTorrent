@@ -1,6 +1,6 @@
 using System.Threading.Channels;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-using Microsoft.Testing.Platform.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Application.Events.Listening.Downloads;
 
@@ -11,7 +11,6 @@ public class DownloadEventListener : IEventListener
     private readonly ChannelReader<Func<ICommandContext, Task>> _commandReader;
     private readonly ILogger _logger;
     private readonly int _tickInterval;
-
 
     public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver, ChannelReader<Func<ICommandContext, Task>> commandReader, int tickInterval, ILogger logger)
     {

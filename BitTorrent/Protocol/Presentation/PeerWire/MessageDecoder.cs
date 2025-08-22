@@ -15,7 +15,7 @@ public static class MessageDecoder
         return new(protocol, extensions, infoHash.ToArray(), peerId.ToArray());
     }
 
-    public static PieceRequest DecodeRequest(BigEndianBinaryReader reader)
+    public static BlockRequest DecodeRequest(BigEndianBinaryReader reader)
     {
         var index = reader.ReadInt32();
         var begin = reader.ReadInt32();

@@ -19,7 +19,7 @@ public class PipedMessageSender : IMessageSender
         await _pipe.FlushAsync(cancellationToken);
     }
 
-    public void SendCancel(PieceRequest cancel)
+    public void SendCancel(BlockRequest cancel)
     {
         MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Cancel));
         MessageEncoder.EncodePieceRequest(Writer, cancel);
@@ -36,7 +36,7 @@ public class PipedMessageSender : IMessageSender
         MessageEncoder.EncodeHeader(Writer, new(1, (MessageType)relation));
     }
 
-    public void SendRequest(PieceRequest request)
+    public void SendRequest(BlockRequest request)
     {
         MessageEncoder.EncodeHeader(Writer, new(13, MessageType.Request));
         MessageEncoder.EncodePieceRequest(Writer, request);

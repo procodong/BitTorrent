@@ -26,6 +26,7 @@ internal class FileRandomAccessStream : IRandomAccesStream
     {
         return RandomAccess.WriteAsync(_stream.SafeFileHandle, buffer, fileOffset, cancellationToken);
     }
+
     public void Dispose()
     {
         _stream.Dispose();

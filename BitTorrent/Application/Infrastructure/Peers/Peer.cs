@@ -54,13 +54,13 @@ public class Peer : IPeer, IDisposable
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
     public LazyBitArray DownloadedPieces { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
 
-    public Task CancelUploadAsync(PieceRequest request)
+    public Task CancelUploadAsync(BlockRequest request)
     {
         _sender.CancelUpload(request);
         return Task.CompletedTask;
     }
 
-    public async Task RequestUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task RequestUploadAsync(BlockRequest request, CancellationToken cancellationToken = default)
     {
         if (!Uploading) return;
         if (_requester.TryGetBlock(request, out var stream))

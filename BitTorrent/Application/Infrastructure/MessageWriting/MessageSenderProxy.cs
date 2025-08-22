@@ -8,10 +8,10 @@ namespace BitTorrentClient.Application.Infrastructure.MessageWriting;
 internal class MessageSenderProxy : IMessageSender
 {
     private readonly ChannelWriter<IMemoryOwner<Message>> _messageWriter;
-    private readonly ChannelWriter<PieceRequest> _cancellationWriter;
+    private readonly ChannelWriter<BlockRequest> _cancellationWriter;
     private readonly PooledList<Message> _buffer;
-    private readonly List<PieceRequest> _queuedUploadCancels;
-    public MessageSenderProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<PieceRequest> cancellationWriter)
+    private readonly List<BlockRequest> _queuedUploadCancels;
+    public MessageSenderProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<BlockRequest> cancellationWriter)
     {
         _messageWriter = messageSender;
         _cancellationWriter = cancellationWriter;
@@ -29,12 +29,12 @@ internal class MessageSenderProxy : IMessageSender
         _buffer.Add(new(piece));
     }
 
-    public void SendRequest(PieceRequest request)
+    public void SendRequest(BlockRequest request)
     {
         _buffer.Add(new(request, RequestType.Request));
     }
 
-    public void SendCancel(PieceRequest cancel)
+    public void SendCancel(BlockRequest cancel)
     {
         _buffer.Add(new(cancel, RequestType.Cancel));
     }
@@ -58,7 +58,7 @@ internal class MessageSenderProxy : IMessageSender
         }
     }
 
-    public void CancelUpload(PieceRequest cancel)
+    public void CancelUpload(BlockRequest cancel)
     {
         _queuedUploadCancels.Add(cancel);
     }

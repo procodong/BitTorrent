@@ -5,6 +5,14 @@ using System.Threading.Channels;
 using BitTorrentClient.UserInterface.Input;
 using BitTorrentClient.UserInterface.Output;
 using BitTorrentClient.Application.Events.Listening.Downloads;
+using BitTorrentClient.Protocol.Presentation.PeerWire;
+using BitTorrentClient.Protocol.Transport.Trackers;
+using BitTorrentClient.Application.Infrastructure.Downloads;
+using BitTorrentClient.Application.Events.Handling.Downloads;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
+using System.Net.Sockets;
+using System.Net;
+using BitTorrentClient.Application.Launchers.Downloads.Application;
 
 var config = new Config(
     TargetDownload: int.MaxValue,
@@ -23,15 +31,11 @@ var config = new Config(
     TransferRateResetInterval: 10
     );
 int port = 6881;
+int peerBufferSize = config.RequestSize + 13;
 ILogger logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");
 
 var commandChannel = Channel.CreateBounded<Func<ICommandContext, Task>>(32);
-var newDownloadChannel = Channel.CreateBounded<PeerReceivingSubscribe>(32);
 var updateChannel = Channel.CreateBounded<IEnumerable<DownloadUpdate>>(32);
-
-var peerReceiver = new TrackerHandler(port, logger);
-
-_ = peerReceiver.ListenAsync(newDownloadChannel.Reader).ConfigureAwait(false);
 
 var inputHandler = new InputHandler(commandChannel.Writer);
 
@@ -44,13 +48,18 @@ var ui = new CliHandler();
 Console.WriteLine();
 var uiUpdater = new UiUpdater(ui);
 
-_ = uiUpdater.ListenAsync(updateChannel.Reader).ConfigureAwait(false);
+_ = Task.Run(() => uiUpdater.ListenAsync(updateChannel.Reader).ConfigureAwait(false));
 
 var canceller = new CancellationTokenSource();
 var peerIdGenerator = new PeerIdGenerator("BT", 1001);
-var trackerFetcher = new TrackerFinder(new(), logger, port);
-var downloads = new DownloadCollection(newDownloadChannel.Writer, peerIdGenerator, config, logger, trackerFetcher);
-await using var downloadManager = new DownloadManager(downloads, updateChannel.Writer);
+var trackerFetcher = new TrackerFinder(new(), logger, port, peerBufferSize);
+var downloadLauncher = new DownloadLauncher(logger);
+var downloads = new DownloadCollection(peerIdGenerator, config, trackerFetcher, downloadLauncher);
+var downloadEventHandler = new DownloadEventHandler(downloads, updateChannel.Writer);
+var peerSocket = new TcpListener(IPAddress.Any, port);
+peerSocket.Start();
+var peerReceiver = new TcpPeerReceiver(peerSocket, peerBufferSize);
+var downloadEventListener = new DownloadEventListener(downloadEventHandler, peerReceiver, commandChannel.Reader, config.UiUpdateInterval, logger);
 
 Console.CancelKeyPress += (_, e) =>
 {
@@ -59,6 +68,6 @@ Console.CancelKeyPress += (_, e) =>
 };
 try
 {
-    await downloadManager.ListenAsync(commandChannel.Reader, canceller.Token);
+    await downloadEventListener.ListenAsync(canceller.Token);
 }
 catch (OperationCanceledException) { }

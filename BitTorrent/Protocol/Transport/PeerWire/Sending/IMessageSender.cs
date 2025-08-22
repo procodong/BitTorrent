@@ -5,9 +5,9 @@ public interface IMessageSender
 {
     void SendRelation(RelationUpdate relation);
     void SendHave(int piece);
-    void SendRequest(PieceRequest request);
-    void SendCancel(PieceRequest cancel);
-    void CancelUpload(PieceRequest cancel);
+    void SendRequest(BlockRequest request);
+    void SendCancel(BlockRequest cancel);
+    void CancelUpload(BlockRequest cancel);
     Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default);
     Task FlushAsync(CancellationToken cancellationToken = default);
 }

@@ -78,7 +78,7 @@ public class PeerSpawner : IPeerSpawner
     {
         var haveChannel = Channel.CreateBounded<int>(16);
         var relationChannel = Channel.CreateBounded<DataTransferVector>(16);
-        var state = new PeerState(new(_downloadState.Download.Torrent.NumberOfPieces));
+        var state = new PeerState(new(_downloadState.Download.Torrent.NumberOfPieces), default);
         var handle = new PeerHandle(state, haveChannel.Writer, relationChannel.Writer, new());
         _ = StartPeer(stream, state, relationChannel.Reader, haveChannel.Reader, index, handle.Canceller.Token);
         return handle;

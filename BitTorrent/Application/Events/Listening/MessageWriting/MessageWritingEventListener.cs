@@ -7,9 +7,9 @@ public class MessageWritingEventListener : IEventListener
 {
     private readonly IMessageWritingEventHandler _handler;
     private readonly ChannelReader<IMemoryOwner<Message>> _messageReader;
-    private readonly ChannelReader<PieceRequest> _cancellationReader;
+    private readonly ChannelReader<BlockRequest> _cancellationReader;
 
-    public MessageWritingEventListener(IMessageWritingEventHandler handler, ChannelReader<IMemoryOwner<Message>> messageReader, ChannelReader<PieceRequest> cancellationReader)
+    public MessageWritingEventListener(IMessageWritingEventHandler handler, ChannelReader<IMemoryOwner<Message>> messageReader, ChannelReader<BlockRequest> cancellationReader)
     {
         _handler = handler;
         _messageReader = messageReader;
@@ -19,7 +19,7 @@ public class MessageWritingEventListener : IEventListener
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<IMemoryOwner<Message>> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        Task<PieceRequest> cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
+        Task<BlockRequest> cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
         Task delayTask = Task.Delay(-1, cancellationToken);
 
         var delayer = new PieceDelayingHandle();
@@ -30,11 +30,11 @@ public class MessageWritingEventListener : IEventListener
             if (ready == messageTask)
             {
                 var message = await messageTask;
+                delayer.Changed = false;
                 await _handler.OnMessageAsync(message, delayer, cancellationToken);
                 if (delayer.Changed)
                 {
                     delayTask = Task.Delay(delayer.Delay, cancellationToken);
-                    delayer.Changed = false;
                 }
                 messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
             }
@@ -46,9 +46,9 @@ public class MessageWritingEventListener : IEventListener
             }
             else if (ready == delayTask)
             {
+                delayer.Reset();
                 await _handler.OnDelayEnd(delayer, cancellationToken);
-                delayTask = Task.Delay(delayer.Changed ? delayer.Delay : -1, cancellationToken);
-                delayer.Changed = false;
+                delayTask = Task.Delay(delayer.Delay, cancellationToken);
             }
         }
     }

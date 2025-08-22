@@ -15,7 +15,7 @@ public readonly struct Message
         _body = null!;
     }
 
-    public Message(PieceRequest request, RequestType type)
+    public Message(BlockRequest request, RequestType type)
     {
         _type = (MessageType)type;
         _message = new MessageUnion(request);

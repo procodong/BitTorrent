@@ -18,7 +18,7 @@ public class BlockDistributor : IBlockRequester
         _blockCursor = new(default);
     }
     
-    public IEnumerable<PieceRequest> DrainRequests()
+    public IEnumerable<BlockRequest> DrainRequests()
     {
         Block? currentBlock = default;
         foreach (var block in _requests)
@@ -45,7 +45,7 @@ public class BlockDistributor : IBlockRequester
         _requests.Clear();
     }
 
-    public bool TryGetBlock(PieceRequest request, out Stream stream)
+    public bool TryGetBlock(BlockRequest request, out Stream stream)
     {
         if (!_downloader.DownloadedPieces[request.Index])
         {

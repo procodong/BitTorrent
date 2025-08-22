@@ -4,6 +4,7 @@ using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Protocol.Presentation.UdpTracker;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Networking;
+using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class UdpTrackerFetcher : ITrackerFetcher, IDisposable

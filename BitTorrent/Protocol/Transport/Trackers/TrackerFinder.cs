@@ -7,14 +7,16 @@ namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class TrackerFinder : ITrackerFinder
 {
     private readonly int _port;
+    private readonly int _peerBufferSize;
     private readonly Random _random;
     private readonly ILogger _logger;
 
-    public TrackerFinder(Random random, ILogger logger, int port)
+    public TrackerFinder(Random random, ILogger logger, int port, int peerBufferSize)
     {
         _random = random;
         _logger = logger;
         _port = port;
+        _peerBufferSize = peerBufferSize;
     }
 
     public async Task<ITrackerFetcher> FindTrackerAsync(IEnumerable<IList<string>> urls)
@@ -73,7 +75,7 @@ public class TrackerFinder : ITrackerFinder
         {
             var client = new UdpClient();
             client.Connect(address, port);
-            var udpTracker = new UdpTrackerFetcher(client, _port);
+            var udpTracker = new UdpTrackerFetcher(client, _port, _peerBufferSize);
             try
             {
                 await udpTracker.ConnectAsync(cancellationToken);

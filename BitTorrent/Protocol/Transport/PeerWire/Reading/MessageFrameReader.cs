@@ -25,7 +25,7 @@ public class MessageFrameReader : IMessageFrameReader
         return index;
     }
 
-    public async Task<PieceRequest> ReadRequestAsync(CancellationToken cancellationToken = default)
+    public async Task<BlockRequest> ReadRequestAsync(CancellationToken cancellationToken = default)
     {
         await _reader.EnsureReadAtLeastAsync(12, cancellationToken);
         return MessageDecoder.DecodeRequest(Reader);
@@ -35,7 +35,7 @@ public class MessageFrameReader : IMessageFrameReader
     {
         await _reader.EnsureReadAtLeastAsync(8, cancellationToken);
         var piece = MessageDecoder.DecodePieceHeader(Reader);
-        var pieceRequest = new PieceRequest(piece.Index, piece.Begin, _reader.Remaining);
+        var pieceRequest = new BlockRequest(piece.Index, piece.Begin, _reader.Remaining);
         return new(pieceRequest, _reader.GetStream());
     }
 

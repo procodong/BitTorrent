@@ -1,3 +1,5 @@
+using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.Exceptions;
+
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes.ReceivedPeers;
 
 public class HandshakeReceiver : IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>>

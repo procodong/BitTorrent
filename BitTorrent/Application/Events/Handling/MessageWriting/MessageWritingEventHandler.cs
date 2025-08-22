@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 using BitTorrentClient.Application.Events.Listening.MessageWriting;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
@@ -21,19 +22,42 @@ public class MessageWritingEventHandler : IMessageWritingEventHandler
         var iter = MemoryMarshal.ToEnumerable<Message>(messages.Memory);
         foreach (var message in iter)
         {
-            await _writer.WriteMessageAsync(message, delayer, cancellationToken);
+            switch (message.Type)
+            {
+                case MessageType.Choke:
+                case MessageType.UnChoke:
+                case MessageType.Interested:
+                case MessageType.NotInterested:
+                    _writer.WriteRelation((RelationUpdate)message.Type);
+                    break;
+                case MessageType.Have:
+                    _writer.WriteHave(message.Data.Have);
+                    break;
+                case MessageType.Request:
+                    _writer.WriteRequest(message.Data.Request);
+                    break;
+                case MessageType.Piece:
+                    var header = message.Data.Piece;
+                    var req = new BlockRequest(header.Index, header.Begin, (int)message.Body.Length);
+                    var block = new BlockData(req, message.Body);
+                    await _writer.WriteBlockAsync(block, delayer, cancellationToken);
+                    break;
+                case MessageType.Cancel:
+                    _writer.WriteCancel(message.Data.Request);
+                    break;
+            }
         }
         await _writer.FlushAsync(cancellationToken);
     }
 
-    public Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default)
+    public Task OnCancelAsync(BlockRequest cancel, CancellationToken cancellationToken = default)
     {
-        _writer.RemoveQueuedBlock(cancel);
+        _writer.TryCancelUpload(cancel);
         return Task.CompletedTask;
     }
 
     public async Task OnDelayEnd(IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
-        await _writer.WriteQueuedBlock(delayer, cancellationToken);
+        await _writer.WriteBlockAsync(delayer, cancellationToken);
     }
 }

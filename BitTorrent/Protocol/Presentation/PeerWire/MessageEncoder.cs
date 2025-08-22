@@ -4,7 +4,7 @@ using BitTorrentClient.Helpers.Parsing;
 namespace BitTorrentClient.Protocol.Presentation.PeerWire;
 public static class MessageEncoder
 {
-    public static void EncodePieceRequest(BigEndianBinaryWriter writer, PieceRequest request)
+    public static void EncodePieceRequest(BigEndianBinaryWriter writer, BlockRequest request)
     {
         writer.Write(request.Index);
         writer.Write(request.Begin);
