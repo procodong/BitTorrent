@@ -18,7 +18,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Helpers", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Cli", "BitTorrentClient.Cli\BitTorrentClient.Cli.csproj", "{56551430-5303-4676-ADBD-7FC93D6266C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient", "BitTorrentClient\BitTorrentClient.csproj", "{C0CC261D-9B5A-4EC8-B38D-7F737D466865}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Api", "BitTorrentClient.Api\BitTorrentClient.Api.csproj", "{C0CC261D-9B5A-4EC8-B38D-7F737D466865}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

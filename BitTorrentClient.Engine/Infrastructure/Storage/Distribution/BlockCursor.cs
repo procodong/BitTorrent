@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
-internal class BlockCursor
+public class BlockCursor
 {
     private readonly Block _block;
     private int _position;

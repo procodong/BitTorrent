@@ -2,7 +2,7 @@
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-internal interface IPeer
+public interface IPeer
 {
     bool Downloading { get; set; }
     bool WantsToDownload { get; set; }

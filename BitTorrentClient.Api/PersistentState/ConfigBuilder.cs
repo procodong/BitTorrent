@@ -1,6 +1,6 @@
 using BitTorrentClient.Engine.Models;
 
-namespace BitTorrentClient.PersistentState;
+namespace BitTorrentClient.Api.PersistentState;
 
 public class ConfigBuilder
 {

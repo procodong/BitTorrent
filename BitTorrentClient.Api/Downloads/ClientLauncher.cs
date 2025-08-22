@@ -1,35 +1,35 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using BitTorrentClient.Data;
+using BitTorrentClient.Api.Information;
+using BitTorrentClient.Api.PersistentState;
+using BitTorrentClient.Api.Services;
 using BitTorrentClient.Engine.Events.Handling;
 using BitTorrentClient.Engine.Events.Listening;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Launchers;
 using BitTorrentClient.Engine.Models;
-using BitTorrentClient.PersistentState;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.Trackers;
-using BitTorrentClient.Services;
 using Microsoft.Extensions.Logging;
 
-namespace BitTorrentClient.Api;
+namespace BitTorrentClient.Api.Downloads;
 
 public static class ClientLauncher
 {
-    public static IDownloadService LaunchClient(PeerIdentifier id, ConfigBuilder configBuilder, ILogger logger, CancellationToken cancellationToken)
+    public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger, CancellationToken cancellationToken)
     {
         var config = configBuilder.Build(Config.Default);
         int peerBufferSize = config.RequestSize + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte);
 
         var (port, socket) = FindPort();
 
-        var peerIdGenerator = new PeerIdGenerator(id.ClientId, id.ClientVersion.ToString());
+        var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
         var trackerFetcher = new TrackerFinder(logger, port, peerBufferSize);
         var downloadLauncher = new DownloadLauncher(logger);
-        var downloads = new DownloadCollection(peerIdGenerator, config, trackerFetcher, downloadLauncher);
+        var downloads = new DownloadCollection(clientId, config, trackerFetcher, downloadLauncher);
         var downloadEventHandler = new DownloadEventHandler(downloads);
         var peerReceiver = new TcpPeerReceiver(socket, peerBufferSize);
         var downloadEventListener = new DownloadEventListener(downloadEventHandler, peerReceiver);

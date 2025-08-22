@@ -1,6 +1,6 @@
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 
-internal interface IPieceDelayer
+public interface IPieceDelayer
 {
     void DelayNextPiece(int milliseconds);
 }

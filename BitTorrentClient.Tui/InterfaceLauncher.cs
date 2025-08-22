@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using BitTorrentClient.Api;
+using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Tui.Interface.Input;
 using BitTorrentClient.Tui.Interface.Output;
 using Microsoft.Extensions.Logging;

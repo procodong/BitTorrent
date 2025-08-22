@@ -1,4 +1,4 @@
-namespace BitTorrentClient.PersistentState;
+namespace BitTorrentClient.Api.PersistentState;
 
 internal class ClientFileProvider
 {

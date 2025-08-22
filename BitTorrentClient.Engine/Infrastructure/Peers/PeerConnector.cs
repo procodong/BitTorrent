@@ -9,7 +9,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-internal class PeerConnector : IPeerSpawner
+public class PeerConnector : IPeerSpawner
 {
     private readonly DownloadState _downloadState;
     private readonly ILogger _logger;

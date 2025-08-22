@@ -3,7 +3,7 @@ using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-internal class PeerHandle
+public class PeerHandle
 {
     public DataTransferVector LastStatistics { get; set; }
     public DataTransferVector LastUnchokedStats { get; set; }

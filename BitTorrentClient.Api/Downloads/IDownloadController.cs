@@ -1,6 +1,6 @@
-using BitTorrentClient.Data;
+using BitTorrentClient.Api.Information;
 
-namespace BitTorrentClient.Api;
+namespace BitTorrentClient.Api.Downloads;
 
 public interface IDownloadController
 {

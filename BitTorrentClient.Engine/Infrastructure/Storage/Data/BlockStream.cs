@@ -1,8 +1,7 @@
 ﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
 public class BlockStream : Stream
 {
-    private readonly IEnumerator<StreamPart> _parts;
-    private int _position;
+    private readonly PartsCursor _cursor;
     private readonly long _length;
 
     public override bool CanRead => true;
@@ -13,51 +12,34 @@ public class BlockStream : Stream
 
     public override long Length => _length;
 
-    public override long Position { set => throw new NotSupportedException(); get => _position; }
-    public StreamPart CurrentPart => _parts.Current;
+    public override long Position { set => throw new NotSupportedException(); get => throw new NotSupportedException(); }
 
-    public BlockStream(IEnumerable<StreamPart> parts, long length)
+    public BlockStream(PartsCursor parts, long length)
     {
-        _parts = parts.GetEnumerator();
+        _cursor = parts;
         _length = length;
-        _parts.MoveNext();
-    }
-
-    private bool Next()
-    {
-        _position = 0;
-        return _parts.MoveNext();
-    }
-
-    private bool UpdateCurrentFile()
-    {
-        if (_position >= CurrentPart.Length)
-        {
-            return Next();
-        }
-        return true;
     }
 
     private int CapReadCount(int count)
     {
-        return int.Min(count, CurrentPart.Length - _position);
+        return int.Min(count, _cursor.RemainingInPart);
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        if (!UpdateCurrentFile()) return 0;
-        var stream = await CurrentPart.StreamData.Handle.Value;
-        int readCount = await stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position, cancellationToken);
-        _position += readCount;
+        if (!_cursor.TryGetPart(out var part)) return 0;
+        var stream = await part.StreamData.Handle.Value;
+        int readCount = await stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], part.Position, cancellationToken);
+        _cursor.Advance(readCount);
         return readCount;
     }
 
     public override int Read(Span<byte> buffer)
     {
-        if (!UpdateCurrentFile()) return 0;
-        var handle = CurrentPart.StreamData.Handle.Value.GetAwaiter().GetResult();
-        int readCount = handle.Read(buffer[..CapReadCount(buffer.Length)], CurrentPart.Position);
-        _position += readCount;
+        if (!_cursor.TryGetPart(out var part)) return 0;
+        var stream = part.StreamData.Handle.Value.GetAwaiter().GetResult();
+        int readCount = stream.Read(buffer[..CapReadCount(buffer.Length)], part.Position);
+        _cursor.Advance(readCount);
         return readCount;
     }
 
@@ -71,11 +53,11 @@ public class BlockStream : Stream
         int writtenBytes = 0;
         while (writtenBytes < buffer.Length)
         {
-            if (!UpdateCurrentFile()) return;
-            var handle = await CurrentPart.StreamData.Handle.Value;
+            if (!_cursor.TryGetPart(out var part)) return;
+            var handle = await part.StreamData.Handle.Value;
             int writeLen = CapReadCount(buffer.Length - writtenBytes);
-            await handle.WriteAsync(buffer.Slice(writtenBytes, writeLen), CurrentPart.Position, cancellationToken);
-            _position += writeLen;
+            await handle.WriteAsync(buffer.Slice(writtenBytes, writeLen), part.Position, cancellationToken);
+            _cursor.Advance(writeLen);
             writtenBytes += writeLen;
         }
     }

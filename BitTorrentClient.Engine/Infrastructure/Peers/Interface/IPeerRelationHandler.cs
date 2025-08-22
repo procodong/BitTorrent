@@ -2,7 +2,7 @@
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-internal interface IPeerRelationHandler
+public interface IPeerRelationHandler
 {
     DataTransferVector GetRelation(PeerStatistics peerStatistics, DownloadStatistics downloadStatistics);
 }

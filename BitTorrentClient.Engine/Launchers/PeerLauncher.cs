@@ -16,7 +16,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Launchers;
-internal class PeerLauncher : IPeerLauncher
+public class PeerLauncher : IPeerLauncher
 {
     private readonly Downloader _downloader;
     private readonly ChannelWriter<int?> _peerRemovalWriter;
@@ -45,7 +45,7 @@ internal class PeerLauncher : IPeerLauncher
         var state = new PeerState(new(_pieceCount), new(long.MaxValue, long.MaxValue));
 
         var sender = new MessageSenderProxy(messageChannel.Writer, cancellationCannel.Writer);
-        var writer = new MessageWriter(stream.Sender, state);
+        var writer = new DelayedMessageSender(stream.Writer, state);
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader, new(_keepAliveInterval));
 

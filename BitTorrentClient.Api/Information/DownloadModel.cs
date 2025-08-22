@@ -1,8 +1,8 @@
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
-namespace BitTorrentClient.Data;
+namespace BitTorrentClient.Api.Information;
 
-public class DownloadModel
+public readonly struct DownloadModel
 {
     internal DownloadData Data { get; }
     

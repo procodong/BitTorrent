@@ -6,7 +6,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
 
-internal class BlockDistributor : IBlockRequester
+public class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;

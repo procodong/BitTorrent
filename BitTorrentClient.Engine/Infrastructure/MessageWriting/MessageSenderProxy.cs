@@ -6,13 +6,13 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting;
-public class PeerWireWriterProxy : IPeerWireWriter
+public class MessageSenderProxy : IPeerWireWriter
 {
     private readonly ChannelWriter<IMemoryOwner<Message>> _messageWriter;
     private readonly ChannelWriter<BlockRequest> _cancellationWriter;
     private readonly PooledList<Message> _buffer;
     private readonly List<BlockRequest> _queuedUploadCancels;
-    public PeerWireWriterProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<BlockRequest> cancellationWriter)
+    public MessageSenderProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<BlockRequest> cancellationWriter)
     {
         _messageWriter = messageSender;
         _cancellationWriter = cancellationWriter;

@@ -6,7 +6,7 @@ using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
-internal class Downloader
+public class Downloader
 {
     private readonly DownloadState _state;
     private readonly List<BlockCursor> _pieceRegisters = [];

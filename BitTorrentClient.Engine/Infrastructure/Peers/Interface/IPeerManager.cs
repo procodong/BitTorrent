@@ -4,11 +4,11 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-internal interface IPeerManager
+public interface IPeerManager
 {
     IPeerCollection Peers { get; }
-    DownloadStatistics Statistics { get; }
-
+    
+    DownloadStatistics GetStatistics();
     void ResetResentDataTransfer();
     IEnumerable<PeerStatistics> GetPeerStatistics();
     Task PauseAsync(PauseType type, CancellationToken cancellationToken = default);

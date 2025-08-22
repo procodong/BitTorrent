@@ -1,10 +1,10 @@
 ﻿
 using System.Threading.Channels;
-using BitTorrentClient.Api;
+using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Api.Information;
+using BitTorrentClient.Api.PersistentState;
 using BitTorrentClient.Cli;
-using BitTorrentClient.Data;
 using BitTorrentClient.Helpers.Utility;
-using BitTorrentClient.PersistentState;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -17,14 +17,14 @@ var logReader = new LogReader();
 _ = logReader.ReadLogs(messageChannel.Reader);
 
 var canceller = new CancellationTokenSource();
-var downloadService = ClientLauncher.LaunchClient(new("BT", new('0', '1', '1', '1')), config, logger, canceller.Token);
+await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger, canceller.Token);
 
 if (args.Length != 2)
 {
     Console.WriteLine("Please provide the torrent file path and save path");
     return;
 }
-IDownloadController download = await downloadService.AddDownloadAsync(new(args[0]), new(args[1]));
+var download = await downloadService.AddDownloadAsync(new(args[0]), new(args[1]));
 
 while (true)
 {

@@ -2,7 +2,7 @@
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-internal interface IPeerCollection
+public interface IPeerCollection
 {
     void Add(PeerWireStream peer);
     void Remove(int? peer);

@@ -1,11 +1,11 @@
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
 
-public class PartCursor
+public class PartsCursor
 {
     private readonly IEnumerator<StreamPart> _parts;
     private int _filePosition;
 
-    public PartCursor(IEnumerable<StreamPart> parts)
+    public PartsCursor(IEnumerable<StreamPart> parts)
     {
         _parts = parts.GetEnumerator();
         _parts.MoveNext();

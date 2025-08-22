@@ -3,20 +3,19 @@ using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Engine.Models.Downloads;
+using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-internal class BlockStorage
+public class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
-    private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private readonly DataStorage _storage;
     private readonly DownloadData _downloadData;
 
-    public BlockStorage(DownloadData downloadData, DataStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
+    public BlockStorage(DownloadData downloadData, DataStorage storage, ChannelWriter<int> haveWriter)
     {
-        _downloadStateWriter = downloadStateWriter;
         _haveWriter = haveWriter;
         _storage = storage;
         _downloadData = downloadData;

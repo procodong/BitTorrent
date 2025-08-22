@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Events.Handling;
-internal class PeerManagerEventHandler : IPeerManagerEventHandler
+public class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IAsyncDisposable
 {
     private readonly IPeerManager _peerManager;
     private readonly IPeerRelationHandler _relationHandler;
@@ -57,7 +57,7 @@ internal class PeerManagerEventHandler : IPeerManagerEventHandler
     {
         if (_tick % _relationUpdateInterval == 0)
         {
-            var stats = _peerManager.Statistics;
+            var stats = _peerManager.GetStatistics();
             var relations = _peerManager.GetPeerStatistics().Select(peer => _relationHandler.GetRelation(peer, stats));
             await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
         }
@@ -70,7 +70,27 @@ internal class PeerManagerEventHandler : IPeerManagerEventHandler
 
     public Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default)
     {
-        _peerManager.Peers.Feed(response.Peers);
+        _peerManager.Peers.Feed(response.Peers.ToList());
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (_peerManager is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_peerManager is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync();
+        }
+        else if (_peerManager is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 }

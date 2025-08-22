@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Data;
+﻿using BitTorrentClient.Api.Information;
 using BitTorrentClient.Helpers.Utility;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;

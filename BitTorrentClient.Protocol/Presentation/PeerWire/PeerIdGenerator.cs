@@ -1,23 +1,13 @@
-﻿namespace BitTorrentClient.Protocol.Presentation.PeerWire;
-public class PeerIdGenerator
-{
-    private readonly string _clientId;
-    private readonly string _clientVersion;
+﻿using System.Text;
 
-    public PeerIdGenerator(string clientId, string clientVersion)
+namespace BitTorrentClient.Protocol.Presentation.PeerWire;
+public static class PeerIdGenerator
+{
+    public static string GeneratePeerId(string clientId, string clientVersion)
     {
-        _clientId = clientId;
-        _clientVersion = clientVersion;
-    }
-    
-    public string GeneratePeerId()
-    {
-        var number = Random.Shared.NextInt64(1_000_000_000_00, 9_999_999_999_99);
-        string id = $"-{_clientId}{_clientVersion}-{number}";
-        if (id.Length != 20)
-        {
-            id = id[..20];
-        }
-        return id;
+        if (Encoding.ASCII.GetByteCount(clientId) != 2) throw new ArgumentException("Must be 2 ASCII characters", nameof(clientId));
+        if (Encoding.ASCII.GetByteCount(clientVersion) != 4) throw new ArgumentException("Must be 4 ASCII characters", nameof(clientVersion));
+        var number = Random.Shared.NextInt64(0, 1_000_000_000_000).ToString("D12");
+        return $"-{clientId}{clientVersion}-{number}";
     }
 }

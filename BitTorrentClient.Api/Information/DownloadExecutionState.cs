@@ -1,4 +1,4 @@
-namespace BitTorrentClient.Data;
+namespace BitTorrentClient.Api.Information;
 
 public enum DownloadExecutionState
 {

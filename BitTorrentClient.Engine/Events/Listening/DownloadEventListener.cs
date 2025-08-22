@@ -6,12 +6,12 @@ namespace BitTorrentClient.Engine.Events.Listening;
 
 public class DownloadEventListener : IEventListener
 {
-    private readonly IDownloadEventHandler _hander;
+    private readonly IDownloadEventHandler _handler;
     private readonly IPeerReceiver _peerReceiver;
 
     public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver)
     {
-        _hander = handler;
+        _handler = handler;
         _peerReceiver = peerReceiver;
     }
 
@@ -20,7 +20,7 @@ public class DownloadEventListener : IEventListener
         while (true)
         {
             var peer = await _peerReceiver.ReceivePeerAsync(cancellationToken);
-            await _hander.OnPeerAsync(peer, cancellationToken);
+            await _handler.OnPeerAsync(peer, cancellationToken);
         }
     }
 }

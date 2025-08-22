@@ -6,13 +6,13 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-internal class Peer : IPeer, IDisposable
+public class Peer : IPeer, IDisposable
 {
     private readonly PeerState _state;
-    private readonly IMessageSender _sender;
+    private readonly IPeerWireWriter _sender;
     private readonly IBlockRequester _requester;
 
-    public Peer(PeerState state, IBlockRequester requester, IMessageSender sender)
+    public Peer(PeerState state, IBlockRequester requester, IPeerWireWriter sender)
     {
         _state = state;
         _sender = sender;

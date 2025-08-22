@@ -97,4 +97,8 @@ public class HttpTrackerFetcher : ITrackerFetcher
             Warning: content.Get<BString?>("warning message")?.ToString()
             );
     }
+
+    public void Dispose()
+    {
+    }
 }

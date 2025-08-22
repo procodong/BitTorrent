@@ -10,7 +10,7 @@ public class StorageStream : IDisposable, IAsyncDisposable
         _size = size;
     }
 
-    public BlockStream GetStream(long offset, long length) => new(GetParts(offset, length), length);
+    public BlockStream GetStream(long offset, long length) => new(new(GetParts(offset, length)), length);
 
     public BlockStream GetStream(long offset) => GetStream(offset, _size - offset);
 

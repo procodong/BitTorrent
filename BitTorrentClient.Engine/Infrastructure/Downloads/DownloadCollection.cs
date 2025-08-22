@@ -15,14 +15,14 @@ namespace BitTorrentClient.Engine.Infrastructure.Downloads;
 public class DownloadCollection : IDownloadRepository
 {
     private readonly ConcurrentDictionary<DownloadId, PeerManagerHandle> _downloads;
-    private readonly PeerIdGenerator _peerIdGenerator;
+    private readonly string _clientId;
     private readonly Config _config;
     private readonly ITrackerFinder _trackerFinder;
     private readonly IDownloadLauncher _launcher;
 
-    public DownloadCollection(PeerIdGenerator peerIdGenerator, Config config, ITrackerFinder trackerFinder, IDownloadLauncher launcher)
+    public DownloadCollection(string clientId, Config config, ITrackerFinder trackerFinder, IDownloadLauncher launcher)
     {
-        _peerIdGenerator = peerIdGenerator;
+        _clientId = clientId;
         _config = config;
         _trackerFinder = trackerFinder;
         _launcher = launcher;
@@ -31,9 +31,8 @@ public class DownloadCollection : IDownloadRepository
 
     public async Task<DownloadHandle> AddDownloadAsync(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default)
     {
-        string peerId = _peerIdGenerator.GeneratePeerId();
         var tracker = await _trackerFinder.FindTrackerAsync(data.Trackers);
-        var download = new Download(peerId, data, _config);
+        var download = new Download(_clientId, data, _config);
         var handle = _launcher.LaunchDownload(download, storage, tracker);
         _downloads.TryAdd(new(data.InfoHash), handle);
         return new(handle.State, handle.StateWriter);

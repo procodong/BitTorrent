@@ -6,14 +6,14 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting;
-internal class MessageWriter : IMessageWriter
+public class DelayedMessageSender : IDelayedMessageSender
 {
-    private readonly IMessageSender _sender;
+    private readonly IPeerWireWriter _sender;
     private readonly List<BlockData> _queuedBlocks;
     private readonly PeerState _state;
     private readonly TransferTracker _tracker;
 
-    public MessageWriter(IMessageSender sender, PeerState state)
+    public DelayedMessageSender(IPeerWireWriter sender, PeerState state)
     {
         _sender = sender;
         _queuedBlocks = [];
@@ -26,32 +26,32 @@ internal class MessageWriter : IMessageWriter
         await _sender.FlushAsync(cancellationToken);
     }
 
-    public void WriteRelation(RelationUpdate relation)
+    public void SendRelation(RelationUpdate relation)
     {
         _sender.SendRelation(relation);
     }
 
-    public void WriteHave(int piece)
+    public void SendHave(int piece)
     {
         _sender.SendHave(piece);
     }
 
-    public void WriteRequest(BlockRequest request)
+    public void SendRequest(BlockRequest request)
     {
         _sender.SendRequest(request);
     }
 
-    public void WriteCancel(BlockRequest cancel)
+    public void SendCancel(BlockRequest cancel)
     {
         _sender.SendCancel(cancel);
     }
 
-    public void WriteKeepAlive()
+    public void SendKeepAlive()
     {
         _sender.SendKeepAlive();
     }
 
-    public async Task WriteBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task SendBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
         int delay = _tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded);
         if (_tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded) < 0)
@@ -67,11 +67,11 @@ internal class MessageWriter : IMessageWriter
         }
     }
 
-    public Task WriteBlockAsync(IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public Task SendBlockAsync(IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
         if (_queuedBlocks.Count != 0)
         {
-            return WriteBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken);
+            return SendBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken);
         }
         return Task.CompletedTask;
     }

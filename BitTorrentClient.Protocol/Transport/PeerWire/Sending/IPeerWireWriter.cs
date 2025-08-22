@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Sending;
-public interface IMessageSender
+public interface IPeerWireWriter
 {
     void SendRelation(RelationUpdate relation);
     void SendHave(int piece);

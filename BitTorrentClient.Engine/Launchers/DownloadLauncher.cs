@@ -44,22 +44,22 @@ public class DownloadLauncher : IDownloadLauncher
         var canceller = new CancellationTokenSource();
         var downloader = new Downloader(downloadState);
         var dataStorage = new DataStorage(storage, stateChannel.Writer, canceller.Token);
-        var blockStorage = new BlockStorage(downloadState.Download.Data, dataStorage, haveChannel.Writer, stateChannel.Writer);
+        var blockStorage = new BlockStorage(downloadState.Download.Data, dataStorage, haveChannel.Writer);
         var launcher = new PeerLauncher(downloader, removalChannel.Writer, download.Data.PieceCount, TimeSpan.FromMilliseconds(download.Config.KeepAliveInterval), blockStorage, _logger);
         var spawner = new PeerConnector(downloadState, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(downloadState.Download.ClientId));
         var peers = new PeerCollection(spawner, launcher, downloadState.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, downloadState, dataStorage);
         var relationHandler = new PeerRelationHandler();
         var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
-        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, downloadState.Download.Config.TransferRateResetInterval, _logger);
-        _ = LaunchDownload(storage, eventListener, canceller.Token);
+        var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(downloadState.Download.Config.TransferRateResetInterval));
+        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, updateInterval, _logger);
+        _ = LaunchDownload(eventListener, canceller.Token);
         return new PeerManagerHandle(downloadState, stateChannel.Writer, canceller, spawner, download);
     }
 
-    private static async Task LaunchDownload(StorageStream storage, PeerManagerEventListener events, CancellationToken cancellationToken = default)
+    private static async Task LaunchDownload(PeerManagerEventListener events, CancellationToken cancellationToken = default)
     {
         await using var _ = events;
-        await using var __ = storage;
         await events.ListenAsync(cancellationToken);
     }
 }

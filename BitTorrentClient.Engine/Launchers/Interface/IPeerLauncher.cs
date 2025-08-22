@@ -2,7 +2,7 @@
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Launchers.Interface;
-internal interface IPeerLauncher
+public interface IPeerLauncher
 {
     PeerHandle LaunchPeer(PeerWireStream stream, int peerIndex);
 }

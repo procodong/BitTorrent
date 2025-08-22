@@ -5,7 +5,7 @@ using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
 
-internal class DataStorage
+public class DataStorage : IDisposable, IAsyncDisposable
 {
     private readonly StorageStream _stream;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
@@ -50,6 +50,16 @@ internal class DataStorage
             ref var write = ref writes[i];
             _ = WriteDataAsync(write.Offset, write.Array);
         }
+    }
+
+    public void Dispose()
+    {
+        _stream.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _stream.DisposeAsync();
     }
 }
 

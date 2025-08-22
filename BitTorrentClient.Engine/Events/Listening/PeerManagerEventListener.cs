@@ -16,11 +16,11 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     private readonly ChannelReader<PeerWireStream> _peerReader;
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
-    private readonly int _updateInterval;
+    private readonly PeriodicTimer _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
     private readonly ILogger _logger;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval, ILogger logger)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, ILogger logger)
     {
         _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
@@ -35,8 +35,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<PeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
-        var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
-        Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
+        Task updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
         Task<int> pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
         Task<DownloadExecutionState> fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
@@ -73,7 +72,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
                 }
                 finally
                 {
-                    updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
+                    updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
                 }
             }
             else if (ready == peerRemovalTask)
@@ -162,10 +161,8 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
 
     public void Dispose()
     {
-        if (_trackerFetcher is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Stopped), CancellationToken.None).GetAwaiter().GetResult();
+        _trackerFetcher.Dispose();
         if (_handler is IDisposable handlerDisposable)
         {
             handlerDisposable.Dispose();
@@ -174,13 +171,15 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
 
     public async ValueTask DisposeAsync()
     {
-        if (_trackerFetcher is IAsyncDisposable disposable)
+        await _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Stopped), CancellationToken.None);
+        _trackerFetcher.Dispose();
+        if (_handler is IAsyncDisposable handlerAsyncDisposable)
         {
-            await disposable.DisposeAsync();
+            await handlerAsyncDisposable.DisposeAsync();
         }
-        if (_handler is IAsyncDisposable handlerDisposable)
+        else if (_handler is IDisposable handlerDisposable)
         {
-            await handlerDisposable.DisposeAsync();
+            handlerDisposable.Dispose();
         }
     }
 }

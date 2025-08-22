@@ -7,7 +7,7 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-internal class PeerManager : IPeerManager
+public class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
 {
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
@@ -20,8 +20,6 @@ internal class PeerManager : IPeerManager
         _storage = storage;
     }
 
-    DownloadStatistics IPeerManager.Statistics => new(_downloadState.TransferRate, new(_downloadState.Download.Config.TargetDownload, _downloadState.Download.Config.TargetUpload), _peers.Count);
-
     public void ResetResentDataTransfer()
     {
         foreach (var peer in _peers)
@@ -30,6 +28,11 @@ internal class PeerManager : IPeerManager
         }
         _downloadState.DataTransfer.AtomicAdd(_downloadState.RecentDataTransfer.Fetch());
         _downloadState.ResetRecentTransfer();
+    }
+
+    public DownloadStatistics GetStatistics()
+    {
+        return new(_downloadState.TransferRate, new(_downloadState.Download.Config.TargetDownload, _downloadState.Download.Config.TargetUpload), _peers.Count);
     }
 
     public IEnumerable<PeerStatistics> GetPeerStatistics()
@@ -42,13 +45,13 @@ internal class PeerManager : IPeerManager
             ));
     }
 
-    public IPeerCollection Peers => _peers;
-
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {
         return new(_downloadState.Download.Data.InfoHash, _downloadState.Download.ClientId, _downloadState.DataTransfer.Fetch(), _downloadState.Download.Data.Size - _downloadState.DataTransfer.Downloaded, trackerEvent);
     }
-
+    
+    public IPeerCollection Peers => _peers;
+    
     public async Task PauseAsync(PauseType type, CancellationToken cancellationToken = default)
     {
         _downloadState.ExecutionState = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
@@ -82,5 +85,23 @@ internal class PeerManager : IPeerManager
         {
             await peer.HaveEventWriter.WriteAsync(piece, cancellationToken);
         }
+    }
+
+    public void Dispose()
+    {
+        foreach (var peer in _peers)
+        {
+            peer.Canceller.Cancel();
+        }
+        _storage.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        foreach (var peer in _peers)
+        {
+            peer.Canceller.Cancel();
+        }
+        return _storage.DisposeAsync();
     }
 }

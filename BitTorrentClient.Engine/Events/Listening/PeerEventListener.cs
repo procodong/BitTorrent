@@ -7,7 +7,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
 namespace BitTorrentClient.Engine.Events.Listening;
-internal class PeerEventListener : IEventListener
+public class PeerEventListener : IEventListener
 {
     private readonly IPeerWireReader _connection;
     private readonly IPeerEventHandler _handler;
@@ -38,13 +38,13 @@ internal class PeerEventListener : IEventListener
             }
             else if (readyTask == transferLimitTask)
             {
-                DataTransferVector relation = await transferLimitTask;
+                var relation = await transferLimitTask;
                 await _handler.OnClientRelationAsync(relation, cancellationToken);
                 transferLimitTask = _transferLimitReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
             {
-                int have = await haveTask;
+                var have = await haveTask;
                 await _handler.OnClientHaveAsync(have, cancellationToken);
                 haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
             }

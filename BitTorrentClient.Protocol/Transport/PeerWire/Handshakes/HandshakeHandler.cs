@@ -68,7 +68,7 @@ public class HandshakeHandler : IHandshakeHandler
     {
         var stream = new BufferedMessageStream(_stream, _cursor);
         var reader = new PeerWireReader(stream);
-        var sender = new PipedMessageSender(_writer);
+        var sender = new PipedPeerWireWriter(_writer);
         _finished = true;
         return new(ReceivedHandshake!.Value, reader, sender);
     }

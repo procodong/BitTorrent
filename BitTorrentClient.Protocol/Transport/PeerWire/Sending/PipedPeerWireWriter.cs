@@ -4,12 +4,12 @@ using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Sending;
-public class PipedMessageSender : IMessageSender
+public class PipedPeerWireWriter : IPeerWireWriter
 {
     private readonly PipeWriter _pipe;
     private BigEndianBinaryWriter Writer => new(_pipe);
 
-    public PipedMessageSender(PipeWriter pipe)
+    public PipedPeerWireWriter(PipeWriter pipe)
     {
         _pipe = pipe;
     }

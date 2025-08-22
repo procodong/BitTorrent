@@ -5,7 +5,7 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Handling;
-internal class PeerEventHandler : IPeerEventHandler
+public class PeerEventHandler : IPeerEventHandler
 {
     private readonly IPeer _peer;
     private readonly long _interestMin;

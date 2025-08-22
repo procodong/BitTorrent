@@ -7,13 +7,13 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Handling;
 
-internal class MessageWritingEventHandler : IMessageWritingEventHandler
+public class MessageWritingEventHandler : IMessageWritingEventHandler
 {
-    private readonly IMessageWriter _writer;
+    private readonly IDelayedMessageSender _sender;
     
-    public MessageWritingEventHandler(IMessageWriter sender)
+    public MessageWritingEventHandler(IDelayedMessageSender sender)
     {
-        _writer = sender;
+        _sender = sender;
     }
 
     public async Task OnMessageAsync(IMemoryOwner<Message> messages, IPieceDelayer delayer, CancellationToken cancellationToken = default)
@@ -28,42 +28,42 @@ internal class MessageWritingEventHandler : IMessageWritingEventHandler
                 case MessageType.UnChoke:
                 case MessageType.Interested:
                 case MessageType.NotInterested:
-                    _writer.WriteRelation((RelationUpdate)message.Type);
+                    _sender.SendRelation((RelationUpdate)message.Type);
                     break;
                 case MessageType.Have:
-                    _writer.WriteHave(message.Data.Have);
+                    _sender.SendHave(message.Data.Have);
                     break;
                 case MessageType.Request:
-                    _writer.WriteRequest(message.Data.Request);
+                    _sender.SendRequest(message.Data.Request);
                     break;
                 case MessageType.Piece:
                     var header = message.Data.Block;
                     var req = new BlockRequest(header.Index, header.Begin, (int)message.Body.Length);
                     var block = new BlockData(req, message.Body);
-                    await _writer.WriteBlockAsync(block, delayer, cancellationToken);
+                    await _sender.SendBlockAsync(block, delayer, cancellationToken);
                     break;
                 case MessageType.Cancel:
-                    _writer.WriteCancel(message.Data.Request);
+                    _sender.SendCancel(message.Data.Request);
                     break;
             }
         }
-        await _writer.FlushAsync(cancellationToken);
+        await _sender.FlushAsync(cancellationToken);
     }
 
     public Task OnCancelAsync(BlockRequest cancel, CancellationToken cancellationToken = default)
     {
-        _writer.TryCancelUpload(cancel);
+        _sender.TryCancelUpload(cancel);
         return Task.CompletedTask;
     }
 
     public async Task OnDelayEnd(IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
-        await _writer.WriteBlockAsync(delayer, cancellationToken);
+        await _sender.SendBlockAsync(delayer, cancellationToken);
     }
 
     public Task OnKeepAliveAsync(CancellationToken cancellationToken = default)
     {
-        _writer.WriteKeepAlive();
+        _sender.SendKeepAlive();
         return Task.CompletedTask;
     }
 }

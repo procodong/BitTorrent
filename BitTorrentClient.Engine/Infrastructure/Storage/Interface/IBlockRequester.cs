@@ -3,7 +3,7 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Interface;
-internal interface IBlockRequester
+public interface IBlockRequester
 {
     IEnumerable<BlockRequest> DrainRequests();
     bool TryGetBlock(BlockRequest request, out Stream stream);

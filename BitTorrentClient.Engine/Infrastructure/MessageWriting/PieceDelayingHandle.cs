@@ -2,7 +2,7 @@ using BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting;
 
-internal class PieceDelayingHandle : IPieceDelayer
+public class PieceDelayingHandle : IPieceDelayer
 {
     public int DelayMilliSeconds { get; private set; }
     public bool Changed { get; set; }

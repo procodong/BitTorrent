@@ -8,7 +8,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-internal class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
+public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
 {
     private readonly SlotMap<PeerHandle> _peers = [];
     private readonly HashSet<ReadOnlyMemory<byte>> _peerIds;

@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using BencodeNET.IO;
 using BencodeNET.Torrents;
-using BitTorrentClient.Api;
-using BitTorrentClient.Data;
+using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Models.Downloads;
@@ -11,7 +11,7 @@ using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using Microsoft.Extensions.Logging;
 
-namespace BitTorrentClient.Services;
+namespace BitTorrentClient.Api.Services;
 
 internal class DownloadService : IDownloadService
 {
@@ -46,10 +46,10 @@ internal class DownloadService : IDownloadService
         return new DownloadController(handle.Writer, handle.State);
     }
 
-    public void AddDownload(DownloadModel data)
+    public async Task AddDownloadAsync(DownloadModel data)
     {
         var storage = CreateStorage(data.Data);
-        _ = _downloads.AddDownloadAsync(data.Data, storage).Catch(ex => _logger.LogError(ex, "Failed to add download {}", ex));
+        await _downloads.AddDownloadAsync(data.Data, storage);
     }
 
     private static StorageStream CreateStorage(DownloadData data)
@@ -72,12 +72,6 @@ internal class DownloadService : IDownloadService
         {
             yield return _controllers.GetOrAdd(new(download.State.Download.Data.InfoHash), _ => new DownloadController(download.Writer, download.State));
         }
-    }
-
-    public IDownloadController GetDownload(ReadOnlyMemory<byte> id)
-    {
-        var handle = _downloads.GetDownload(new(id));
-        return new DownloadController(handle.Writer, handle.State);
     }
     
     public void Dispose()

@@ -1,9 +1,9 @@
 using System.Text.Json;
-using BitTorrentClient.Data;
+using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
-namespace BitTorrentClient.PersistentState;
+namespace BitTorrentClient.Api.PersistentState;
 
 public class PersistentStateManager
 {

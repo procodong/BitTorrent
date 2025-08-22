@@ -8,13 +8,13 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
 {
     public HandshakeData ReceivedHandshake { get; }
     public IPeerWireReader Reader { get; }
-    public IMessageSender Sender { get; }
+    public IPeerWireWriter Writer { get; }
 
-    public PeerWireStream(HandshakeData receivedHandshake, IPeerWireReader reader, IMessageSender sender)
+    public PeerWireStream(HandshakeData receivedHandshake, IPeerWireReader reader, IPeerWireWriter writer)
     {
         ReceivedHandshake = receivedHandshake;
         Reader = reader;
-        Sender = sender;
+        Writer = writer;
     }
 
     public void Dispose()
