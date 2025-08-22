@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 public interface IPeerReceiver
 {
-    Task<IHandshakeReceiver<IHandshakeSender<IBitfieldSender>>> ReceivePeerAsync(CancellationToken cancellationToken = default);
+    Task<IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>>> ReceivePeerAsync(CancellationToken cancellationToken = default);
 }

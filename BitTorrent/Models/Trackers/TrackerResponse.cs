@@ -12,6 +12,6 @@ public record class TrackerResponse(
     int? MinInterval,
     int Complete,
     int Incomplete,
-    IPeerConnector[] Peers,
+    IEnumerable<IPeerConnector> Peers,
     string? Warning
     );

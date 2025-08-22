@@ -18,20 +18,16 @@ public static class UdpTrackerDecoder
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
         int peerCount = reader.Remaining / 6;
-        var peers = ReadAddresses(reader, peerCount);
-        return new(interval, seeders, leechers, peerCount, peers);
-    }
-
-    private static IEnumerable<PeerAddress> ReadAddresses(BigEndianBinaryReader reader, int count)
-    {
-        for (int i = 0; i < count; i++)
+        var peers = new IPEndPoint[peerCount];
+        for (int i = 0; i < peerCount; i++)
         {
 
             var ip = reader.ReadBytes(4);
             var port = reader.ReadUInt16();
-            yield return (new(new(ip), port));
+            peers[i] = new(new IPAddress(ip), port);
         }
-    } 
+        return new(interval, seeders, leechers, peerCount, peers);
+    }
 
     public static TrackerHeader ReadHeader(BigEndianBinaryReader reader)
     {

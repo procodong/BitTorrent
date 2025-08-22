@@ -12,9 +12,9 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
-using BitTorrentClient.Application.EventHandling.Peers;
 using BitTorrentClient.Protocol.Networking.PeerWire;
 using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
+using BitTorrentClient.Application.Events.EventHandling.Peers;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer, IDisposable

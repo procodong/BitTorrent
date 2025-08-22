@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Threading.Channels;
-using BitTorrentClient.Application.EventHandling.PeerManagement;
+using BitTorrentClient.Application.Events.EventHandling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
@@ -17,7 +17,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
     private readonly HashSet<ReadOnlyMemory<byte>> _peerIds = new(new MemoryComparer<byte>());
     private readonly PeerSpawner _spawner;
     private readonly int _pieceCount;
-    private List<IPeerConnector> _potentialPeers = [];
+    private IEnumerable<IPeerConnector> _potentialPeers = [];
     private IEnumerator<(int Index, IPeerConnector Address)> _peerCursor;
     private int _missedPeers;
 
@@ -78,14 +78,12 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         return _peers.GetEnumerator();
     }
 
-    public void Feed(IPeerConnector[] addresses)
+    public void Feed(IEnumerable<IPeerConnector> addresses)
     {
-        var peers = addresses.ToList();
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
-        peers.RemoveAll(oldPeers.Contains);
-        _potentialPeers = peers;
+        _potentialPeers = addresses.Where(old => !oldPeers.Contains(old));
         _peerCursor.Dispose();
-        _peerCursor = peers.Indexed().GetEnumerator();
+        _peerCursor = _potentialPeers.Indexed().GetEnumerator();
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
         {

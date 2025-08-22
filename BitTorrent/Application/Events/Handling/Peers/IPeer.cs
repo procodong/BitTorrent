@@ -1,0 +1,24 @@
+﻿using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Helpers;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using BitTorrentClient.Helpers.DataStructures;
+
+namespace BitTorrentClient.Application.Events.EventHandling.Peers;
+public interface IPeer
+{
+    bool Downloading { get; set; }
+    bool WantsToDownload { get; set; }
+    bool Uploading { get; set; }
+    bool WantsToUpload { get; set; }
+    LazyBitArray DownloadedPieces { get; set; }
+    Task RequestUploadAsync(PieceRequest request, CancellationToken cancellationToken = default);
+    Task CancelUploadAsync(PieceRequest request);
+    Task RequestDownloadAsync(BlockData blockData, CancellationToken cancellationToken = default);
+    Task UpdateAsync(CancellationToken cancellationToken = default);
+    void NotifyHavePiece(int piece);
+}

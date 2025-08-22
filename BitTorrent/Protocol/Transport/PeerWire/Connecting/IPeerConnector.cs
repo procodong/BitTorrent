@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-public interface IPeerConnector
+public interface IPeerConnector : IEquatable<IPeerConnector>
 {
     Task<IHandshakeSender<IBitfieldSender<IHandshakeReceiver<PeerWireStream>>>> ConnectAsync(CancellationToken cancellationToken = default);
 }

@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Net.Sockets;
+using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
@@ -32,12 +33,7 @@ public class UdpTrackerFetcher : ITrackerFetcher, IDisposable
         var request = new TrackerRequest(update.InfoHash, update.ClientId, _port, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
         var response = await ReceiveAsync(() => SendAnnounceAsync(request, cancellationToken), cancellationToken);
         var data = UdpTrackerDecoder.ReadAnnounceResponse(new(response));
-        var peers = new IPeerConnector[data.PeerCount];
-        foreach (var (i, peer) in data.Peers.Indexed())
-        {
-            peers[i] = new TcpPeerConnector(peer, _peerBufferSize);
-        }
-        return new(data.Interval, default, data.Complete, data.Incomplete, peers, default);
+        return new(data.Interval, default, data.Complete, data.Incomplete, data.Peers.Select(addr => new TcpPeerConnector(addr, _peerBufferSize)), default);
     }
 
     private async Task<int> SendAnnounceAsync(TrackerRequest request, CancellationToken cancellationToken = default)

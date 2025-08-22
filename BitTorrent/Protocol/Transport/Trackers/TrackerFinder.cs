@@ -37,9 +37,10 @@ public class TrackerFinder : ITrackerFinder
             }
         }
         ITrackerFetcher? fetcher = null;
+        var readyTasks = new HashSet<Task>();
         while (tasks.Count != 0)
         {
-            var tracker = await Task.WhenAny(tasks);
+            var tracker = await Task.WhenAny(tasks.Where(t => !readyTasks.Contains(t)));
             try
             {
                 var workingTracker = await tracker;
@@ -59,7 +60,7 @@ public class TrackerFinder : ITrackerFinder
                 {
                     _logger.LogError("Tracker exception connecting to tracker: {}", ex.Message);
                 }
-                tasks.Remove(tracker);
+                readyTasks.Add(tracker);
             }
         }
         return fetcher ?? throw new NoValidTrackerException();

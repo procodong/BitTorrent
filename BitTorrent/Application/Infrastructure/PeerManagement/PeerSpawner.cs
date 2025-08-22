@@ -1,13 +1,7 @@
 ﻿using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO.Pipelines;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Channels;
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
@@ -15,9 +9,10 @@ using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
+using System.Text;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
-public class PeerSpawner
+public class PeerSpawner : IPeerSpawner
 {
     private readonly DownloadState _downloadState;
     private readonly ILogger _logger;
@@ -59,6 +54,23 @@ public class PeerSpawner
         }
     }
 
+    public async Task SpawnConnect(IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>> peer, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var bitfieldSender = await peer.SendHandShakeAsync(new(0, _downloadState.Download.Torrent.OriginalInfoHashBytes, Encoding.ASCII.GetBytes(_downloadState.Download.ClientId)), cancellationToken);
+            var stream = await bitfieldSender.SendBitfieldAsync(_downloadState.DownloadedPieces, cancellationToken);
+            await _peerAdderWriter.WriteAsync(stream, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            if (ex is not SocketException && ex is not IOException)
+            {
+                _logger.LogError("connecting to peer", ex);
+            }
+        }
+    }
+
     public async Task SpawnListener(PeerWireStream stream, int index, PeerState state, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
         var haveChannel = Channel.CreateBounded<int>(16);
@@ -71,7 +83,7 @@ public class PeerSpawner
         {
             var requestChannel = Channel.CreateBounded<BlockData>(8);
             var cancellationChannel = Channel.CreateBounded<PieceRequest>(8);
-            var peer = new Peer(state, )
+            var peer = new Peer(state, );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

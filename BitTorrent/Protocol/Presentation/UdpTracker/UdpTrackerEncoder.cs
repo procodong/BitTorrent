@@ -1,5 +1,6 @@
 ﻿using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Trackers;
+using System.Buffers.Binary;
 
 namespace BitTorrentClient.Protocol.Presentation.UdpTracker;
 public static class UdpTrackerEncoder

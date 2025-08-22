@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Application.EventHandling.PeerManagement;
+﻿using BitTorrentClient.Application.Events.EventHandling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;

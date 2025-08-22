@@ -25,4 +25,8 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Launchers\Peers\" />
+  </ItemGroup>
+
 </Project>

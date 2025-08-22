@@ -8,5 +8,4 @@ public class PeerState(LazyBitArray ownedPieces)
     public PeerRelation Relation = new();
     public LazyBitArray OwnedPieces = ownedPieces;
     public DataTransferCounter DataTransfer = new();
-    public TaskCompletionSource Completion = new();
 }
