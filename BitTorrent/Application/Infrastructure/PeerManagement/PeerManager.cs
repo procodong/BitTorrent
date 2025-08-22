@@ -16,6 +16,8 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
         _downloadState = downloadState;
     }
 
+    DownloadStatistics IPeerManager.Statistics => new(_downloadState.TransferRate, _peers.Count);
+
     public void ResetResentDataTransfer()
     {
         foreach (var peer in _peers)
@@ -24,6 +26,16 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider
         }
         _downloadState.DataTransfer.AtomicAdd(_downloadState.RecentDataTransfer.Fetch());
         _downloadState.ResetRecentTransfer();
+    }
+
+    public IEnumerable<PeerStatistics> GetPeerStatistics()
+    {
+        return _peers.Select(peer =>
+            new PeerStatistics(
+                (peer.State.DataTransfer.Fetch() - peer.LastStatistics) / _downloadState.ElapsedSinceRecentReset,
+                peer.State.RelationToMe,
+                peer.State.Relation
+            ));
     }
 
     public IPeerCollection Peers => _peers;

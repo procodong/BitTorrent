@@ -70,9 +70,10 @@ internal class PeerEventHandler : IPeerEventHandler
         return Task.CompletedTask;
     }
 
-    public async Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
+    public Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
     {
-        await _peer.RequestDownloadAsync(piece, cancellationToken);
+        _ = _peer.RequestDownloadAsync(piece, cancellationToken);
+        return Task.CompletedTask;
     }
 
     public async Task OnRequestAsync(BlockRequest request, CancellationToken cancellationToken = default)

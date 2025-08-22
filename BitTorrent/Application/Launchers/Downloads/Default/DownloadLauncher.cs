@@ -42,7 +42,7 @@ public class DownloadLauncher : IDownloadLauncher
         });
         var downloader = new Downloader(download);
         var blockStorage = new BlockStorage(haveChannel.Writer, download, storage);
-        var launcher = new PeerLauncher(downloader, blockStorage);
+        var launcher = new PeerLauncher(downloader, blockStorage, stateChannel.Writer);
         var spawner = new PeerSpawner(download, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(download.Download.ClientId));
         var peers = new PeerCollection(spawner, download.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, download);

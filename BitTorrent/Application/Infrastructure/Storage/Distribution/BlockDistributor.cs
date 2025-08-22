@@ -1,7 +1,9 @@
+using System.Threading.Channels;
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Messages;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
@@ -11,14 +13,16 @@ public class BlockDistributor : IBlockRequester
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;
     private readonly BlockStorage _storage;
+    private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(Downloader downloader, BlockStorage storage)
+    public BlockDistributor(Downloader downloader, BlockStorage storage, ChannelWriter<DownloadExecutionState> downloadStateWriter)
     {
         _requests = new(downloader.Config.RequestQueueSize);
         _downloader = downloader;
         _storage = storage;
         _blockCursor = new(default);
+        _downloadStateWriter = downloadStateWriter;
     }
     
     public IEnumerable<BlockRequest> DrainRequests()
@@ -73,8 +77,16 @@ public class BlockDistributor : IBlockRequester
         }
         catch (InvalidDataException)
         {
-            _downloader.Cancel(block);
+            lock (_downloader)
+            {
+                _downloader.Cancel(block);
+            }
+
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
+        }
+        catch (IOException)
+        {
+            await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, cancellationToken);
         }
         finally
         {
