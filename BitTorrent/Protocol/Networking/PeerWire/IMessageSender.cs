@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Protocol.Presentation.PeerWire;
 public interface IMessageSender
 {
-    void SendRelation(Relation relation);
+    void SendRelation(RelationUpdate relation);
     void SendHave(int piece);
     void SendRequest(PieceRequest request);
     void SendCancel(PieceRequest cancel);

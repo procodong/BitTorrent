@@ -18,12 +18,12 @@ public static class UdpTrackerDecoder
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
         int peerCount = reader.Remaining / 6;
-        var peers = new List<PeerAddress>(peerCount);
-        while (peers.Count < peerCount)
+        var peers = new PeerAddress[peerCount];
+        for (int i = 0; i < peers.Length; i++)
         {
             var ip = reader.ReadBytes(4);
             var port = reader.ReadUInt16();
-            peers.Add(new(new(ip), port));
+            peers[i] = (new(new(ip), port));
         }
         return new(interval, default, seeders, leechers, peers, default);
     }

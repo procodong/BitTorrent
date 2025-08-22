@@ -23,13 +23,12 @@ public class Download : IDisposable, IAsyncDisposable
     private readonly Config _config;
     private readonly LazyBitArray _downloadedPieces;
     private readonly DataTransferCounter _recentDataTransfer = new();
-    private readonly Stopwatch _recentTransferUpdateWatch = Stopwatch.StartNew();
+    private readonly Stopwatch _recentTransferUpdateWatch;
     private readonly DownloadStorage _storage;
     private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
     private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
     private readonly List<int> _rarestPieces = [];
-    private readonly ArrayPool<byte> _pieceBufferPool;
     private int _downloadedPiecesCount = 0;
     private int _requestedPiecesOffset = 0;
 
@@ -40,7 +39,7 @@ public class Download : IDisposable, IAsyncDisposable
         _downloadedPieces = new(torrent.NumberOfPieces);
         _storage = storage;
         _requestedPieces = new(torrent.NumberOfPieces);
-        _pieceBufferPool = ArrayPool<byte>.Create((int)torrent.PieceSize, 3);
+        _recentTransferUpdateWatch = Stopwatch.StartNew();
     }
 
     public LazyBitArray DownloadedPieces => _downloadedPieces;
@@ -133,7 +132,7 @@ public class Download : IDisposable, IAsyncDisposable
         }
         var files = _storage.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
         await files.WriteAsync(block.Piece.Buffer.AsMemory(..block.Piece.Size), cancellationToken);
-        _pieceBufferPool.Return(block.Piece.Buffer);
+        ArrayPool<byte>.Shared.Return(block.Piece.Buffer);
         lock (_haveWriters)
         {
             _downloadedPieces[block.Piece.PieceIndex] = true;
@@ -232,7 +231,7 @@ public class Download : IDisposable, IAsyncDisposable
         int? piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;
         int size = PieceSize(piece.Value);
-        var buffer = _pieceBufferPool.Rent(size);
+        var buffer = ArrayPool<byte>.Shared.Rent(size);
         return new(size, piece.Value, buffer);
     }
 

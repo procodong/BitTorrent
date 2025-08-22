@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitTorrentClient.Models.Peers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,6 @@ public record class TrackerResponse(
     int? MinInterval,
     int Complete,
     int Incomplete,
-    List<Peers.PeerAddress> Peers,
+    PeerAddress[] Peers,
     string? Warning
     );

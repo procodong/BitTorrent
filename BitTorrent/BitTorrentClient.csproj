@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="BitTorrent\Downloads\**" />
+    <EmbeddedResource Remove="BitTorrent\Downloads\**" />
+    <None Remove="BitTorrent\Downloads\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
@@ -20,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="BitTorrent\Downloads\" />
     <Folder Include="BitTorrent\Peers\Parsing\" />
+    <Folder Include="BitTorrent\Trackers\UdpTracker\" />
     <Folder Include="Storage\" />
   </ItemGroup>
 

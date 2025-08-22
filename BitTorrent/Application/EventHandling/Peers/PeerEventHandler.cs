@@ -1,10 +1,7 @@
 ﻿using BitTorrentClient.Application.EventListening.Peers;
+using BitTorrentClient.BitTorrent.Peers.Errors;
 using BitTorrentClient.Models.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BitTorrentClient.Models.Peers;
 
 namespace BitTorrentClient.Application.EventHandling.Peers;
 internal class PeerEventHandler : IPeerEventHandler
@@ -16,42 +13,68 @@ internal class PeerEventHandler : IPeerEventHandler
         _peer = peer;
     }
 
-    public Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default)
+    public async Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default)
     {
+        if (bitfield.Length != _peer.DownloadedPieces.Size)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
+        }
+        var buffer = new byte[bitfield.Length];
+        await bitfield.ReadExactlyAsync(buffer, cancellationToken);
+        _peer.DownloadedPieces = new(new(buffer));
     }
 
-    public Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task OnCancelAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _peer.CancelUploadAsync(request);
     }
 
     public Task OnClientHaveAsync(int piece, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        _peer.NotifyHavePiece(piece);
+        return Task.CompletedTask;
     }
 
-    public Task OnClientRelationAsync(Relation relation, CancellationToken cancellationToken = default)
+    public Task OnClientRelationAsync(PeerRelation relation, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        _peer.WantsToDownload = relation.Interested;
+        _peer.Uploading = !relation.Choked;
+        return Task.CompletedTask;
     }
 
     public Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        _peer.DownloadedPieces[piece] = true;
+        return Task.CompletedTask;
     }
 
-    public Task OnPeerRelationAsync(Relation relation, CancellationToken cancellationToken = default)
+    public Task OnPeerRelationAsync(RelationUpdate relation, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        switch (relation)
+        {
+            case RelationUpdate.Choke:
+                _peer.Downloading = false;
+                break;
+            case RelationUpdate.Unchoke:
+                _peer.Downloading = true;
+                break;
+            case RelationUpdate.Interested:
+                _peer.WantsToUpload = true;
+                break;
+            case RelationUpdate.NotInterested:
+                _peer.WantsToUpload = false;
+                break;
+        }
+        return Task.CompletedTask;
     }
 
-    public Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
+    public async Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _peer.RequestDownloadAsync(piece, cancellationToken);
     }
 
-    public Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
+    public async Task OnRequestAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _peer.RequestUploadAsync(request, cancellationToken);
     }
 }

@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.BitTorrent.Peers;
+﻿using BitTorrentClient.Application.Infrastructure.PeerManagement;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.BitTorrent.Managing;
 public interface IPeerManagingStrategy
 {
-    (BitArray Downloaders, BitArray Uploaders) GetPeerRelations(List<PeerConnector> peers);
+    (BitArray Downloaders, BitArray Uploaders) GetPeerRelations(List<PeerHandle> peers);
 }

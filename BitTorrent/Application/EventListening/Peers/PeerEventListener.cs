@@ -55,16 +55,16 @@ internal class PeerEventListener
         switch (message.Type)
         {
             case MessageType.Choke:
-                await _handler.OnPeerRelationAsync(Relation.Choke, cancellationToken);
+                await _handler.OnPeerRelationAsync(RelationUpdate.Choke, cancellationToken);
                 break;
             case MessageType.Unchoke:
-                await _handler.OnPeerRelationAsync(Relation.Unchoke, cancellationToken);
+                await _handler.OnPeerRelationAsync(RelationUpdate.Unchoke, cancellationToken);
                 break;
             case MessageType.Interested:
-                await _handler.OnPeerRelationAsync(Relation.Interested, cancellationToken);
+                await _handler.OnPeerRelationAsync(RelationUpdate.Interested, cancellationToken);
                 break;
             case MessageType.NotInterested:
-                await _handler.OnPeerRelationAsync(Relation.NotInterested, cancellationToken);
+                await _handler.OnPeerRelationAsync(RelationUpdate.NotInterested, cancellationToken);
                 break;
             case MessageType.Have:
                 var have = await message.ReadHaveAsync(cancellationToken);

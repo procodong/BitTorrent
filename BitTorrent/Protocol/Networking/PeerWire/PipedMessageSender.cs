@@ -36,7 +36,7 @@ public class PipedMessageSender : IMessageSender
         Writer.Write(piece);
     }
 
-    public void SendRelation(Relation relation)
+    public void SendRelation(RelationUpdate relation)
     {
         MessageEncoder.EncodeHeader(Writer, new(1, (MessageType)relation));
     }
@@ -47,7 +47,7 @@ public class PipedMessageSender : IMessageSender
         MessageEncoder.EncodePieceRequest(Writer, request);
     }
 
-    public async Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
+    public virtual async Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
     {
         MessageEncoder.EncodeHeader(Writer, new(block.Request.Length + 9, MessageType.Piece));
         MessageEncoder.EncodePieceHeader(Writer, new(block.Request.Index, block.Request.Begin));

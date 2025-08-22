@@ -8,11 +8,15 @@ public class BufferCursor : IBufferReader
     private int _end;
     private int _position;
 
-    public BufferCursor(byte[] buffer, int end, int position)
+    public BufferCursor(byte[] buffer, int end = 0)
     {
         _buffer = buffer;
         _end = end;
-        _position = position;
+    }
+
+    public BufferCursor(int len) : this(new byte[len])
+    {
+
     }
 
     public int RemainingInitializedBytes => _end - _position;

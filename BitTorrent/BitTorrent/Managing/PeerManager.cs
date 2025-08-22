@@ -1,16 +1,16 @@
-﻿using BitTorrentClient.BitTorrent.Peers.Connections;
-using BitTorrentClient.Models.Application;
+﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.BitTorrent.Trackers;
 using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Threading.Channels;
-using BitTorrentClient.BitTorrent.Peers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
+using BitTorrentClient.Application.Infrastructure.PeerManagement;
+using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Protocol.Networking.Trackers;
 
 namespace BitTorrentClient.BitTorrent.Managing;
 public class PeerManager : IDisposable, IAsyncDisposable
@@ -34,19 +34,6 @@ public class PeerManager : IDisposable, IAsyncDisposable
         _peers = peers;
     }
 
-    public async Task ListenAsync(ChannelReader<PeerHandshaker> peerReader, ChannelReader<int?> peerRemoveReader, CancellationToken cancellationToken = default)
-    {
-        var events = new PeerManagerEventHandler(peerRemoveReader, peerReader, _trackerFetcher, _download.Config.PeerUpdateInterval, GetTrackerUpdate)
-        {
-            Update = Update,
-            PeerAddition = _peers.Add,
-            PeerRemoval = _peers.RemoveAsync,
-            TrackerResponse = (response) => _peers.Update(response.Peers),
-            Error = (err) => _logger.LogError("Peer manager", err)
-        };
-        await events.ListenAsync(cancellationToken);
-    }
-
     private async Task Update()
     {
         var (interesting, unChoked) = GetPeerRelations();
@@ -63,7 +50,7 @@ public class PeerManager : IDisposable, IAsyncDisposable
     }
 
     private TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
-        => new(_download.Torrent.OriginalInfoHashBytes, _peerId, _transfered.AsVector(), _download.Torrent.TotalSize - _transfered.Downloaded, trackerEvent);
+        => new(_download.Torrent.OriginalInfoHashBytes, _peerId, Transfered, _download.Torrent.TotalSize - _transfered.Downloaded, trackerEvent);
 
     private (BitArray Interesting, BitArray UnChoked) GetPeerRelations()
     {

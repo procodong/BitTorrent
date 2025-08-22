@@ -7,6 +7,7 @@ public class LazyBitArray
 
     public bool AllSet => _state == BitfieldState.AllSet;
     public bool NoneSet => _state == BitfieldState.NoneSet;
+    public int Size => _size;
     public byte[] Buffer => _bitfield.Buffer;
 
     public LazyBitArray(ZeroCopyBitArray bitfield)
@@ -38,10 +39,7 @@ public class LazyBitArray
                 case BitfieldState.AllSet:
                     if (value) return;
                     _bitfield = new(_size);
-                    for (int i = 0; i < _bitfield.Buffer.Length; i++)
-                    {
-                        _bitfield.Buffer[i] = byte.MaxValue;
-                    }
+                    _bitfield.Buffer.AsSpan().Fill(byte.MaxValue);
                     _state = BitfieldState.Unknown;
                     break;
                 case BitfieldState.NoneSet:

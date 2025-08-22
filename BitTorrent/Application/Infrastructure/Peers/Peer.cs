@@ -51,7 +51,7 @@ public class Peer : IPeer, IDisposable
         {
             if (_state.Relation.Interested == value) return;
             _state.Relation = _state.Relation with { Interested = value };
-            _sender.SendRelation(value ? Relation.Interested : Relation.NotInterested);
+            _sender.SendRelation(value ? RelationUpdate.Interested : RelationUpdate.NotInterested);
         }
     }
     public bool Uploading
@@ -62,7 +62,7 @@ public class Peer : IPeer, IDisposable
         {
             if (_state.Relation.Choked == !value) return;
             _state.Relation = _state.Relation with { Choked = !value };
-            _sender.SendRelation(value ? Relation.Unchoke : Relation.Choke);
+            _sender.SendRelation(value ? RelationUpdate.Unchoke : RelationUpdate.Choke);
         }
     }
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }

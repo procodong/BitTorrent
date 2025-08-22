@@ -1,0 +1,73 @@
+﻿using BitTorrentClient.BitTorrent.Trackers.Errors;
+using BitTorrentClient.BitTorrent.Trackers.UdpTracker;
+using BitTorrentClient.Protocol.Networking.UdpTracker;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BitTorrentClient.Protocol.Networking.Trackers;
+public class TrackerFinder(Random random, ILogger logger, int port) : ITrackerFinder
+{
+    private readonly int _port = port;
+    private readonly Random _random = random;
+    private readonly ILogger _logger = logger;
+
+    public async Task<ITrackerFetcher> FindTrackerAsync(IEnumerable<IList<string>> urls)
+    {
+        var canceller = new CancellationTokenSource();
+        var tasks = new List<Task<ITrackerFetcher>>();
+        foreach (var set in urls)
+        {
+            foreach (string url in set.OrderBy(_ => _random.Next()))
+            {
+                if (url.StartsWith("udp"))
+                {
+                    tasks.Add(ConnectUdpAsync(url, canceller.Token));
+                }
+            }
+        }
+        while (tasks.Count != 0)
+        {
+            var tracker = await Task.WhenAny(tasks);
+            try
+            {
+                var workingTracker = await tracker;
+                await canceller.CancelAsync();
+                return workingTracker;
+            }
+            catch (Exception ex)
+            {
+                if (ex is TrackerException)
+                {
+                    _logger.LogError("Tracker exception connecting to tracker: {}", ex.Message);
+                }
+                tasks.Remove(tracker);
+            }
+        }
+        throw new NoValidTrackerException();
+    }
+
+    private async Task<ITrackerFetcher> ConnectUdpAsync(string url, CancellationToken cancellationToken = default)
+    {
+        const string PROTOCOL_START = "udp://";
+        var portSeperator = url.LastIndexOf(':');
+        var portEnd = url.IndexOf('/', portSeperator);
+        if (portEnd == -1) portEnd = url.Length;
+        var port = ushort.Parse(url.AsSpan((portSeperator + 1)..portEnd));
+        var addresses = await Dns.GetHostAddressesAsync(url[PROTOCOL_START.Length..portSeperator], cancellationToken);
+        foreach (var address in addresses)
+        {
+            var client = new UdpClient();
+            client.Connect(address, port);
+            var udpTracker = new UdpTrackerFetcher(client, _port);
+            await udpTracker.ConnectAsync(cancellationToken);
+            return udpTracker;
+        }
+        throw new Exception();
+    }
+}
