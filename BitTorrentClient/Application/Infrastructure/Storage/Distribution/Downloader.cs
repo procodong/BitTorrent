@@ -7,7 +7,7 @@ using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
-public class Downloader
+internal class Downloader
 {
     private readonly DownloadState _state;
     private readonly List<BlockCursor> _pieceRegisters = [];
@@ -18,11 +18,11 @@ public class Downloader
     public Downloader(DownloadState state)
     {
         _state = state;
-        _requestedPieces = new(state.Download.Torrent.NumberOfPieces);
+        _requestedPieces = new(state.Download.Data.PieceCount);
     }
 
     public LazyBitArray DownloadedPieces => _state.DownloadedPieces;
-    public Torrent Torrent => _state.Download.Torrent;
+    public DownloadData Torrent => _state.Download.Data;
     public Config Config => _state.Download.Config;
 
     public void RegisterDownloaded(long download)
@@ -89,7 +89,7 @@ public class Downloader
                 return rarePiece;
             }
         }
-        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.NumberOfPieces - _requestedPiecesOffset), ownedPieces);
+        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.PieceCount - _requestedPiecesOffset), ownedPieces);
     }
 
     private bool CanBeRequested(int pieceIndex, LazyBitArray ownedPieces)
@@ -109,6 +109,6 @@ public class Downloader
 
     private int PieceSize(int piece)
     {
-        return (int)long.Min(Torrent.PieceSize, Torrent.TotalSize - piece * Torrent.PieceSize);
+        return (int)long.Min(Torrent.PieceSize, Torrent.Size - piece * Torrent.PieceSize);
     }
 }

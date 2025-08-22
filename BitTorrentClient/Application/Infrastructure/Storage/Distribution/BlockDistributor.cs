@@ -1,12 +1,13 @@
 using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
+using BitTorrentClient.Application.Infrastructure.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
-public class BlockDistributor : IBlockRequester
+internal class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
     private readonly Downloader _downloader;

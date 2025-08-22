@@ -13,4 +13,16 @@ public static class TaskExt
             handler(ex);
         }
     }
+
+    public static async Task Catch<TState>(this Task task, TState state, Action<TState, Exception> handler)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception ex)
+        {
+            handler(state, ex);
+        }
+    }
 }

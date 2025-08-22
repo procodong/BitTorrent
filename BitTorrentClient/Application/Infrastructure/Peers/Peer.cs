@@ -1,11 +1,12 @@
-﻿using BitTorrentClient.Application.Infrastructure.Interfaces;
-using BitTorrentClient.Helpers.DataStructures;
+﻿using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Application.Infrastructure.Peers.Interface;
+using BitTorrentClient.Application.Infrastructure.Storage.Interface;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
-public class Peer : IPeer, IDisposable
+internal class Peer : IPeer, IDisposable
 {
     private readonly PeerState _state;
     private readonly IMessageSender _sender;

@@ -18,7 +18,7 @@ public static class UdpTrackerEncoder
         writer.Write(connectionId);
         writer.Write(1);
         writer.Write(transactionId);
-        writer.Write(request.InfoHash);
+        writer.Write(request.InfoHash.Span);
         writer.Write(System.Text.Encoding.ASCII.GetBytes(request.ClientId));
         writer.Write(request.Downloaded);
         writer.Write(request.Left);

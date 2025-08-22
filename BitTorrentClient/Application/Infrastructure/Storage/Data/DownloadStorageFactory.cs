@@ -1,39 +1,29 @@
 ﻿using BencodeNET.Torrents;
 using BitTorrentClient.Helpers.Streams;
+using BitTorrentClient.Models.Application;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public static class DownloadStorageFactory
+internal static class DownloadStorageFactory
 {
-    public static StorageStream CreateMultiFileStorage(string path, MultiFileInfoList files)
+    public static StorageStream CreateMultiFileStorage(string path, IReadOnlyList<FileData> files)
     {
         var createdFiles = new List<StreamData>(files.Count);
-        var createdDirectories = new HashSet<string>();
         long createdBytes = 0;
         foreach (var file in files)
         {
-            if (file.Path.Count != 1)
-            {
-                var directoryPath = string.Join(Path.PathSeparator, file.Path.Take(file.Path.Count - 1));
-                if (!createdDirectories.Contains(directoryPath))
-                {
-                    Directory.CreateDirectory(Path.Combine(path, directoryPath));
-                    createdDirectories.Add(directoryPath);
-                }
-            }
-            var filePath = Path.Combine(path, file.FullPath);
-            var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
-            createdFiles.Add(new(createdBytes, file.FileSize, handle));
-            createdBytes += file.FileSize;
+            var filePath = Path.Combine(path, file.Path);
+            var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.Size)), true);
+            createdFiles.Add(new(createdBytes, file.Size, handle));
+            createdBytes += file.Size;
         }
         return new(createdFiles, createdBytes);
     }
     
-    public static StorageStream CreateSingleFileStorage(string path, SingleFileInfo file)
+    public static StorageStream CreateSingleFileStorage(FileData file)
     {
-        var filePath = Path.Combine(path, file.FileName);
-        var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.FileSize)), true);
-        var streamData = new StreamData(0, file.FileSize, handle);
-        return new([streamData], file.FileSize);
+        var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(file.Path, file.Size)), true);
+        var streamData = new StreamData(0, file.Size, handle);
+        return new([streamData], file.Size);
     }
 
     private static IRandomAccesStream CreateStream(string path, long size)

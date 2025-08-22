@@ -32,8 +32,8 @@ public static class MessageEncoder
             BinaryPrimitives.WriteUInt64BigEndian(ext, handShake.Extensions);
         }
         writer.Write(ext);
-        writer.Write(handShake.InfoHash);
-        writer.Write(handShake.PeerId);
+        writer.Write(handShake.InfoHash.Span);
+        writer.Write(handShake.PeerId.Span);
     }
 
     public static void EncodeHeader(BigEndianBinaryWriter writer, MessageHeader header)

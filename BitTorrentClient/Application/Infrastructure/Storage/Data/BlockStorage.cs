@@ -7,19 +7,19 @@ using System.Threading.Channels;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public class BlockStorage
+internal class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
     private readonly DataStorage _storage;
-    private readonly Torrent _torrent;
+    private readonly DownloadData _downloadData;
 
-    public BlockStorage(Torrent torrent, DataStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
+    public BlockStorage(DownloadData downloadData, DataStorage storage, ChannelWriter<int> haveWriter, ChannelWriter<DownloadExecutionState> downloadStateWriter)
     {
         _downloadStateWriter = downloadStateWriter;
         _haveWriter = haveWriter;
         _storage = storage;
-        _torrent = torrent;
+        _downloadData = downloadData;
     }
 
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ public class BlockStorage
         {
             foreach (var (offset, buffer) in block.Piece.Hasher.HashReadyBlocks())
             {
-                _ = _storage.WriteDataAsync(block.Piece.Index * _torrent.PieceSize + offset, buffer);
+                _ = _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + offset, buffer);
             }
         }
         int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
@@ -39,7 +39,7 @@ public class BlockStorage
         {
             return;
         }
-        if (!block.Piece.Hasher.Finish().AsSpan().SequenceEqual(_torrent.Pieces.AsSpan(block.Piece.Index * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes)))
+        if (!block.Piece.Hasher.Finish().AsSpan().SequenceEqual(_downloadData.PieceHashes.Span.Slice(block.Piece.Index * SHA1.HashSizeInBytes, SHA1.HashSizeInBytes)))
         {
             throw new InvalidDataException();
         }
@@ -49,7 +49,7 @@ public class BlockStorage
     public BlockStream RequestBlock(BlockRequest request)
     {
         ValidateRequest(request);
-        return _storage.GetData(request.Index * _torrent.PieceSize + request.Begin, request.Length);
+        return _storage.GetData(request.Index * _downloadData.PieceSize + request.Begin, request.Length);
     }
 
     private void ValidateRequest(BlockRequest request)
@@ -64,6 +64,6 @@ public class BlockStorage
 
     private int PieceSize(int piece)
     {
-        return (int)long.Min(_torrent.PieceSize, _torrent.TotalSize - piece * _torrent.PieceSize);
+        return (int)long.Min(_downloadData.PieceSize, _downloadData.Size - piece * _downloadData.PieceSize);
     }
 }

@@ -1,13 +1,13 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 using BitTorrentClient.Application.Events.Listening.MessageWriting;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.MessageWriting.Interface;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Application.Events.Handling;
 
-public class MessageWritingEventHandler : IMessageWritingEventHandler
+internal class MessageWritingEventHandler : IMessageWritingEventHandler
 {
     private readonly IMessageWriter _writer;
     

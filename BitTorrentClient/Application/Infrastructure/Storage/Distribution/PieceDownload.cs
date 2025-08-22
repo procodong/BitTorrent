@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Application.Infrastructure.Storage.Data;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
-public class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
+internal class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
     public int Downloaded;
     public int Index { get; }  = pieceIndex;

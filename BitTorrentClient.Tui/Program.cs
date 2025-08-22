@@ -1,20 +1,28 @@
-﻿
-using System.Threading.Channels;
-using BitTorrentClient.Application.Launchers.Application;
+﻿using System.Threading.Channels;
 using BitTorrentClient.Tui;
-using BitTorrentClient.Helpers;
-using BitTorrentClient.Models.Application;
 using Microsoft.Extensions.Logging;
+using BitTorrentClient.Helpers.Utility;
+using BitTorrentClient.Application.Launchers;
+using BitTorrentClient.Application.State;
 
-await using var logFile = LoggingFileProvider.GetLogFile("BitTorrentClient");
+var fileProvider = new PersistenStateManager("BitTorrentClient");
+var config = await fileProvider.GetConfigAsync();
+var downloads = await fileProvider.GetStateAsync();
+
+await using var logFile = fileProvider.GetLog();
 var messageChannel = Channel.CreateBounded<(LogLevel, string)>(8);
 var logger = new ChannelLogger(messageChannel.Writer, logFile);
 
-var applicationLauncher = new ApplicationLauncher(new("KJ", new('0', '1', '1', '1')), Config.Default, logger);
+var applicationLauncher = new ApplicationLauncher(new("BT", new('0', '1', '1', '1')), config, logger);
 
 var canceller = new CancellationTokenSource();
 
 await using var downloadService = applicationLauncher.LaunchApplication(canceller.Token);
+
+foreach (var download in downloads)
+{
+    downloadService.AddDownload(download);
+}
 
 var interfaceLauncher = new InterfaceLauncher(TimeSpan.FromSeconds(1), logger);
 
@@ -28,3 +36,4 @@ Console.CancelKeyPress += (_, e) =>
     closingWaiter.SetResult();
 };
 await closingWaiter.Task;
+await fileProvider.SaveStateAsync(downloadService.GetDownloads().Select(d => d.Download).ToArray());

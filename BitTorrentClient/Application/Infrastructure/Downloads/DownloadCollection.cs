@@ -4,15 +4,14 @@ using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using System.Collections.Concurrent;
-using BitTorrentClient.Helpers;
-using BitTorrentClient.Application.Launchers.Downloads;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
-using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Helpers.Utility;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
+using BitTorrentClient.Application.Launchers.Interface;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
-public class DownloadCollection : IDownloadCollection
+internal class DownloadCollection : IDownloadCollection
 {
     private readonly ConcurrentDictionary<ReadOnlyMemory<byte>, PeerManagerHandle> _downloads;
     private readonly PeerIdGenerator _peerIdGenerator;
@@ -28,14 +27,15 @@ public class DownloadCollection : IDownloadCollection
         _launcher = launcher;
         _downloads = new(new MemoryComparer<byte>());
     }
-    
-    public async Task AddDownloadAsync(Torrent torrent, StorageStream storage, string? name, CancellationToken cancellationToken = default)
+
+    public async Task<IDownloadController> AddDownloadAsync(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default)
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
-        var tracker = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
-        var download = new Download(peerId, name ?? torrent.DisplayName, torrent, _config);
+        var tracker = await _trackerFinder.FindTrackerAsync(data.Trackers);
+        var download = new Download(peerId, data, _config);
         var handle = _launcher.LaunchDownload(download, storage, tracker);
-        _downloads.TryAdd(torrent.OriginalInfoHashBytes, handle);
+        _downloads.TryAdd(data.InfoHash, handle);
+        return handle.Controller;
     }
 
     public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)
@@ -49,9 +49,14 @@ public class DownloadCollection : IDownloadCollection
         return false;
     }
 
-    public IEnumerable<DownloadUpdate> GetDownloadState()
+    public IEnumerable<IDownloadController> GetDownloads()
     {
-        return _downloads.Select(d => d.Value.UpdateProvider.GetUpdate());
+        return _downloads.Values.Select(h => h.Controller);
+    }
+
+    public IDownloadController GetDownloadController(ReadOnlyMemory<byte> id)
+    {
+        return _downloads[id].Controller;
     }
 
     public async Task AddPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender<PeerWireStream>>> peer,
@@ -70,6 +75,7 @@ public class DownloadCollection : IDownloadCollection
         {
             await download.Value.Canceller.CancelAsync();
         }
+        _downloads.Clear();
     }
 
     public void Dispose()
@@ -78,5 +84,6 @@ public class DownloadCollection : IDownloadCollection
         {
             download.Value.Canceller.Cancel();
         }
+        _downloads.Clear();
     }
 }

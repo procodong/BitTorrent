@@ -4,7 +4,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 namespace BitTorrentClient.Models.Messages;
 
 [StructLayout(LayoutKind.Explicit)]
-public struct MessageUnion
+public readonly struct MessageUnion
 {
     [FieldOffset(0)] public readonly int Have;
     [FieldOffset(0)] public readonly BlockRequest Request;

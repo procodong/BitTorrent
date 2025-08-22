@@ -1,9 +1,8 @@
 using System.Threading.Channels;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Tui.Interface.Input;
 using BitTorrentClient.Tui.Interface.Output;
 using Microsoft.Extensions.Logging;
-using Spectre.Console;
 
 namespace BitTorrentClient.Tui;
 
@@ -20,8 +19,7 @@ internal class InterfaceLauncher
 
     public void LaunchInterface(IDownloadService downloadService, ChannelReader<(LogLevel, string)> messageReader, CancellationToken cancellationToken = default)
     {
-        var ui = new Table();
-        var handler = UiHandler.Create(ui, 10);
+        var handler = UiHandler.Create(10);
         var updater = new UiUpdater(handler, downloadService, messageReader, new(_tickInterval));
         _ = updater.ListenAsync(cancellationToken);
 

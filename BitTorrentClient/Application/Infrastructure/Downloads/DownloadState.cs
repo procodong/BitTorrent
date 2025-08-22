@@ -4,7 +4,7 @@ using BitTorrentClient.Models.Application;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
 
-public class DownloadState
+internal class DownloadState
 {
     public LazyBitArray DownloadedPieces { get; }
     public DataTransferCounter DataTransfer { get; }
@@ -18,7 +18,7 @@ public class DownloadState
         Download = download;
         DataTransfer = new();
         RecentDataTransfer = new();
-        DownloadedPieces = new(download.Torrent.NumberOfPieces);
+        DownloadedPieces = new(download.Data.PieceCount);
         _recentTransferWatch = new();
     }
 
@@ -29,4 +29,9 @@ public class DownloadState
     }
     public long ElapsedSinceRecentReset => _recentTransferWatch.Elapsed;
     public DataTransferVector TransferRate => RecentDataTransfer.Fetch() / ElapsedSinceRecentReset;
+
+    public DownloadUpdate GetUpdate()
+    {
+        return new(Download.Data.Name, DataTransfer.Fetch(), TransferRate, Download.Data.Size, ExecutionState, Download.Data.InfoHash);
+    }
 }

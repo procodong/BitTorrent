@@ -1,4 +1,4 @@
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
 
 namespace BitTorrentClient.Models.Application;
 

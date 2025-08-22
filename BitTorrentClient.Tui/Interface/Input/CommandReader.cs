@@ -1,5 +1,6 @@
 using System.CommandLine;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using System.CommandLine.Parsing;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Input;
@@ -9,15 +10,19 @@ public class CommandReader
     private readonly RootCommand _commands;
     private readonly Command _createCommand;
     private readonly Command _removeCommand;
+    private readonly Command _pauseCommand;
+    private readonly Command _continueCommand;
     private readonly IDownloadService _downloadService;
     private readonly ILogger _logger;
-    private readonly List<DownloadData> _downloads;
+    private readonly List<IDownloadController> _downloads;
 
-    private CommandReader(RootCommand commands, Command createCommand, Command removeCommand, IDownloadService actionWriter, ILogger logger)
+    private CommandReader(RootCommand commands, Command createCommand, Command removeCommand, Command pauseCommand, Command continueCommand, IDownloadService actionWriter, ILogger logger)
     {
         _commands = commands;
         _createCommand = createCommand;
         _removeCommand = removeCommand;
+        _pauseCommand = pauseCommand;
+        _continueCommand = continueCommand;
         _downloadService = actionWriter;
         _logger = logger;
         _downloads = [];
@@ -36,12 +41,24 @@ public class CommandReader
             new Option<string>("--name", "-n"),
             new Option<int?>("--index", "-i")
         };
+        var pauseCommand = new Command("pause")
+        {
+            new Option<string>("--name", "-n"),
+            new Option<int?>("--index", "-i")
+        };
+        var continueCommand = new Command("continue")
+        {
+            new Option<string>("--name", "-n"),
+            new Option<int?>("--index", "-i")
+        };
         var commands = new RootCommand
         {
             createCommand,
-            removeCommand
+            removeCommand,
+            pauseCommand,
+            continueCommand
         };
-        return new(commands, createCommand, removeCommand, actionWriter, logger);
+        return new(commands, createCommand, removeCommand, pauseCommand, continueCommand, actionWriter, logger);
     }
 
     public async Task ReadAsync(CancellationToken cancellationToken = default)
@@ -62,23 +79,56 @@ public class CommandReader
                 var torrent = parsed.CommandResult.GetRequiredValue((Argument<FileInfo>)_createCommand.Arguments[0]);
                 var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
                 var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
-
-                var id = await _downloadService.AddDownloadAsync(torrent, targetDirectory, name);
-                _downloads.Add(new(id, name ?? targetDirectory.FullName));
+                try
+                {
+                    var download = await _downloadService.AddDownloadAsync(torrent, targetDirectory, name);
+                    _downloads.Add(download);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Creating download {}", ex);
+                }
             }
             else if (command == _removeCommand)
             {
-                var name = parsed.CommandResult.GetValue((Option<string>)_removeCommand.Options[0]);
-                var index = parsed.CommandResult.GetValue((Option<int?>)_removeCommand.Options[1]);
-                int downloadIndex = index ?? _downloads.FindIndex(d => d.Name == name);
-                if (downloadIndex == -1 || downloadIndex >= _downloads.Count)
+                if (TryFindDownload(parsed.CommandResult, out var download))
                 {
-                    _logger.LogError("Could not find download {}", (object?)name ?? index);
+                    await _downloadService.RemoveDownloadAsync(download.Download.InfoHash);
+                    _downloads.Remove(download);
                 }
-                await _downloadService.RemoveDownloadAsync(_downloads[downloadIndex].Id);
-                _downloads.RemoveAt(downloadIndex);
+            }
+            else if (command == _pauseCommand)
+            {
+                if (TryFindDownload(parsed.CommandResult, out var download))
+                {
+                    await download.PauseAsync(cancellationToken);
+                }
+            }
+            else if (command == _continueCommand)
+            {
+                
+                if (TryFindDownload(parsed.CommandResult, out var download))
+                {
+                    await download.ResumeAsync(cancellationToken);
+                }
             }
         }
+    }
+
+    private bool TryFindDownload(CommandResult command, out IDownloadController download)
+    {
+
+        var name = command.GetValue((Option<string>)_removeCommand.Options[0]);
+        var index = command.GetValue((Option<int?>)_removeCommand.Options[1]);
+        int downloadIndex = index ?? _downloads.FindIndex(d => d.Download.Name == name);
+        if (downloadIndex == -1 || downloadIndex >= _downloads.Count)
+        {
+            _logger.LogError("Could not find download {}", (object?)name ?? index);
+            download = null!;
+            return false;
+        }
+        download = _downloads[downloadIndex];
+        return true;
     }
 }
 

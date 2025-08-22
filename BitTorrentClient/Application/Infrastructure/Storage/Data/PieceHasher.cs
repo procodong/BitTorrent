@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public class PieceHasher
+internal class PieceHasher
 {
     private readonly HashUnit[] _buffers;
     private readonly int _bufferSize;

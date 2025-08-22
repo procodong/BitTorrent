@@ -3,9 +3,8 @@ using BitTorrentClient.Models.Application;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
-public record Download(
+internal record Download(
     string ClientId,
-    string Name,
-    Torrent Torrent,
+    DownloadData Data,
     Config Config
     );

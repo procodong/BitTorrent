@@ -1,10 +1,10 @@
 using BitTorrentClient.Application.Events.Listening.Downloads;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Events.Handling;
 
-public class DownloadEventHandler : IDownloadEventHandler
+internal class DownloadEventHandler : IDownloadEventHandler
 {
     private readonly IDownloadCollection _downloads;
 

@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Protocol",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Helpers", "BitTorrentClient.Helpers\BitTorrentClient.Helpers.csproj", "{0A009D00-993A-4AB0-9178-0A38EE440725}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Cli", "BitTorrentClient.Cli\BitTorrentClient.Cli.csproj", "{56551430-5303-4676-ADBD-7FC93D6266C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,6 +76,18 @@ Global
 		{0A009D00-993A-4AB0-9178-0A38EE440725}.Release|x64.Build.0 = Release|Any CPU
 		{0A009D00-993A-4AB0-9178-0A38EE440725}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A009D00-993A-4AB0-9178-0A38EE440725}.Release|x86.Build.0 = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|x64.Build.0 = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Debug|x86.Build.0 = Debug|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|x64.ActiveCfg = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|x64.Build.0 = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|x86.ActiveCfg = Release|Any CPU
+		{56551430-5303-4676-ADBD-7FC93D6266C4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -51,7 +51,7 @@ public class HttpTrackerFetcher : ITrackerFetcher
             Port = -1
         };
         var query = HttpUtility.ParseQueryString(builder.Query);
-        query["info_hash"] = Uri.EscapeDataString(Convert.ToBase64String(request.InfoHash));
+        query["info_hash"] = Uri.EscapeDataString(Convert.ToBase64String(request.InfoHash.Span));
         query["peer_id"] = request.ClientId;
         query["port"] = request.Port.ToString();
         query["uploaded"] = request.Uploaded.ToString();

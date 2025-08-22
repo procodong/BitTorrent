@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
-public class BlockStream : Stream
+internal class BlockStream : Stream
 {
     private readonly IEnumerator<StreamPart> _parts;
     private int _position;

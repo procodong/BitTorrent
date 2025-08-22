@@ -1,11 +1,11 @@
 ﻿using BitTorrentClient.Application.Events.Listening.PeerManagement;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.Peers.Interface;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Events.Handling;
-public class PeerManagerEventHandler : IPeerManagerEventHandler
+internal class PeerManagerEventHandler : IPeerManagerEventHandler
 {
     private readonly IPeerManager _peerManager;
     private readonly IPeerRelationHandler _relationHandler;

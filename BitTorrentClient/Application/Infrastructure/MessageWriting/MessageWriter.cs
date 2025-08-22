@@ -2,11 +2,11 @@
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Application.Infrastructure.MessageWriting.Interface;
 
 namespace BitTorrentClient.Application.Infrastructure.MessageWriting;
-public class MessageWriter : IMessageWriter
+internal class MessageWriter : IMessageWriter
 {
     private readonly IMessageSender _sender;
     private readonly List<BlockData> _queuedBlocks;

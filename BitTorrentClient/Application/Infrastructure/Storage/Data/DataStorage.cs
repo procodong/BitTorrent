@@ -5,7 +5,7 @@ using BitTorrentClient.Models.Application;
 
 namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 
-public class DataStorage
+internal class DataStorage
 {
     private readonly StorageStream _stream;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;

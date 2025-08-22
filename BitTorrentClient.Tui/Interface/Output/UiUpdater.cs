@@ -1,5 +1,5 @@
 ﻿using System.Threading.Channels;
-using BitTorrentClient.Application.Infrastructure.Interfaces;
+using BitTorrentClient.Application.Infrastructure.Downloads.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Output;
@@ -35,7 +35,7 @@ public class UiUpdater
             {
                 var update = await updateTask;
                 if (!update) break;
-                _uiHandler.Update(_downloadService.GetUpdates());
+                _uiHandler.Update(_downloadService.GetDownloads().Select(d => d.State));
                 updateTask = _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask();
             }
         }
