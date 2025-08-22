@@ -1,5 +1,4 @@
-﻿using BitTorrentClient.BitTorrent.Downloads;
-using BitTorrentClient.Models.Messages;
+﻿using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Helpers;
 using System;
 using System.Collections;
@@ -14,7 +13,8 @@ using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Application.EventHandling.Peers;
-using BitTorrentClient.BitTorrent.Peers.Connections;
+using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Protocol.Networking.PeerWire.Sending;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer, IDisposable
@@ -95,7 +95,7 @@ public class Peer : IPeer, IDisposable
 
     public async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
-        while (_requester.TryRequestDownload(out var block))
+        while (_requester.TryRequestDownload(DownloadedPieces, out var block))
         {
             _sender.SendRequest(block);
         }

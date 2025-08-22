@@ -1,4 +1,5 @@
-﻿using BitTorrentClient.UserInterface.Input.Exceptions;
+﻿using BitTorrentClient.Application.EventListening.Downloads;
+using BitTorrentClient.UserInterface.Input.Exceptions;
 
 namespace BitTorrentClient.UserInterface.Input.Parsing;
 public static class CommandParser

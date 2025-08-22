@@ -1,9 +1,4 @@
 ﻿using BitTorrentClient.Helpers.Streams;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BitTorrentClient.Storage;
+namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public readonly record struct StreamData(long ByteOffset, long Size, Lazy<Task<IRandomAccesStream>> Handle);

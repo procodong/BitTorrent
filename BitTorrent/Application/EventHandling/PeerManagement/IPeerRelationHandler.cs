@@ -1,6 +1,4 @@
 ﻿using BitTorrentClient.Application.Infrastructure.PeerManagement;
-using BitTorrentClient.BitTorrent.Peers;
-using BitTorrentClient.BitTorrent.Peers.Connections;
 using BitTorrentClient.Models.Peers;
 using System;
 using System.Collections.Generic;

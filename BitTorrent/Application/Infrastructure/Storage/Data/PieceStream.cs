@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
-using BitTorrentClient.Application.Infrastructure.Storage.Data;
-
-namespace BitTorrentClient.Storage;
+﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public class PieceStream : Stream
 {
     private readonly IEnumerator<StreamPart> _parts;

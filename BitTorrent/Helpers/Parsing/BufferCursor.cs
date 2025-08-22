@@ -21,9 +21,7 @@ public class BufferCursor : IBufferReader
 
     public int RemainingInitializedBytes => _end - _position;
     public int AvailableBuffer => RemainingInitializedBytes - _buffer.Length;
-    public int RemainingBuffer => _buffer.Length - _position;
-    public int End => _end;
-    public int Position => _position;
+    public int RemainingBuffer => _buffer.Length - RemainingInitializedBytes;
 
     public void Advance(int count)
     {

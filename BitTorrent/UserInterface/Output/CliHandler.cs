@@ -13,7 +13,7 @@ public class CliHandler : IUiHandler
         Console.SetCursorPosition(_displayPosition.Left, _displayPosition.Top);
         foreach (var (index, update) in updates.Indexed())
         {
-            int downloadedBarCount = unchecked((int)((double)update.Transfered.Download / update.Size * 10));
+            int downloadedBarCount = unchecked((int)((double)update.Transfer.Download / update.Size * 10));
             _buffer.Append(index);
             _buffer.Append(". ");
             for (int i = 0; i < downloadedBarCount; i++)
@@ -32,9 +32,9 @@ public class CliHandler : IUiHandler
             _buffer.Append(" upload per second: ");
             _buffer.Append(update.TransferRate.Upload);
             _buffer.Append(" downloaded: ");
-            _buffer.Append(update.Transfered.Download);
+            _buffer.Append(update.Transfer.Download);
             _buffer.Append(" uploaded: ");
-            _buffer.Append(update.Transfered.Upload);
+            _buffer.Append(update.Transfer.Upload);
             _buffer.AppendLine();
         }
         Console.Write(_buffer.ToString());

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Application.EventHandling.PeerManagement;
 public interface IPeerCollection
 {
-    void Add(RespondedPeerHandshaker peer);
+    void Add(RespondedHandshakeHandler peer);
     void Remove(int? peer);
     void Feed(PeerAddress[] peers);
 }

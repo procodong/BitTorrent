@@ -1,7 +1,7 @@
-﻿using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Helpers.Parsing;
+﻿using BitTorrentClient.Helpers.Parsing;
+using BitTorrentClient.Models.Trackers;
 
-namespace BitTorrentClient.BitTorrent.Trackers.UdpTracker;
+namespace BitTorrentClient.Protocol.Presentation.UdpTracker;
 public static class UdpTrackerEncoder
 {
     private const long CONNECT_CONNECTION_ID = 0x41727101980;

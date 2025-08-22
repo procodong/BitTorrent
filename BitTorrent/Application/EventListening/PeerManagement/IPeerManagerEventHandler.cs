@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace BitTorrentClient.Application.EventListening.PeerManagement;
 public interface IPeerManagerEventHandler
 {
-    Task OnPeerCreationAsync(RespondedPeerHandshaker handshaker, CancellationToken cancellationToken = default);
+    Task OnPeerCreationAsync(RespondedHandshakeHandler handshaker, CancellationToken cancellationToken = default);
     Task OnPeerRemovalAsync(int? peer, CancellationToken cancellationToken = default);
     Task OnTickAsync(CancellationToken cancellationToken = default);
     Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default);

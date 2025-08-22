@@ -60,7 +60,7 @@ public class FrameReader : IBufferReader
         return buffer;
     }
 
-    public async Task EnsureReadAtleastAsync(int count, CancellationToken cancellationToken = default)
+    public async Task EnsureReadAtLeastAsync(int count, CancellationToken cancellationToken = default)
     {
         int cappedCount = int.Min(count, _cursor.AvailableBuffer);
         while (Buffered < cappedCount)

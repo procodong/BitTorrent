@@ -1,11 +1,10 @@
 ﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Storage;
-using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Peers;
 using BitTorrentClient.BitTorrent.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
+using BitTorrentClient.Application.EventListening.Downloads;
 using BitTorrentClient.UserInterface.Input;
 using BitTorrentClient.UserInterface.Output;
 

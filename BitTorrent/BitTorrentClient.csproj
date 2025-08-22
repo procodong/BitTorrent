@@ -25,9 +25,4 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.6.4" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="BitTorrent\Peers\Parsing\" />
-    <Folder Include="BitTorrent\Trackers\UdpTracker\" />
-  </ItemGroup>
-
 </Project>

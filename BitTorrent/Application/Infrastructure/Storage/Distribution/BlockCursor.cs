@@ -1,12 +1,4 @@
-﻿using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
-using BitTorrentClient.Models.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BitTorrentClient.BitTorrent.Downloads;
+﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 public class BlockCursor
 {
     private readonly Block _block;
@@ -20,8 +12,6 @@ public class BlockCursor
     {
         _block = block;
     }
-
-    //public static implicit operator Block(BlockCursor cursor) => cursor._block;
 
     public Block GetRequest(int requestSize)
     {

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.EventHandling.Trackers;
 public class TrackerListeningEventHandler : ITrackerListeningEventHandler
@@ -25,7 +26,7 @@ public class TrackerListeningEventHandler : ITrackerListeningEventHandler
     {
         var stream = new NetworkStream(client.Client, true);
         var buffer = new BufferCursor(_peerBufferSize);
-        var handshaker = new PeerHandshaker(stream, buffer);
+        var handshaker = new HandshakeHandler(stream, buffer);
         await _handler.SendPeerAsync(handshaker, cancellationToken);
     }
 

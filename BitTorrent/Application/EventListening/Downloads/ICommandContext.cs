@@ -1,4 +1,4 @@
-﻿namespace BitTorrentClient.UserInterface.Input;
+﻿namespace BitTorrentClient.Application.EventListening.Downloads;
 public interface ICommandContext
 {
     Task AddTorrentAsync(string torrentPath, string targetPath);

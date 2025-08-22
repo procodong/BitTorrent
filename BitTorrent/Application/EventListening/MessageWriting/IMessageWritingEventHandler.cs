@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrentClient.Application.EventHandling.MessageWriting;
 
 namespace BitTorrentClient.Application.EventListening.MessageWriting;
 public interface IMessageWritingEventHandler
 {
-    Task OnMessageAsync(ReadOnlySequence<byte> data, CancellationToken cancellationToken = default);
-    Task OnBlockAsync(BlockData data, CancellationToken cancellationToken = default);
+    Task OnMessageAsync(ReadOnlyMemory<Message> message, CancellationToken cancellationToken = default);
+    Task OnBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default);
     Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default);
 }

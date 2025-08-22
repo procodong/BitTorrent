@@ -1,6 +1,4 @@
-﻿using BitTorrentClient.Storage;
-
-namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
+﻿namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public class DownloadStorage(int pieceSize, List<StreamData> saves) : IDisposable, IAsyncDisposable
 {
     private readonly int _pieceSize = pieceSize;

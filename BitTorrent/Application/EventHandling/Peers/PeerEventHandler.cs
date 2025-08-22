@@ -1,5 +1,5 @@
 ﻿using BitTorrentClient.Application.EventListening.Peers;
-using BitTorrentClient.BitTorrent.Peers.Errors;
+using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 

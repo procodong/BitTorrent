@@ -1,41 +1,52 @@
 ﻿using BitTorrentClient.Application.EventHandling.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
-using BitTorrentClient.BitTorrent.Peers.Connections;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Protocol.Networking.PeerWire;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
-public class PeerManager : IPeerManager
+public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDisposable
 {
     private readonly PeerCollection _peers;
-    private readonly DownloadState _download;
+    private readonly DownloadState _downloadState;
     private DownloadExecutionState _state;
 
-    public PeerManager(PeerCollection peers, DownloadState download)
+    public PeerManager(PeerCollection peers, DownloadState downloadState)
     {
         _peers = peers;
-        _download = download;
+        _downloadState = downloadState;
     }
 
     public void ResetResentDataTransfer()
     {
-        throw new NotImplementedException();
+        foreach (var peer in _peers)
+        {
+            peer.LastStatistics = peer.State.DataTransfer.Fetch();
+        }
+        _downloadState.DataTransfer.AtomicAdd(_downloadState.RecentDataTransfer.Fetch());
+        _downloadState.ResetRecentTransfer();
     }
 
     public IPeerCollection Peers => _peers;
 
-    public IEnumerable<PeerStatistics> Statistics => _peers.Select(h => new PeerStatistics());
+    public IEnumerable<PeerStatistics> Statistics => _peers.Select(peer => 
+        new PeerStatistics(
+            (peer.State.DataTransfer.Fetch() - peer.LastStatistics) / _downloadState.ElapsedSinceRecentReset,
+            peer.State.RelationToMe,
+            peer.State.Relation
+        ));
 
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {
-        return new(_download.Torrent.OriginalInfoHashBytes, _download.ClientId, _download.DataTransfer.Fetch(), _download.Torrent.TotalSize - _download.DataTransfer.Downloaded, trackerEvent);
+        return new(_downloadState.Download.Torrent.OriginalInfoHashBytes, _downloadState.Download.ClientId, _downloadState.DataTransfer.Fetch(), _downloadState.Download.Torrent.TotalSize - _downloadState.DataTransfer.Downloaded, trackerEvent);
     }
 
     public async Task PauseAsync(PauseType type, CancellationToken cancellationToken = default)
@@ -63,4 +74,27 @@ public class PeerManager : IPeerManager
             await peer.RelationEventWriter.WriteAsync(relation, cancellationToken);
         }
     }
+
+    public DownloadUpdate GetUpdate()
+    {
+        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _state);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

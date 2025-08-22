@@ -6,4 +6,4 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Models.Application;
-public readonly record struct DownloadUpdate(string DownloadName, DataTransferVector Transfered, DataTransferVector TransferRate, long Size);
+public readonly record struct DownloadUpdate(string DownloadName, DataTransferVector Transfer, DataTransferVector TransferRate, long Size, DownloadExecutionState ExecutionState);

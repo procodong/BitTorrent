@@ -3,7 +3,6 @@ using BencodeNET.Torrents;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.Storage;
 using BitTorrentClient.BitTorrent.Managing;
 using Microsoft.Extensions.Logging;
 using System.IO.Pipelines;
@@ -23,15 +22,12 @@ using PeerManager = BitTorrentClient.BitTorrent.Managing.PeerManager;
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
 public class DownloadCollection : IAsyncDisposable, IDownloadCollection
 {
-    private readonly List<PeerManagerConnector> _downloads = [];
+    private readonly List<PeerManagerHandle> _downloads = [];
     private readonly PeerIdGenerator _peerIdGenerator;
     private readonly Config _config;
     private readonly ChannelWriter<PeerReceivingSubscribe> _peerReceivingSubscriber;
     private readonly ILogger _logger;
     private readonly ITrackerFinder _trackerFinder;
-    public bool HasUpdates => _downloads.Count != 0;
-    public Config Config => _config;
-    public ILogger Logger => _logger;
 
     public DownloadCollection(ChannelWriter<PeerReceivingSubscribe> peerReceivingSubscriber, PeerIdGenerator peerIdGenerator, Config config, ILogger logger, ITrackerFinder trackerFinder)
     {
@@ -46,8 +42,8 @@ public class DownloadCollection : IAsyncDisposable, IDownloadCollection
     {
         string peerId = _peerIdGenerator.GeneratePeerId();
         var fetcher = await _trackerFinder.FindTrackerAsync(torrent.Trackers);
-        var download = new Download(torrent, storage, _config);
-        var peerAdditionChannel = Channel.CreateBounded<RespondedPeerHandshaker>(new BoundedChannelOptions(8)
+        var download = new Downloader(torrent, storage, _config);
+        var peerAdditionChannel = Channel.CreateBounded<RespondedHandshakeHandler>(new BoundedChannelOptions(8)
         {
             SingleWriter = false
         });
@@ -65,7 +61,7 @@ public class DownloadCollection : IAsyncDisposable, IDownloadCollection
         _ = SpawnDownload(peerManager, peerAdditionChannel.Reader, removalChannel.Reader, cancellationTokenSource.Token).ConfigureAwait(false);
     }
     
-    private async Task SpawnDownload(PeerManager download, ChannelReader<RespondedPeerHandshaker> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
+    private async Task SpawnDownload(PeerManager download, ChannelReader<RespondedHandshakeHandler> peerAdditionReader, ChannelReader<int?> removalReader, CancellationToken cancellationToken = default)
     {
         await using var _ = download;
         try

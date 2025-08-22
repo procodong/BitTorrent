@@ -2,7 +2,6 @@
 using BencodeNET.Parsing;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.BitTorrent.Trackers.Errors;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using BitTorrentClient.Protocol.Networking.Trackers.Exceptions;
 
 namespace BitTorrentClient.Protocol.Networking.Trackers;
 public class HttpTrackerFetcher : ITrackerFetcher

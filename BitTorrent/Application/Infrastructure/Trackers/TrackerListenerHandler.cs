@@ -2,19 +2,20 @@ using System.Threading.Channels;
 using BitTorrentClient.Application.EventHandling.Trackers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Protocol.Networking.PeerWire;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.Infrastructure.Trackers;
 
 public class TrackerListenerHandler : ITrackerListeningHandler
 {
-    private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<RespondedPeerHandshaker>> _downloads;
+    private readonly Dictionary<ReadOnlyMemory<byte>, ChannelWriter<IHandshakeSender<IBitfieldSender>>> _downloads;
 
     public TrackerListenerHandler()
     {
         _downloads = new(new MemoryComparer<byte>());
     }
     
-    public void AddDownload(ReadOnlyMemory<byte> infoHash, ChannelWriter<RespondedPeerHandshaker> channel)
+    public void AddDownload(ReadOnlyMemory<byte> infoHash, ChannelWriter<IHandshakeSender<IBitfieldSender>> channel)
     {
         _downloads.Add(infoHash, channel);
     }
@@ -24,9 +25,9 @@ public class TrackerListenerHandler : ITrackerListeningHandler
         _downloads.Remove(infoHash);
     }
 
-    public async Task SendPeerAsync(PeerHandshaker peer, CancellationToken cancellationToken = default)
+    public async Task SendPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender>> peer, CancellationToken cancellationToken = default)
     {
         var responded = await peer.ReadHandShakeAsync(cancellationToken);
-        await _downloads[responded.ReceivedHandshake.InfoHash].WriteAsync(responded, cancellationToken);
+        await _downloads[responded.ReceiveHandshake.InfoHash].WriteAsync(responded, cancellationToken);
     }
 }

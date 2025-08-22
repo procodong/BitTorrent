@@ -9,13 +9,13 @@ namespace BitTorrentClient.Application.EventListening.PeerManagement;
 public class PeerManagerEventListener
 {
     private readonly ChannelReader<int?> _peerRemovalReader;
-    private readonly ChannelReader<RespondedPeerHandshaker> _peerReader;
+    private readonly ChannelReader<RespondedHandshakeHandler> _peerReader;
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
 
-    public PeerManagerEventListener(ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<RespondedPeerHandshaker> peerReader, IPeerManagerEventHandler handler, ITrackerFetcher trackerFetcher, int updateInterval)
+    public PeerManagerEventListener(ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<RespondedHandshakeHandler> peerReader, IPeerManagerEventHandler handler, ITrackerFetcher trackerFetcher, int updateInterval)
     {
         _peerRemovalReader = peerRemovalReader;
         _stateReader = stateReader;
@@ -27,7 +27,7 @@ public class PeerManagerEventListener
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<RespondedPeerHandshaker> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
+        Task<RespondedHandshakeHandler> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
         var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
         Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();

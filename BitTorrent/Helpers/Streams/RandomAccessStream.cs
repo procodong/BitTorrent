@@ -19,21 +19,20 @@ internal class RandomAccessStream : IRandomAccesStream
 
     public int Read(Span<byte> buffer, long fileOffset)
     {
-        lock (_lock)
+        long pos = _stream.Position;
+        _stream.Position = fileOffset;
+        _lock.Wait();
+        int read;
+        try
         {
-            long pos = _stream.Position;
-            _stream.Position = fileOffset;
-            int read;
-            try
-            {
-                read = _stream.Read(buffer);
-            }
-            finally
-            {
-                _stream.Position = pos;
-            }
-            return read;
+            read = _stream.Read(buffer);
         }
+        finally
+        {
+            _lock.Release();
+            _stream.Position = pos;
+        }
+        return read;
     }
 
     public async ValueTask<int> ReadAsync(Memory<byte> buffer, long fileOffset, CancellationToken cancellationToken = default)
@@ -56,18 +55,17 @@ internal class RandomAccessStream : IRandomAccesStream
 
     public void Write(ReadOnlySpan<byte> buffer, long fileOffset)
     {
-        lock (_lock)
+        long pos = _stream.Position;
+        _stream.Position = fileOffset;
+        _lock.WaitAsync();
+        try
         {
-            long pos = _stream.Position;
-            _stream.Position = fileOffset;
-            try
-            {
-                _stream.Write(buffer);
-            }
-            finally
-            {
-                _stream.Position = pos;
-            }
+            _stream.Write(buffer);
+        }
+        finally
+        {
+            _lock.Release();
+            _stream.Position = pos;
         }
     }
 

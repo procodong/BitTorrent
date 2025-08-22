@@ -5,11 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitTorrentClient.Protocol.Networking.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Application.EventHandling.Trackers;
 public interface ITrackerListeningHandler
 {
-    void AddDownload(ReadOnlyMemory<byte> infoHash, ChannelWriter<RespondedPeerHandshaker> channel);
+    void AddDownload(ReadOnlyMemory<byte> infoHash, ChannelWriter<IHandshakeSender<IBitfieldSender>> channel);
     void RemoveDownload(ReadOnlyMemory<byte> infoHash);
-    Task SendPeerAsync(PeerHandshaker peer, CancellationToken cancellationToken = default);
+    Task SendPeerAsync(IHandshakeReceiver<IRespondedHandshakeSender<IBitfieldSender>> peer, CancellationToken cancellationToken = default);
 }

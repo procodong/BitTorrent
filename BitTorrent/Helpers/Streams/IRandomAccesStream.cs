@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentClient.Helpers.Streams;
-internal interface IRandomAccesStream : IDisposable, IAsyncDisposable
+public interface IRandomAccesStream : IDisposable, IAsyncDisposable
 {
     int Read(Span<byte> buffer, long fileOffset);
     void Write(ReadOnlySpan<byte> buffer, long fileOffset);

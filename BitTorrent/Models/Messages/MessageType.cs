@@ -8,7 +8,7 @@ namespace BitTorrentClient.Models.Messages;
 public enum MessageType
 {
     Choke,
-    Unchoke,
+    UnChoke,
     Interested,
     NotInterested,
     Have,

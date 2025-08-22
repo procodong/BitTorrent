@@ -1,8 +1,7 @@
 ﻿using BencodeNET.Torrents;
-using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Helpers.Streams;
 
-namespace BitTorrentClient.Storage;
+namespace BitTorrentClient.Application.Infrastructure.Storage.Data;
 public static class DownloadStorageFactory
 {
     public static DownloadStorage CreateMultiFileStorage(string path, MultiFileInfoList files, int pieceSize)

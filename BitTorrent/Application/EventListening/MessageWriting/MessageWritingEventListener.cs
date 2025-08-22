@@ -12,38 +12,34 @@ namespace BitTorrentClient.Application.EventListening.MessageWriting;
 public class MessageWritingEventListener
 {
     private readonly IMessageWritingEventHandler _handler;
-    private readonly PipeReader _messageReader;
-    private readonly ChannelReader<BlockData> _requestReader;
+    private readonly ChannelReader<ReadOnlyMemory<Message>> _messageReader;
+    private readonly ChannelReader<BlockData> _blockReader;
     private readonly ChannelReader<PieceRequest> _cancellationReader;
 
-    public MessageWritingEventListener(IMessageWritingEventHandler handler, PipeReader messageReader, ChannelReader<BlockData> requestReader, ChannelReader<PieceRequest> cancellationReader)
+    public MessageWritingEventListener(IMessageWritingEventHandler handler, ChannelReader<ReadOnlyMemory<Message>> messageReader, ChannelReader<BlockData> blockReader, ChannelReader<PieceRequest> cancellationReader)
     {
         _handler = handler;
         _messageReader = messageReader;
-        _requestReader = requestReader;
         _cancellationReader = cancellationReader;
+        _blockReader = blockReader;
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<ReadResult> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        Task<BlockData> pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
+        Task<ReadOnlyMemory<Message>> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
         Task<PieceRequest> cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
+        Task<BlockData> blockTask = _blockReader.ReadAsync(cancellationToken).AsTask();
+
+        var delayer = new PieceDelayingHandle();
 
         while (true)
         {
-            var ready = await Task.WhenAny(messageTask, pieceTask, cancelledBlockTask);
+            var ready = await Task.WhenAny(messageTask, cancelledBlockTask, blockTask);
             if (ready == messageTask)
             {
                 var message = await messageTask;
-                await _handler.OnMessageAsync(message.Buffer, cancellationToken);
+                await _handler.OnMessageAsync(message, cancellationToken);
                 messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-            }
-            else if (ready == pieceTask)
-            {
-                var data = await pieceTask;
-                await _handler.OnBlockAsync(data, cancellationToken);
-                pieceTask = _requestReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (ready == cancelledBlockTask)
             {
@@ -51,6 +47,18 @@ public class MessageWritingEventListener
                 await _handler.OnCancelAsync(block, cancellationToken);
                 cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
             }
+            else if (ready == blockTask)
+            {
+                var block = await blockTask;
+                await _handler.OnBlockAsync(block, delayer, cancellationToken);
+                blockTask = DelayedTask(_blockReader.ReadAsync(cancellationToken).AsTask(), delayer.Delay, cancellationToken);
+            }
         }
+    }
+
+    private async Task<T> DelayedTask<T>(Task<T> task, int millisecondsDelay, CancellationToken cancellationToken = default)
+    {
+        await Task.WhenAll(_blockReader.ReadAsync(cancellationToken).AsTask(), Task.Delay(millisecondsDelay, cancellationToken));
+        return await task;
     }
 }

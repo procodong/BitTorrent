@@ -7,7 +7,7 @@ namespace BitTorrentClient.Helpers.Streams;
 
 public class BufferedMessageStream : IDisposable, IAsyncDisposable
 {
-    private readonly Parsing.BufferCursor _cursor;
+    private readonly BufferCursor _cursor;
     private readonly Stream _stream;
 
     public BufferedMessageStream(Stream reader, Parsing.BufferCursor cursor)
@@ -22,8 +22,8 @@ public class BufferedMessageStream : IDisposable, IAsyncDisposable
         {
             await _stream.ReadAsync(_cursor, cancellationToken);
         }
-        int size = BinaryPrimitives.ReadInt32BigEndian(_cursor.Buffer.AsSpan(_cursor.Position));
-        _cursor.Position += 4;
+        int size = BinaryPrimitives.ReadInt32BigEndian(_cursor.GetSpan());
+        _cursor.Advance(sizeof(int));
         return new(_stream, _cursor, size);
     }
 

@@ -6,7 +6,6 @@ using BencodeNET.Torrents;
 using BitTorrentClient.Application.EventListening.Downloads;
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Models.Application;
-using BitTorrentClient.Storage;
 
 namespace BitTorrentClient.Application.EventHandling.Downloads;
 

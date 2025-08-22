@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Threading.Channels;
 using BitTorrentClient.Application.EventHandling.PeerManagement;
-using BitTorrentClient.BitTorrent.Peers.Connections;
+using BitTorrentClient.Application.Infrastructure.Peers;
 using BitTorrentClient.Helpers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
@@ -29,7 +29,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         _peerCursor = Enumerable.Empty<(int, PeerAddress)>().GetEnumerator();
     }
 
-    public void Add(RespondedPeerHandshaker stream)
+    public void Add(RespondedHandshakeHandler stream)
     {
         byte[] peerId = stream.ReceivedHandshake.PeerId;
         if (!_peerIds.Add(peerId))

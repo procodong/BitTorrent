@@ -1,5 +1,4 @@
-﻿using BitTorrentClient.BitTorrent.Peers.Connections;
-using BitTorrentClient.Models.Application;
+﻿using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
 using BitTorrentClient.Protocol.Networking.PeerWire;

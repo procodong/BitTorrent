@@ -1,5 +1,4 @@
-﻿using BitTorrentClient.BitTorrent.Peers.Errors;
-using BitTorrentClient.Models.Messages;
+﻿using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Protocol.Networking.PeerWire;
 using System;
@@ -8,14 +7,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitTorrentClient.Application.Infrastructure.Peers.Exceptions;
 
 namespace BitTorrentClient.Application.EventListening.Peers;
 internal class PeerEventListener
 {
-    private readonly PeerWireReader _connection;
+    private readonly IPeerWireReader _connection;
     private readonly IPeerEventHandler _handler;
 
-    public PeerEventListener(PeerWireReader connection, IPeerEventHandler handler)
+    public PeerEventListener(IPeerWireReader connection, IPeerEventHandler handler)
     {
         _connection = connection;
         _handler = handler;
@@ -23,7 +23,7 @@ internal class PeerEventListener
 
     public async Task ListenAsync(ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader, CancellationToken cancellationToken = default)
     {
-        Task<MessageFrameReader> receiveTask = _connection.ReceiveAsync(cancellationToken);
+        Task<IMessageFrameReader> receiveTask = _connection.ReceiveAsync(cancellationToken);
         Task<PeerRelation> relationTask = relationReader.ReadAsync(cancellationToken).AsTask();
         Task<int> haveTask = haveMessageReader.ReadAsync(cancellationToken).AsTask();
         while (true)
@@ -50,14 +50,14 @@ internal class PeerEventListener
         }
     }
 
-    private async Task HandleMessage(MessageFrameReader message, CancellationToken cancellationToken = default)
+    private async Task HandleMessage(IMessageFrameReader message, CancellationToken cancellationToken = default)
     {
         switch (message.Type)
         {
             case MessageType.Choke:
                 await _handler.OnPeerRelationAsync(RelationUpdate.Choke, cancellationToken);
                 break;
-            case MessageType.Unchoke:
+            case MessageType.UnChoke:
                 await _handler.OnPeerRelationAsync(RelationUpdate.Unchoke, cancellationToken);
                 break;
             case MessageType.Interested:
@@ -78,11 +78,11 @@ internal class PeerEventListener
                 await _handler.OnRequestAsync(request, cancellationToken);
                 break;
             case MessageType.Piece:
-                var piece = await message.ReadRequestAsync(cancellationToken);
-                await _handler.OnPieceAsync(new(piece, message.ReadStream()), cancellationToken);
+                var piece = await message.ReadPieceAsync(cancellationToken);
+                await _handler.OnPieceAsync(piece, cancellationToken);
                 break;
             case MessageType.Cancel:
-                var cancel = await message.ReadPieceHeaderAsync(cancellationToken);
+                var cancel = await message.ReadRequestAsync(cancellationToken);
                 await _handler.OnCancelAsync(cancel, cancellationToken);
                 break;
             default:

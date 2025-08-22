@@ -20,7 +20,7 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
         return _peerManager.GetTrackerUpdate(trackerEvent);
     }
 
-    public Task OnPeerCreationAsync(RespondedPeerHandshaker handshaker, CancellationToken cancellationToken = default)
+    public Task OnPeerCreationAsync(RespondedHandshakeHandler handshaker, CancellationToken cancellationToken = default)
     {
         _peerManager.Peers.Add(handshaker);
         return Task.CompletedTask;
