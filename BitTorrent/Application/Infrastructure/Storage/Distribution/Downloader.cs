@@ -17,21 +17,21 @@ public class Downloader
     private readonly DownloadState _state;
     private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
-    private readonly SlotMap<ChannelWriter<int>> _haveWriters = [];
+    private readonly ChannelWriter<int> _haveWriter;
     private readonly List<int> _rarestPieces = [];
     private int _downloadedPiecesCount;
     private int _requestedPiecesOffset;
 
-    public Downloader(DownloadState state)
+    public Downloader(DownloadState state, ChannelWriter<int> haveWriter)
     {
         _state = state;
+        _haveWriter = haveWriter;
         _requestedPieces = new(state.Download.Torrent.NumberOfPieces);
     }
 
     public LazyBitArray DownloadedPieces => _state.DownloadedPieces;
     public Torrent Torrent => _state.Download.Torrent;
     public Config Config => _state.Download.Config;
-    public string ClientId => _state.Download.ClientId;
     public bool FinishedDownloading => _downloadedPiecesCount >= _state.Download.Torrent.NumberOfPieces;
     
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
@@ -54,17 +54,7 @@ public class Downloader
         var files = _state.Storage.GetStream(block.Piece.PieceIndex, block.Begin, block.Length);
         await files.WriteAsync(block.Piece.Buffer.AsMemory(..block.Piece.Size), cancellationToken);
         ArrayPool<byte>.Shared.Return(block.Piece.Buffer);
-        lock (_haveWriters)
-        {
-            _state.DownloadedPieces[block.Piece.PieceIndex] = true;
-            foreach (var peer in _haveWriters)
-            {
-                if (!peer.TryWrite(block.Piece.PieceIndex))
-                {
-                    _ = peer.WriteAsync(block.Piece.PieceIndex, default).AsTask();
-                }
-            }
-        }
+        await _haveWriter.WriteAsync(block.Piece.PieceIndex, default);
     }
 
     public PieceStream RequestBlock(PieceRequest request)

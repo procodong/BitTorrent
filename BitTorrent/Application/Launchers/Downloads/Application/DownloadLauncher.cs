@@ -2,6 +2,7 @@
 using BitTorrentClient.Application.Events.Listening.PeerManagement;
 using BitTorrentClient.Application.Infrastructure.Downloads;
 using BitTorrentClient.Application.Infrastructure.PeerManagement;
+using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Application.Launchers.Peers.Application;
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
@@ -34,12 +35,17 @@ public class DownloadLauncher : IDownloadLauncher
         {
             SingleWriter = false
         });
-        var launcher = new PeerLauncher();
+        var haveChannel = Channel.CreateBounded<int>(new BoundedChannelOptions(8)
+        {
+            SingleWriter = false
+        });
+        var downloader = new Downloader(download, haveChannel.Writer);
+        var launcher = new PeerLauncher(downloader);
         var spawner = new PeerSpawner(download, launcher, _logger, removalChannel.Writer, peerAdditionChannel.Writer, Encoding.ASCII.GetBytes(download.Download.ClientId));
-        var peers = new PeerCollection(spawner, download.Download.Torrent.NumberOfPieces, download.Download.Config.MaxParallelPeers);
+        var peers = new PeerCollection(spawner, download.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, download);
         var eventHandler = new PeerManagerEventHandler(peerManager, _);
-        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, download.Download.Config.PeerUpdateInterval);
+        var eventListener = new PeerManagerEventListener(eventHandler, removalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, download.Download.Config.PeerUpdateInterval);
         var canceller = new CancellationTokenSource();
         _ = LaunchDownload(peerManager, eventListener, canceller.Token);
         return new PeerManagerHandle(peerManager, canceller, download.Download.Torrent.OriginalInfoHashBytes, spawner);

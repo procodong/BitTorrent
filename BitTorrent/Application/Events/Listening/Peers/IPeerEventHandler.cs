@@ -5,7 +5,7 @@ namespace BitTorrentClient.Application.Events.Listening.Peers;
 public interface IPeerEventHandler
 {
     Task OnPeerRelationAsync(RelationUpdate relation, CancellationToken cancellationToken = default);
-    Task OnClientRelationAsync(PeerRelation relation, CancellationToken cancellationToken = default);
+    Task OnClientRelationAsync(DataTransferVector transferLimit, CancellationToken cancellationToken = default);
     Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default);
     Task OnClientHaveAsync(int piece, CancellationToken cancellationToken = default);
     Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default);

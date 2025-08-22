@@ -1,7 +1,6 @@
 ﻿using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Models.Peers;
 
-namespace BitTorrentClient.Application.Infrastructure.Peers;
+namespace BitTorrentClient.Models.Peers;
 public class PeerState(LazyBitArray ownedPieces, DataTransferVector transferLimit)
 {
     public PeerRelation RelationToMe { get; set; } = new();

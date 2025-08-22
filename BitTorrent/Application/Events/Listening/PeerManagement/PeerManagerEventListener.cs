@@ -9,14 +9,16 @@ namespace BitTorrentClient.Application.Events.Listening.PeerManagement;
 public class PeerManagerEventListener : IEventListener
 {
     private readonly ChannelReader<int?> _peerRemovalReader;
+    private readonly ChannelReader<int> _pieceCompletionReader;
     private readonly ChannelReader<PeerWireStream> _peerReader;
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly int _updateInterval;
     private readonly IPeerManagerEventHandler _handler;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, int updateInterval)
     {
+        _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
         _stateReader = stateReader;
         _peerReader = peerReader;
@@ -31,11 +33,12 @@ public class PeerManagerEventListener : IEventListener
         var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(_updateInterval));
         Task updateIntervalTask = updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
+        Task<int> pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
         Task<DownloadExecutionState> fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
         Task trackerUpdateTask = _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken);
         while (true)
         {
-            var ready = await Task.WhenAny(peerAdditionTask, updateIntervalTask, peerRemovalTask, trackerUpdateTask);
+            var ready = await Task.WhenAny(peerAdditionTask, updateIntervalTask, peerRemovalTask, trackerUpdateTask, pieceCompletionTask);
             if (ready == peerAdditionTask)
             {
                 try
@@ -119,6 +122,22 @@ public class PeerManagerEventListener : IEventListener
                 finally
                 {
                     fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
+                }
+            }
+            else if (ready == pieceCompletionTask)
+            {
+                try
+                {
+                    var piece = await pieceCompletionTask;
+                    await _handler.OnPieceCompletionAsync(piece, cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
+                {
+                    await HandleError(cancellationToken);
+                }
+                finally
+                {
+                    pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
                 }
             }
         }

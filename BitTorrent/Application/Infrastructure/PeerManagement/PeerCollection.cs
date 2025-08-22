@@ -15,17 +15,15 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
     private readonly SlotMap<PeerHandle> _peers = [];
     private readonly HashSet<ReadOnlyMemory<byte>> _peerIds = new(new MemoryComparer<byte>());
     private readonly PeerSpawner _spawner;
-    private readonly int _pieceCount;
     private IEnumerable<IPeerConnector> _potentialPeers = [];
     private IEnumerator<(int Index, IPeerConnector Address)> _peerCursor;
     private int _missedPeers;
 
     public int Count => _peers.Count;
 
-    public PeerCollection(PeerSpawner spawner, int pieceCount, int maxParallelPeers)
+    public PeerCollection(PeerSpawner spawner, int maxParallelPeers)
     {
         _spawner = spawner;
-        _pieceCount = pieceCount;
         _missedPeers = maxParallelPeers;
         _peerCursor = Enumerable.Empty<(int, IPeerConnector)>().GetEnumerator();
     }
@@ -38,11 +36,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
             ConnectNext();
             return;
         }
-        var eventChannel = Channel.CreateBounded<PeerRelation>(16);
-        var state = new PeerState(new(_pieceCount));
-        var peerConnector = new PeerHandle(state, eventChannel.Writer, new());
-        int index = _peers.Add(peerConnector);
-        _ = _spawner.SpawnListener(stream, index, state, eventChannel.Reader, peerConnector.Canceller.Token).ConfigureAwait(false);
+        _peers.Add(i => _spawner.SpawnListener(stream, i));
     }
 
     public void Remove(int? index)

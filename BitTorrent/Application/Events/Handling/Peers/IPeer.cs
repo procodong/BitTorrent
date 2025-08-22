@@ -1,5 +1,6 @@
 ﻿using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Models.Peers;
 
 namespace BitTorrentClient.Application.Events.Handling.Peers;
 public interface IPeer

@@ -32,6 +32,11 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler
         return Task.CompletedTask;
     }
 
+    public async Task OnPieceCompletionAsync(int piece, CancellationToken cancellationToken = default)
+    {
+        await _peerManager.NotifyPieceCompletion(piece, cancellationToken);
+    }
+
     public async Task OnStateChange(DownloadExecutionState change, CancellationToken cancellationToken = default)
     {
         if (change == DownloadExecutionState.Running)

@@ -2,6 +2,7 @@
 using BitTorrentClient.Application.Infrastructure.Storage.Data;
 using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 
 namespace BitTorrentClient.Application.Infrastructure.Downloads;
@@ -9,17 +10,16 @@ namespace BitTorrentClient.Application.Infrastructure.Downloads;
 public class DownloadState
 {
     public LazyBitArray DownloadedPieces { get; }
-    public SlotMap<ChannelWriter<int>> Peers { get; }
     public DataTransferCounter DataTransfer { get; }
     public DownloadStorage Storage { get; }
     public Download Download { get; }
     public DataTransferCounter RecentDataTransfer { get; }
+    public DownloadExecutionState ExectutionState { get; set; }
 
     private readonly AtomicWatch _recentTransferWatch;
     public DownloadState(Download download, DownloadStorage storage)
     {
         Download = download;
-        Peers = [];
         DataTransfer = new();
         RecentDataTransfer = new();
         Storage = storage;

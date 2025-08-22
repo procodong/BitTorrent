@@ -11,6 +11,7 @@ public interface IPeerManager
     void ResetResentDataTransfer();
     Task PauseAsync(PauseType type, CancellationToken cancellationToken = default);
     Task ResumeAsync(CancellationToken cancellationToken = default);
-    Task UpdateRelationsAsync(IEnumerable<PeerRelation> relations, CancellationToken cancellationToken = default);
+    Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default);
+    Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default);
     TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent);
 }

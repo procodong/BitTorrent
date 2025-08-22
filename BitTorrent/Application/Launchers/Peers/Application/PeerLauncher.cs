@@ -14,16 +14,25 @@ using System.Threading.Channels;
 namespace BitTorrentClient.Application.Launchers.Peers.Application;
 public class PeerLauncher : IPeerLauncher
 {
-    public async Task LaunchPeer(PeerWireStream stream, PeerState state, IBlockRequester blockRequester, ChannelReader<PeerRelation> relationReader, ChannelReader<int> haveReader, CancellationToken cancellationToken = default)
+    private readonly Downloader _downloader;
+
+    public PeerLauncher(Downloader downloader)
     {
+        _downloader = downloader;
+    }
+
+    public async Task LaunchPeer(PeerWireStream stream, PeerState state, ChannelReader<DataTransferVector> relationReader, ChannelReader<int> haveReader, CancellationToken cancellationToken = default)
+    {
+        await using var _ = stream;
+        var distributor = new BlockDistributor(_downloader);
         var messageChannel = Channel.CreateBounded<IMemoryOwner<Message>>(16);
         var cancellationCannel = Channel.CreateBounded<PieceRequest>(16);
         var sender = new MessageSenderProxy(messageChannel.Writer, cancellationCannel.Writer);
         var writer = new MessageWriter(stream.Sender, state);
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader);
-        var peer = new Peer(state, blockRequester, sender);
-        var eventHandler = new PeerEventHandler(peer);
+        var peer = new Peer(state, distributor, sender);
+        var eventHandler = new PeerEventHandler(peer, _downloader.Torrent.PieceSize);
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveReader, relationReader);
         await Task.WhenAll(eventListener.ListenAsync(cancellationToken), writingEventListener.ListenAsync(cancellationToken));
     }

@@ -9,7 +9,6 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDispo
 {
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
-    private DownloadExecutionState _state;
 
     public PeerManager(PeerCollection peers, DownloadState downloadState)
     {
@@ -43,7 +42,7 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDispo
 
     public async Task PauseAsync(PauseType type, CancellationToken cancellationToken = default)
     {
-        _state = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
+        _downloadState.ExectutionState = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
         foreach (var peer in _peers)
         {
             await peer.RelationEventWriter.WriteAsync(default, cancellationToken);
@@ -52,14 +51,14 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDispo
 
     public async Task ResumeAsync(CancellationToken cancellationToken = default)
     {
-        _state = DownloadExecutionState.Running;
+        _downloadState.ExectutionState = DownloadExecutionState.Running;
         foreach (var peer in _peers)
         {
             await peer.RelationEventWriter.WriteAsync(new(true, false), cancellationToken);
         }
     }
 
-    public async Task UpdateRelationsAsync(IEnumerable<PeerRelation> relations, CancellationToken cancellationToken = default)
+    public async Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default)
     {
         foreach (var (peer, relation) in _peers.Zip(relations))
         {
@@ -69,11 +68,20 @@ public class PeerManager : IPeerManager, IApplicationUpdateProvider, IAsyncDispo
 
     public DownloadUpdate GetUpdate()
     {
-        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _state);
+        return new(_downloadState.Download.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, _downloadState.Download.Torrent.TotalSize, _downloadState.ExectutionState);
     }
 
     public async ValueTask DisposeAsync()
     {
+        await _downloadState.Storage.DisposeAsync();
+    }
+
+    public async Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default)
+    {
+        foreach (var peer in _peers)
+        {
+            await peer.HaveEventWriter.WriteAsync(piece, cancellationToken);
+        }
     }
 }
 

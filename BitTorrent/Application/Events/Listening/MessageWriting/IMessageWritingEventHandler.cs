@@ -7,5 +7,5 @@ public interface IMessageWritingEventHandler
 {
     Task OnMessageAsync(IMemoryOwner<Message> message, IPieceDelayer delayer, CancellationToken cancellationToken = default);
     Task OnCancelAsync(PieceRequest cancel, CancellationToken cancellationToken = default);
-    Task OnDelayEnd(CancellationToken cancellationToken = default);
+    Task OnDelayEnd(IPieceDelayer delayer, CancellationToken cancellationToken = default);
 }

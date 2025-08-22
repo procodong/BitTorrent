@@ -1,19 +1,20 @@
 ﻿using BitTorrentClient.Models.Peers;
 using System.Threading.Channels;
-using BitTorrentClient.Application.Infrastructure.Peers;
 
 namespace BitTorrentClient.Application.Infrastructure.PeerManagement;
 public class PeerHandle
 {
     public DataTransferVector LastStatistics { get; set; }
     public DataTransferVector LastUnchokedStats { get; set; }
-    public PeerState State { get; set; }
-    public ChannelWriter<PeerRelation> RelationEventWriter { get; set; }
-    public CancellationTokenSource Canceller { get; set; }
+    public PeerState State { get; }
+    public ChannelWriter<DataTransferVector> RelationEventWriter { get; }
+    public ChannelWriter<int> HaveEventWriter { get; }
+    public CancellationTokenSource Canceller { get; }
 
 
-    public PeerHandle(PeerState state, ChannelWriter<PeerRelation> relationEventWriter, CancellationTokenSource canceller)
+    public PeerHandle(PeerState state, ChannelWriter<int> haveWriter, ChannelWriter<DataTransferVector> relationEventWriter, CancellationTokenSource canceller)
     {
+        HaveEventWriter = haveWriter;
         State = state;
         RelationEventWriter = relationEventWriter;
         Canceller = canceller;

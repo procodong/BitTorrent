@@ -2,6 +2,7 @@
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Application.Events.Handling.Peers;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
+using BitTorrentClient.Models.Peers;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public class Peer : IPeer, IDisposable

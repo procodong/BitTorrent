@@ -10,35 +10,35 @@ internal class PeerEventListener : IEventListener
     private readonly IPeerWireReader _connection;
     private readonly IPeerEventHandler _handler;
     private readonly ChannelReader<int> _haveMessageReader;
-    private readonly ChannelReader<PeerRelation> _relationReader;
+    private readonly ChannelReader<DataTransferVector> _transferLimitReader;
 
-    public PeerEventListener(IPeerEventHandler handler, IPeerWireReader connection, ChannelReader<int> haveMessageReader, ChannelReader<PeerRelation> relationReader)
+    public PeerEventListener(IPeerEventHandler handler, IPeerWireReader connection, ChannelReader<int> haveMessageReader, ChannelReader<DataTransferVector> transferLimitReader)
     {
         _connection = connection;
         _handler = handler;
         _haveMessageReader = haveMessageReader;
-        _relationReader = relationReader;
+        _transferLimitReader = transferLimitReader;
     }
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         Task<IMessageFrameReader> receiveTask = _connection.ReceiveAsync(cancellationToken);
-        Task<PeerRelation> relationTask = _relationReader.ReadAsync(cancellationToken).AsTask();
+        Task<DataTransferVector> transferLimitTask = _transferLimitReader.ReadAsync(cancellationToken).AsTask();
         Task<int> haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
         while (true)
         {
-            var readyTask = await Task.WhenAny(receiveTask, relationTask, haveTask);
+            var readyTask = await Task.WhenAny(receiveTask, transferLimitTask, haveTask);
             if (readyTask == receiveTask)
             {
                 var message = await receiveTask;
                 await HandleMessage(message, cancellationToken);
                 receiveTask = _connection.ReceiveAsync(cancellationToken);
             }
-            else if (readyTask == relationTask)
+            else if (readyTask == transferLimitTask)
             {
-                PeerRelation relation = await relationTask;
+                DataTransferVector relation = await transferLimitTask;
                 await _handler.OnClientRelationAsync(relation, cancellationToken);
-                relationTask = _relationReader.ReadAsync(cancellationToken).AsTask();
+                transferLimitTask = _transferLimitReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (readyTask == haveTask)
             {

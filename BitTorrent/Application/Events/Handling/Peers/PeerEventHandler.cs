@@ -7,10 +7,12 @@ namespace BitTorrentClient.Application.Events.Handling.Peers;
 internal class PeerEventHandler : IPeerEventHandler
 {
     private readonly IPeer _peer;
+    private readonly long _interestMin;
 
-    public PeerEventHandler(IPeer peer)
+    public PeerEventHandler(IPeer peer, long interestMin)
     {
         _peer = peer;
+        _interestMin = interestMin;
     }
 
     public async Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default)
@@ -35,10 +37,10 @@ internal class PeerEventHandler : IPeerEventHandler
         return Task.CompletedTask;
     }
 
-    public Task OnClientRelationAsync(PeerRelation relation, CancellationToken cancellationToken = default)
+    public Task OnClientRelationAsync(DataTransferVector transferLimit, CancellationToken cancellationToken = default)
     {
-        _peer.WantsToDownload = relation.Interested;
-        _peer.Uploading = !relation.Choked;
+        _peer.Uploading = transferLimit.Upload >= _interestMin;
+        _peer.WantsToDownload = transferLimit.Download >= _interestMin;
         return Task.CompletedTask;
     }
 

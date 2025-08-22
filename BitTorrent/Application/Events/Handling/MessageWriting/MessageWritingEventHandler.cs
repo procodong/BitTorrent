@@ -32,8 +32,8 @@ public class MessageWritingEventHandler : IMessageWritingEventHandler
         return Task.CompletedTask;
     }
 
-    public async Task OnDelayEnd(CancellationToken cancellationToken = default)
+    public async Task OnDelayEnd(IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
-        await _writer.WriteQueuedBlock(cancellationToken);
+        await _writer.WriteQueuedBlock(delayer, cancellationToken);
     }
 }

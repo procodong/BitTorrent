@@ -10,14 +10,12 @@ internal class MessageSenderProxy : IMessageSender
     private readonly ChannelWriter<IMemoryOwner<Message>> _messageWriter;
     private readonly ChannelWriter<PieceRequest> _cancellationWriter;
     private readonly PooledList<Message> _buffer;
-    private readonly List<BlockData> _queuedUploads;
     private readonly List<PieceRequest> _queuedUploadCancels;
     public MessageSenderProxy(ChannelWriter<IMemoryOwner<Message>> messageSender, ChannelWriter<PieceRequest> cancellationWriter)
     {
         _messageWriter = messageSender;
         _cancellationWriter = cancellationWriter;
         _buffer = new();
-        _queuedUploads = [];
         _queuedUploadCancels = [];
     }
 
@@ -43,7 +41,7 @@ internal class MessageSenderProxy : IMessageSender
 
     public Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
     {
-        _queuedUploads.Add(block);
+        _buffer.Add(new(block));
         return Task.CompletedTask;
     }
 

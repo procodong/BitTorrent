@@ -29,23 +29,26 @@ public class MessageWritingEventListener : IEventListener
             var ready = await Task.WhenAny(messageTask, cancelledBlockTask, delayTask);
             if (ready == messageTask)
             {
-                // FIX ME
                 var message = await messageTask;
-                delayer.Reset();
                 await _handler.OnMessageAsync(message, delayer, cancellationToken);
-                delayTask = Task.Delay(delayer.Delay, cancellationToken);
+                if (delayer.Changed)
+                {
+                    delayTask = Task.Delay(delayer.Delay, cancellationToken);
+                    delayer.Changed = false;
+                }
                 messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (ready == cancelledBlockTask)
             {
-                var block = await cancelledBlockTask;
-                await _handler.OnCancelAsync(block, cancellationToken);
+                var cancel = await cancelledBlockTask;
+                await _handler.OnCancelAsync(cancel, cancellationToken);
                 cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
             }
             else if (ready == delayTask)
             {
-                await _handler.OnDelayEnd(cancellationToken);
-                delayTask = Task.Delay(-1, cancellationToken);
+                await _handler.OnDelayEnd(delayer, cancellationToken);
+                delayTask = Task.Delay(delayer.Changed ? delayer.Delay : -1, cancellationToken);
+                delayer.Changed = false;
             }
         }
     }

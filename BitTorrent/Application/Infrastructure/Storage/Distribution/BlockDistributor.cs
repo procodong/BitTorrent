@@ -52,10 +52,7 @@ public class BlockDistributor : IBlockRequester
             stream = null!;
             return false;
         }
-        lock (_downloader)
-        {
-            stream = _downloader.RequestBlock(request);
-        }
+        stream = _downloader.RequestBlock(request);
         return true;
     }
 
