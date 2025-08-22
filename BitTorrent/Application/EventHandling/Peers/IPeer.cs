@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Application.EventHandling.Peers;
-public interface IPeer : IAsyncDisposable
+public interface IPeer
 {
     bool Downloading { get; set; }
     bool WantsToDownload { get; set; }

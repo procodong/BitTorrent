@@ -2,7 +2,6 @@
 using BitTorrentClient.Models.Application;
 using BitTorrentClient.Models.Peers;
 using BitTorrentClient.Models.Trackers;
-using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.BitTorrent.Trackers;
 using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
@@ -11,6 +10,7 @@ using System.Threading.Channels;
 using BitTorrentClient.BitTorrent.Peers;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
 namespace BitTorrentClient.BitTorrent.Managing;
 public class PeerManager : IDisposable, IAsyncDisposable

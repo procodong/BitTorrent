@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.BitTorrent.Downloads;
+namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 public class PieceDownload(int size, int pieceIndex, byte[] buffer)
 {
     public int Downloaded;

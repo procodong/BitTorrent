@@ -13,8 +13,10 @@ using System.Security.Cryptography;
 using System.Threading.Channels;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
+using BitTorrentClient.Application.Infrastructure.Storage.Data;
+using BitTorrentClient.BitTorrent.Downloads;
 
-namespace BitTorrentClient.BitTorrent.Downloads;
+namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 public class Download : IDisposable, IAsyncDisposable
 {
     private readonly Torrent _torrent;
@@ -111,7 +113,7 @@ public class Download : IDisposable, IAsyncDisposable
         }
         return _recentDataTransfer.FetchReplace(new());
     }
-    
+
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
         await stream.ReadExactlyAsync(block.Piece.Buffer.AsMemory(block.Begin, block.Length), cancellationToken);

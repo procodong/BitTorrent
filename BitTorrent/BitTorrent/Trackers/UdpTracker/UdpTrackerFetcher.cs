@@ -3,6 +3,7 @@ using BitTorrentClient.BitTorrent.Trackers.Errors;
 using BitTorrentClient.Helpers.Parsing;
 using System.Net.Sockets;
 using System.Buffers;
+using BitTorrentClient.Protocol.Presentation.UdpTracker;
 
 namespace BitTorrentClient.BitTorrent.Trackers.UdpTracker;
 public class UdpTrackerFetcher : ITrackerFetcher

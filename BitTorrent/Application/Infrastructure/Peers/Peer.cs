@@ -17,27 +17,20 @@ using BitTorrentClient.Application.EventHandling.Peers;
 using BitTorrentClient.BitTorrent.Peers.Connections;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
-public class Peer : IPeer
+public class Peer : IPeer, IDisposable
 {
-    private readonly Download _download;
     private readonly PeerState _state;
-    private readonly List<Block> _blockDownloads;
-    private readonly ChannelWriter<BlockData> _blockUploadWriter;
     private readonly ChannelWriter<PieceRequest> _cancellationWriter;
-    private readonly PipeWriter _messagePipe;
-    private BlockCursor? _blockCursor;
+    private readonly IMessageSender _sender;
+    private readonly IBlockRequester _requester;
 
-    public Peer(Download download, PeerState state, PipeWriter messagePipe, ChannelWriter<BlockData> blockUploader, ChannelWriter<PieceRequest> cancellationWriter)
+    public Peer(PeerState state, IBlockRequester requester, IMessageSender sender, ChannelWriter<PieceRequest> cancellationWriter)
     {
-        _download = download;
         _state = state;
-        _messagePipe = messagePipe;
-        _blockUploadWriter = blockUploader;
+        _sender = sender;
         _cancellationWriter = cancellationWriter;
-        _blockDownloads = [];
+        _requester = requester;
     }
-
-    private MessageWriter Writer => new(_messagePipe);
 
     public bool Downloading
     {
@@ -58,7 +51,7 @@ public class Peer : IPeer
         {
             if (_state.Relation.Interested == value) return;
             _state.Relation = _state.Relation with { Interested = value };
-            Writer.WriteUpdateRelation(value ? Relation.Interested : Relation.NotInterested);
+            _sender.SendRelation(value ? Relation.Interested : Relation.NotInterested);
         }
     }
     public bool Uploading
@@ -69,7 +62,7 @@ public class Peer : IPeer
         {
             if (_state.Relation.Choked == !value) return;
             _state.Relation = _state.Relation with { Choked = !value };
-            Writer.WriteUpdateRelation(value ? Relation.Unchoke : Relation.Choke);
+            _sender.SendRelation(value ? Relation.Unchoke : Relation.Choke);
         }
     }
     public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
@@ -82,94 +75,43 @@ public class Peer : IPeer
 
     public async Task RequestUploadAsync(PieceRequest request, CancellationToken cancellationToken = default)
     {
-        if (!_download.DownloadedPieces[request.Index] || !Uploading) return;
-        var data = _download.RequestBlock(request);
-        await _blockUploadWriter.WriteAsync(new(request, data), cancellationToken);
+        if (!Uploading) return;
+        if (_requester.TryGetBlock(request, out var stream))
+        {
+            await _sender.SendBlockAsync(new(request, stream), cancellationToken);
+        }
     }
 
     public async Task RequestDownloadAsync(BlockData blockData, CancellationToken cancellationToken = default)
     {
-        var requestIndex = _blockDownloads.FindIndex(req => req == blockData.Request);
-        if (requestIndex == -1) return;
-        var block = _blockDownloads[requestIndex];
-        _blockDownloads.RemoveAt(requestIndex);
-        await _download.SaveBlockAsync(blockData.Stream, block, cancellationToken);
+        await _requester.SaveBlockAsync(blockData, cancellationToken);
         _state.DataTransfer.AtomicAddDownload(blockData.Request.Length);
     }
 
     public void NotifyHavePiece(int piece)
     {
-        Writer.WriteHaveMessage(piece);
+        _sender.SendHave(piece);
     }
 
     public async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
-        while (_blockDownloads.Count < 5)
+        while (_requester.TryRequestDownload(out var block))
         {
-            if (!RequestBlock()) break;
+            _sender.SendRequest(block);
         }
-        await _messagePipe.FlushAsync(cancellationToken);
-    }
-
-    private bool RequestBlock()
-    {
-        Block request = _blockCursor?.GetRequest(_download.Config.RequestSize) ?? new();
-        while (request.Length == 0)
-        {
-            Block? block;
-            lock (_download)
-            {
-                block = _download.AssignBlock(_state.OwnedPieces);
-            }
-            if (block is not null)
-            {
-                _blockCursor = new BlockCursor(block.Value);
-            }
-            else
-            {
-                _blockCursor = null;
-                return false;
-            }
-            request = _blockCursor.GetRequest(_download.Config.RequestSize);
-        }
-        _blockDownloads.Add(request);
-        Writer.WritePieceRequest(request);
-        return true;
+        await _sender.FlushAsync(cancellationToken);
     }
 
     private void CancelAll()
     {
-        Block? canceledRequest = default;
-        foreach (var download in _blockDownloads)
+        foreach (var request in _requester.DrainRequests())
         {
-            if (canceledRequest is null)
-            {
-                canceledRequest = download;
-            }
-            else if (canceledRequest.Value.Piece == download.Piece && canceledRequest.Value.Begin + canceledRequest.Value.Length == download.Begin)
-            {
-                canceledRequest = canceledRequest.Value with
-                {
-                    Length = canceledRequest.Value.Length + download.Length
-                };
-            }
-            else
-            {
-                _download.Cancel(canceledRequest.Value);
-                canceledRequest = download;
-            }
-        }
-        _blockDownloads.Clear();
-        if (_blockCursor is not null)
-        {
-            var remaining = _blockCursor.GetRequest(_blockCursor.Remaining);
-            _download.Cancel(remaining);
+            _sender.SendCancel(request);
         }
     }
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
         CancelAll();
-        return _messagePipe.CompleteAsync();
     }
 }

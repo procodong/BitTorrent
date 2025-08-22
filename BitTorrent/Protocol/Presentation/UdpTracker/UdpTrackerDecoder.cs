@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.BitTorrent.Trackers.UdpTracker;
+namespace BitTorrentClient.Protocol.Presentation.UdpTracker;
 public static class UdpTrackerDecoder
 {
     public static TrackerResponse ReadAnnounceResponse(BigEndianBinaryReader reader)

@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.BitTorrent.Peers.Parsing;
+namespace BitTorrentClient.Protocol.Presentation.PeerWire.Binary;
 public static class MessageEncoder
 {
     public static void EncodePieceRequest(BigEndianBinaryWriter writer, PieceRequest request)

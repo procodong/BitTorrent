@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Channels;
 using BitTorrentClient.BitTorrent.Peers.Connections;
 using BitTorrentClient.UserInterface.Input;
+using BitTorrentClient.Application.Infrastructure.Storage.Data;
 
 namespace BitTorrentClient.BitTorrent.Downloads;
 public class DownloadCollection : IAsyncDisposable, ICommandContext

@@ -4,8 +4,9 @@ using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.UserInterface.Input;
+using BitTorrentClient.BitTorrent.Downloads;
 
-namespace BitTorrentClient.BitTorrent.Downloads;
+namespace BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 public class DownloadManager : IAsyncDisposable
 {
     private readonly DownloadCollection _downloads;

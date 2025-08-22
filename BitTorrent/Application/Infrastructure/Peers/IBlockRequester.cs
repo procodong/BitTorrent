@@ -1,15 +1,11 @@
-﻿using BitTorrentClient.BitTorrent.Downloads;
+﻿using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Models.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BitTorrentClient.Application.Infrastructure.Peers;
 public interface IBlockRequester
 {
-    void CancelAllDownloads();
-    void RequestUpload(PieceRequest request);
+    IEnumerable<PieceRequest> DrainRequests();
+    bool TryGetBlock(PieceRequest request, out Stream stream);
+    Task SaveBlockAsync(BlockData data, CancellationToken cancellationToken = default);
     bool TryRequestDownload(out Block block);
 }

@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="BitTorrent\Downloads\" />
     <Folder Include="BitTorrent\Peers\Parsing\" />
+    <Folder Include="Storage\" />
   </ItemGroup>
 
 </Project>

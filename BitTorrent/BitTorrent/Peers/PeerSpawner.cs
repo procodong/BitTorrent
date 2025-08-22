@@ -2,7 +2,6 @@
 using BitTorrentClient.BitTorrent.Peers.Errors;
 using BitTorrentClient.Models.Messages;
 using BitTorrentClient.Models.Peers;
-using BitTorrentClient.BitTorrent.Downloads;
 using BitTorrentClient.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -16,6 +15,7 @@ using System.Threading.Tasks;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Streams;
+using BitTorrentClient.Application.Infrastructure.Storage.Distribution;
 
 namespace BitTorrentClient.BitTorrent.Peers;
 public class PeerSpawner

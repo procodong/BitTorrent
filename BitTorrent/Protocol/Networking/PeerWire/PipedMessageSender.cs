@@ -1,5 +1,6 @@
 ﻿using BitTorrentClient.Helpers.Parsing;
 using BitTorrentClient.Models.Messages;
+using BitTorrentClient.Protocol.Presentation.PeerWire;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -7,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitTorrentClient.Protocol.Presentation.PeerWire;
+namespace BitTorrentClient.Protocol.Networking.PeerWire;
 public class PipedMessageSender : IMessageSender
 {
     private readonly PipeWriter _pipe;
