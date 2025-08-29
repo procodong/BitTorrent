@@ -21,7 +21,14 @@ await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), ne
 
 foreach (var download in downloads)
 {
-    _ = downloadService.AddDownloadAsync(download).Catch(ex => logger.LogError(ex, "Failed to add download {}", ex));;
+    try
+    {
+        downloadService.AddDownload(download);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to add download {}", ex);
+    }
 }
 
 var interfaceLauncher = new InterfaceLauncher(TimeSpan.FromSeconds(1), logger);

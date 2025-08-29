@@ -8,8 +8,8 @@ public class PeerRelationHandler : IPeerRelationHandler
 {
     public DataTransferVector GetRelation(PeerStatistics peerStatistics, DownloadStatistics downloadStatistics)
     {
-        DataTransferVector defaultPeerTransfer = downloadStatistics.MaxTransferRate / peerStatistics.DataTransfer;
-        DataTransferVector averagePeerTransfer = downloadStatistics.TransferRate / downloadStatistics.PeerCount;
+        var defaultPeerTransfer = downloadStatistics.MaxTransferRate / peerStatistics.DataTransfer;
+        var averagePeerTransfer = downloadStatistics.TransferRate / downloadStatistics.PeerCount;
         return defaultPeerTransfer * (peerStatistics.DataTransfer / averagePeerTransfer);
     }
 }

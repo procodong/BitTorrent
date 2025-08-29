@@ -5,7 +5,7 @@ public static class StreamExt
     private static async Task<int> ReadWithAsync(Parsing.BufferCursor reader, Func<Memory<byte>, ValueTask<int>> read)
     {
         var buffer = reader.GetWriteMemory();
-        int readLen = await read(buffer);
+        var readLen = await read(buffer);
         if (readLen == 0)
         {
             throw new EndOfStreamException();

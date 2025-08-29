@@ -44,8 +44,8 @@ public class DataStorage : IDisposable, IAsyncDisposable
     public void TryWritesAgain()
     {
         var writes = new FailedWrite[_failedWrites.Count];
-        int count = _failedWrites.TryPopRange(writes);
-        for (int i = 0; i < count; i++)
+        var count = _failedWrites.TryPopRange(writes);
+        for (var i = 0; i < count; i++)
         {
             ref var write = ref writes[i];
             _ = WriteDataAsync(write.Offset, write.Array);

@@ -7,9 +7,8 @@ namespace BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 
 public interface IDownloadRepository : IDisposable, IAsyncDisposable
 {
-    Task<DownloadHandle> AddDownloadAsync(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default);
+    DownloadHandle AddDownload(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default);
     Task AddPeerAsync(PendingPeerWireStream<InitialReadDataPhase> peer, CancellationToken cancellationToken = default);
     Task<bool> RemoveDownloadAsync(DownloadId id);
     IEnumerable<DownloadHandle> GetDownloads();
-    DownloadHandle GetDownload(DownloadId id);
 }

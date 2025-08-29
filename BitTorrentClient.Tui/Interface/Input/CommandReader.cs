@@ -146,7 +146,7 @@ public class CommandReader
 
         var name = result.GetValue((Option<string>)options[0]);
         var index = result.GetValue((Option<int?>)options[1]);
-        int downloadIndex = index ?? _downloads.FindIndex(d => d.Download.Name == name);
+        var downloadIndex = index ?? _downloads.FindIndex(d => d.Download.Name == name);
         if (downloadIndex == -1 || downloadIndex >= _downloads.Count)
         {
             _logger.LogError("Could not find download {}", (object?)name ?? index);

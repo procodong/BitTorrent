@@ -4,17 +4,18 @@ using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Infrastructure.MessageWriting;
 using BitTorrentClient.Engine.Models.Messages;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Listening;
 public class MessageWritingEventListener : IEventListener
 {
     private readonly IMessageWritingEventHandler _handler;
-    private readonly ChannelReader<IMemoryOwner<Message>> _messageReader;
+    private readonly ChannelReader<MaybeRentedArray<Message>> _messageReader;
     private readonly ChannelReader<BlockRequest> _cancellationReader;
     private readonly PeriodicTimer _keepAliveTimer;
 
-    public MessageWritingEventListener(IMessageWritingEventHandler handler, ChannelReader<IMemoryOwner<Message>> messageReader, ChannelReader<BlockRequest> cancellationReader, PeriodicTimer keepAliveTimer)
+    public MessageWritingEventListener(IMessageWritingEventHandler handler, ChannelReader<MaybeRentedArray<Message>> messageReader, ChannelReader<BlockRequest> cancellationReader, PeriodicTimer keepAliveTimer)
     {
         _handler = handler;
         _messageReader = messageReader;
@@ -24,10 +25,10 @@ public class MessageWritingEventListener : IEventListener
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<IMemoryOwner<Message>> messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        Task<BlockRequest> cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
-        Task delayTask = Task.Delay(-1, cancellationToken);
-        Task<bool> keepAliveTask = _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask();
+        var messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
+        var cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
+        var delayTask = Task.Delay(-1, cancellationToken);
+        var keepAliveTask = _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask();
 
         var delayer = new PieceDelayingHandle();
 

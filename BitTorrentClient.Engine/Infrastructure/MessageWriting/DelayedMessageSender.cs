@@ -53,7 +53,7 @@ public class DelayedMessageSender : IDelayedMessageSender
 
     public async Task SendBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
-        int delay = _tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded);
+        var delay = _tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded);
         if (_tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded) < 0)
         {
             delayer.DelayNextPiece(-delay);
@@ -78,7 +78,7 @@ public class DelayedMessageSender : IDelayedMessageSender
 
     public bool TryCancelUpload(BlockRequest request)
     {
-        int index = _queuedBlocks.FindIndex(b => b.Request == request);
+        var index = _queuedBlocks.FindIndex(b => b.Request == request);
         if (index == -1) return false;
         _queuedBlocks.SwapRemove(index);
         return true;

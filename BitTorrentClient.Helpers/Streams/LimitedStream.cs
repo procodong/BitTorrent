@@ -44,7 +44,7 @@ public class LimitedStream : Stream
 
     public override int Read(Span<byte> buffer)
     {
-        int read = _stream.Read(buffer[..CapReadCount(buffer.Length)]);
+        var read = _stream.Read(buffer[..CapReadCount(buffer.Length)]);
         _position += read;
         return read;
     }

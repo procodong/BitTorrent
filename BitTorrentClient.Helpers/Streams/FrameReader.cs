@@ -48,8 +48,8 @@ public class FrameReader : IBufferReader
 
     public async Task<byte[]> ReadToEndAsync(CancellationToken cancellationToken = default)
     {
-        byte[] buffer = new byte[Remaining];
-        int start = _bytesRead;
+        var buffer = new byte[Remaining];
+        var start = _bytesRead;
         while (RemainingUnbuffered != 0)
         {
             var buffered = GetMemory();
@@ -62,7 +62,7 @@ public class FrameReader : IBufferReader
 
     public async Task EnsureReadAtLeastAsync(int count, CancellationToken cancellationToken = default)
     {
-        int cappedCount = int.Min(count, _cursor.AvailableBuffer);
+        var cappedCount = int.Min(count, _cursor.AvailableBuffer);
         while (Buffered < cappedCount)
         {
             await ReadAsync(cancellationToken);
@@ -72,7 +72,7 @@ public class FrameReader : IBufferReader
     public async Task ReadAsync(CancellationToken cancellationToken = default)
     {
         if (RemainingUnbuffered == 0 || _cursor.RemainingBuffer == 0) return;
-        int read = await _stream.ReadAsync(_cursor, cancellationToken);
+        var read = await _stream.ReadAsync(_cursor, cancellationToken);
         if (read == 0)
         {
             throw new EndOfStreamException();

@@ -22,14 +22,16 @@ public static class ClientLauncher
     public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger, CancellationToken cancellationToken)
     {
         var config = configBuilder.Build(Config.Default);
-        int peerBufferSize = config.RequestSize + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte);
+        var peerBufferSize = config.RequestSize + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte);
 
         var (port, socket) = FindPort();
 
         var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
-        var trackerFetcher = new TrackerFinder(logger, port, peerBufferSize);
+        var httpClient = new HttpClient();
+        var trackerConnector = new TrackerConnector(httpClient, port, peerBufferSize);
+        var trackerFinder = new TrackerFinder(logger, trackerConnector);
         var downloadLauncher = new DownloadLauncher(logger);
-        var downloads = new DownloadCollection(clientId, config, trackerFetcher, downloadLauncher);
+        var downloads = new DownloadCollection(clientId, config, trackerFinder, downloadLauncher);
         var downloadEventHandler = new DownloadEventHandler(downloads);
         var peerReceiver = new TcpPeerReceiver(socket, peerBufferSize);
         var downloadEventListener = new DownloadEventListener(downloadEventHandler, peerReceiver);
@@ -40,9 +42,9 @@ public static class ClientLauncher
     private static (int, TcpListener) FindPort()
     {
         SocketException? socketException = null;
-        for (int i = 0; i < 5; i++)
+        for (var i = 0; i < 5; i++)
         {
-            int port = Random.Shared.Next(49152, 65535);
+            var port = Random.Shared.Next(49152, 65535);
             var listener = new TcpListener(IPAddress.Any, port);
             try
             {

@@ -47,7 +47,7 @@ public class Downloader
             block = default;
             return false;
         }
-        int index = slot.Value;
+        var index = slot.Value;
         var download = _pieceRegisters[index];
         var request = download.GetRequest(Config.PieceSegmentSize);
         if (download.Remaining == 0)
@@ -68,11 +68,11 @@ public class Downloader
 
     private int? SearchPiece(LazyBitArray ownedPieces)
     {
-        int index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.Index]);
+        var index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.Index]);
         if (index != -1) return index;
         var creation = CreateDownload(ownedPieces);
         if (creation is null) return default;
-        int i = _pieceRegisters.Count;
+        var i = _pieceRegisters.Count;
         _pieceRegisters.Add(new(creation));
         return i;
     }
@@ -98,11 +98,11 @@ public class Downloader
 
     private PieceDownload? FindNextPiece(IEnumerable<int> pieces, LazyBitArray ownedPieces)
     {
-        int? piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
+        var piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;
-        int size = PieceSize(piece.Value);
-        int blockSize = _state.Download.Config.RequestSize;
-        var hasher = new PieceHasher(blockSize, 4, size / blockSize);
+        var size = PieceSize(piece.Value);
+        var bufferSize = _state.Download.Config.RequestSize * 4;
+        var hasher = new PieceHasher(bufferSize, size.DivWithRemainder(bufferSize));
         return new(size, piece.Value, hasher);
     }
 

@@ -5,17 +5,19 @@ using System.Web;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
+using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 public class HttpTrackerFetcher : ITrackerFetcher
 {
     private readonly HttpClient _httpClient;
-    public TrackerResponse? InitialResponse;
     private readonly int _peerBufferSize;
-    private readonly string _url;
+    private readonly Uri _url;
     private readonly int _listenPort;
+    
+    public TrackerResponse? InitialResponse { get; set; }
 
-    public HttpTrackerFetcher(HttpClient httpClient, string url, int listenPort, int peerBufferSize)
+    public HttpTrackerFetcher(HttpClient httpClient, Uri url, int listenPort, int peerBufferSize)
     {
         _httpClient = httpClient;
         _listenPort = listenPort;
@@ -23,28 +25,15 @@ public class HttpTrackerFetcher : ITrackerFetcher
         _peerBufferSize = peerBufferSize;
     }
 
-    private static string DisplayEvent(TrackerEvent trackerEvent)
-    {
-        return trackerEvent switch
-        {
-            TrackerEvent.Started => "started",
-            TrackerEvent.Stopped => "stopped",
-            TrackerEvent.Completed => "completed",
-            _ => throw new ArgumentException("Invalid tracker event")
-        };
-    }
-
-    private TrackerRequest GetRequest(TrackerUpdate update) =>
-        new(update.InfoHash, update.ClientId, _listenPort, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
-
     public async Task<TrackerResponse> FetchAsync(TrackerUpdate update, CancellationToken cancellationToken = default)
     {
         if (InitialResponse is not null)
         {
-            var respone = InitialResponse;
+            var res = InitialResponse;
             InitialResponse = null;
-            return respone;
+            return res;
         }
+        
         var request = GetRequest(update);
         var builder = new UriBuilder(_url)
         {
@@ -98,7 +87,22 @@ public class HttpTrackerFetcher : ITrackerFetcher
             );
     }
 
+    private static string DisplayEvent(TrackerEvent trackerEvent)
+    {
+        return trackerEvent switch
+        {
+            TrackerEvent.Started => "started",
+            TrackerEvent.Stopped => "stopped",
+            TrackerEvent.Completed => "completed",
+            _ => throw new ArgumentException("Invalid tracker event")
+        };
+    }
+
+    private TrackerRequest GetRequest(TrackerUpdate update) =>
+        new(update.InfoHash, update.ClientId, _listenPort, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
+
     public void Dispose()
     {
+        _httpClient.Dispose();
     }
 }

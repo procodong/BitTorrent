@@ -5,6 +5,7 @@ using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
+using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Events.Listening;
@@ -34,11 +35,11 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        Task<PeerWireStream> peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
+        var peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
         Task updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
-        Task<int?> peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
-        Task<int> pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
-        Task<DownloadExecutionState> fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
+        var peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
+        var pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
+        var fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
         Task trackerUpdateTask = _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken);
         while (true)
         {
@@ -79,7 +80,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
             {
                 try
                 {
-                    int? peer = await peerRemovalTask;
+                    var peer = await peerRemovalTask;
                     await _handler.OnPeerRemovalAsync(peer, cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)

@@ -30,7 +30,7 @@ public class SlotMap<T> : IEnumerable<T>
 
     public int Add(T item) 
     {
-        if (_freePlaces.TryPop(out int place))
+        if (_freePlaces.TryPop(out var place))
         {
             _buffer[place] = new(item);
             return place;
@@ -44,7 +44,7 @@ public class SlotMap<T> : IEnumerable<T>
 
     public T Add(Func<int, T> func)
     {
-        if (_freePlaces.TryPop(out int place))
+        if (_freePlaces.TryPop(out var place))
         {
             var item = func(place);
             _buffer[place] = new(item);

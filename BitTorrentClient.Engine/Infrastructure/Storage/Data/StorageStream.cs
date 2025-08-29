@@ -16,13 +16,13 @@ public class StorageStream : IDisposable, IAsyncDisposable
 
     private IEnumerable<StreamPart> GetParts(long offset, long length)
     {
-        int bytesRead = 0;
-        int start = Search(offset);
-        for (int i = start; bytesRead < length; i++)
+        var bytesRead = 0;
+        var start = Search(offset);
+        for (var i = start; bytesRead < length; i++)
         {
-            StreamData file = _saves[i];
-            long position = i == start ? offset - file.ByteOffset : 0;
-            int readLen = (int)long.Min(length - bytesRead, file.Size - position);
+            var file = _saves[i];
+            var position = i == start ? offset - file.ByteOffset : 0;
+            var readLen = (int)long.Min(length - bytesRead, file.Size - position);
             yield return new(file, readLen, position);
             bytesRead += readLen;
         }
@@ -30,12 +30,12 @@ public class StorageStream : IDisposable, IAsyncDisposable
 
     private int Search(long byteOffset)
     {
-        int low = 0;
-        int high = _saves.Count - 1;
+        var low = 0;
+        var high = _saves.Count - 1;
 
         while (low <= high)
         {
-            int mid = (low + high) / 2;
+            var mid = (low + high) / 2;
             if (mid < _saves.Count - 1 && byteOffset >= _saves[mid].ByteOffset && byteOffset < _saves[mid + 1].ByteOffset)
             {
                 return mid;

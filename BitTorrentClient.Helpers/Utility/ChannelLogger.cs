@@ -18,17 +18,6 @@ public class ChannelLogger : ILogger, IDisposable, IAsyncDisposable
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default!;
 
-    public void Dispose()
-    {
-        _fullOutput.Dispose();
-    }
-
-
-    public ValueTask DisposeAsync()
-    {
-        return _fullOutput.DisposeAsync();
-    }
-
     public bool IsEnabled(LogLevel logLevel) => true;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -36,7 +25,6 @@ public class ChannelLogger : ILogger, IDisposable, IAsyncDisposable
         var message = formatter(state, exception);
         if (logLevel != LogLevel.Information)
         {
-
             _ = WriteToFileAsync(logLevel, message);
         }
 
@@ -64,5 +52,16 @@ public class ChannelLogger : ILogger, IDisposable, IAsyncDisposable
         {
             _lock.Release();
         }
+    }
+
+    public void Dispose()
+    {
+        _fullOutput.Dispose();
+    }
+
+
+    public ValueTask DisposeAsync()
+    {
+        return _fullOutput.DisposeAsync();
     }
 }

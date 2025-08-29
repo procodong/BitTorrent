@@ -39,7 +39,7 @@ public class PeerLauncher : IPeerLauncher
     {
         var haveChannel = Channel.CreateBounded<int>(8);
         var relationChannel = Channel.CreateBounded<DataTransferVector>(8);
-        var messageChannel = Channel.CreateBounded<IMemoryOwner<Message>>(8);
+        var messageChannel = Channel.CreateBounded<MaybeRentedArray<Message>>(8);
         var cancellationCannel = Channel.CreateBounded<BlockRequest>(8);
 
         var state = new PeerState(new(_pieceCount), new(long.MaxValue, long.MaxValue));

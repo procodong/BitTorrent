@@ -24,7 +24,7 @@ public class BlockStorage
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
         Task readStream;
-        lock (block.Piece.Hasher) readStream = block.Piece.Hasher.SaveBlock(stream, block.Begin, cancellationToken);
+        lock (block.Piece.Hasher) readStream = block.Piece.Hasher.SaveBlockAsync(stream, block.Begin, cancellationToken);
         await readStream;
         lock (block.Piece.Hasher)
         {
@@ -33,7 +33,7 @@ public class BlockStorage
                 _ = _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + offset, buffer);
             }
         }
-        int newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
+        var newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         if (newDownloaded < block.Piece.Size)
         {
             return;
@@ -42,7 +42,7 @@ public class BlockStorage
         {
             throw new InvalidDataException();
         }
-        await _haveWriter.WriteAsync(block.Piece.Index, CancellationToken.None);
+        await _haveWriter.WriteAsync(block.Piece.Index, CancellationToken.None); // SEND AFTER DATA IS WRITTEN TO STORAGE
     }
 
     public BlockStream RequestBlock(BlockRequest request)
@@ -53,8 +53,8 @@ public class BlockStorage
 
     private void ValidateRequest(BlockRequest request)
     {
-        int size = PieceSize(request.Index);
-        int end = request.Begin + request.Length;
+        var size = PieceSize(request.Index);
+        var end = request.Begin + request.Length;
         if (end > size || end < 0)
         {
             throw new BadPeerException(PeerErrorReason.InvalidRequest);

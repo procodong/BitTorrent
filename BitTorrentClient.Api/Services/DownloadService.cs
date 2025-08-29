@@ -7,7 +7,6 @@ using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Models.Downloads;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using Microsoft.Extensions.Logging;
 
@@ -40,23 +39,19 @@ internal class DownloadService : IDownloadService
         var files = torrent.FileMode == TorrentFileMode.Multi
             ? torrent.Files.Select(v => new FileData(v.FileName, v.FileSize)).ToArray()
             : [new(torrent.File.FileName, torrent.File.FileSize)];
-        var data = new DownloadData(torrent.GetInfoHashBytes(), torrent.Pieces, torrent.Trackers.Select(v => v.ToArray()).ToArray(), files, (int)torrent.PieceSize, torrent.NumberOfPieces, torrent.TotalSize, name ?? torrent.DisplayName, path);
+        var data = new DownloadData(torrent.GetInfoHashBytes(), torrent.Pieces, torrent.Trackers.Select(v => v.Select(s => new Uri(s)).ToArray()).ToArray(), files, (int)torrent.PieceSize, torrent.NumberOfPieces, torrent.TotalSize, name ?? torrent.DisplayName, path);
         var storage = CreateStorage(data);
-        var handle = await _downloads.AddDownloadAsync(data, storage);
-        return new DownloadController(handle.Writer, handle.State);
+        var handle = _downloads.AddDownload(data, storage);
+        var controller = new DownloadController(handle.Writer, handle.State);
+        _controllers.TryAdd(new(data.InfoHash), controller);
+        return controller;
     }
 
-    public async Task AddDownloadAsync(DownloadModel data)
+    public IDownloadController AddDownload(DownloadModel data)
     {
         var storage = CreateStorage(data.Data);
-        await _downloads.AddDownloadAsync(data.Data, storage);
-    }
-
-    private static StorageStream CreateStorage(DownloadData data)
-    {
-        return data.Files.Length != 1
-            ? DownloadStorageFactory.CreateMultiFileStorage(data.SavePath, data.Files)
-            : DownloadStorageFactory.CreateSingleFileStorage(new(Path.Combine(data.SavePath, data.Files[0].Path), data.Files[0].Size));
+        var handle = _downloads.AddDownload(data.Data, storage);
+        return new DownloadController(handle.Writer, handle.State);
     }
 
     public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)
@@ -72,6 +67,13 @@ internal class DownloadService : IDownloadService
         {
             yield return _controllers.GetOrAdd(new(download.State.Download.Data.InfoHash), _ => new DownloadController(download.Writer, download.State));
         }
+    }
+
+    private static StorageStream CreateStorage(DownloadData data)
+    {
+        return data.Files.Length != 1
+            ? DownloadStorageFactory.CreateMultiFileStorage(data.SavePath, data.Files)
+            : DownloadStorageFactory.CreateSingleFileStorage(new(Path.Combine(data.SavePath, data.Files[0].Path), data.Files[0].Size));
     }
     
     public void Dispose()

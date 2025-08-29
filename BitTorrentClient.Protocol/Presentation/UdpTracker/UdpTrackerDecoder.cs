@@ -10,9 +10,9 @@ public static class UdpTrackerDecoder
         var interval = reader.ReadInt32();
         var leechers = reader.ReadInt32();
         var seeders = reader.ReadInt32();
-        int peerCount = reader.Remaining / (sizeof(int) + sizeof(short));
+        var peerCount = reader.Remaining / (sizeof(int) + sizeof(short));
         var peers = new IPEndPoint[peerCount];
-        for (int i = 0; i < peerCount; i++)
+        for (var i = 0; i < peerCount; i++)
         {
             var ip = reader.ReadBytes(4);
             var port = reader.ReadUInt16();

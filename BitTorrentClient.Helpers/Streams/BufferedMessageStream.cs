@@ -21,7 +21,7 @@ public class BufferedMessageStream : IDisposable, IAsyncDisposable
         {
             await _stream.ReadAsync(_cursor, cancellationToken);
         }
-        int size = BinaryPrimitives.ReadInt32BigEndian(_cursor.GetSpan());
+        var size = BinaryPrimitives.ReadInt32BigEndian(_cursor.GetSpan());
         _cursor.Advance(sizeof(int));
         return new(_stream, _cursor, size);
     }

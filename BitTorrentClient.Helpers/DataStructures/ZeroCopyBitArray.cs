@@ -8,7 +8,7 @@ public readonly struct ZeroCopyBitArray
     public ZeroCopyBitArray(int length)
     {
         _bitLength = length;
-        int realLength = length / 8;
+        var realLength = length / 8;
         if (length % 8 != 0) realLength++;
         _buffer = new byte[realLength];
     }
@@ -26,16 +26,16 @@ public readonly struct ZeroCopyBitArray
     {
         get
         {
-            byte value = _buffer[index / 8];
-            int offset = index % 8;
-            byte mask = (byte)(1 << offset);
+            var value = _buffer[index / 8];
+            var offset = index % 8;
+            var mask = (byte)(1 << offset);
             return (value & mask) != 0;
         }
         set
         {
-            ref byte target = ref _buffer[index / 8];
-            int offset = index % 8;
-            byte mask = (byte)(1 << offset);
+            ref var target = ref _buffer[index / 8];
+            var offset = index % 8;
+            var mask = (byte)(1 << offset);
             if (value)
             {
                 target |= mask;

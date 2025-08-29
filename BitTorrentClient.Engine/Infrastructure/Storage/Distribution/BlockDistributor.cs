@@ -27,7 +27,7 @@ public class BlockDistributor : IBlockRequester
         foreach (var block in _requests)
         {
             currentBlock ??= block;
-            int blockEnd = currentBlock.Value.Begin + currentBlock.Value.Length;
+            var blockEnd = currentBlock.Value.Begin + currentBlock.Value.Length;
             if (blockEnd == block.Begin)
             {
                 currentBlock = currentBlock.Value with
@@ -99,7 +99,7 @@ public class BlockDistributor : IBlockRequester
         {
             lock (_downloader)
             {
-                if (_downloader.TryAssignBlock(pieces, out Block newBlock))
+                if (_downloader.TryAssignBlock(pieces, out var newBlock))
                 {
                     _blockCursor = new(newBlock);
                     request = _blockCursor.GetRequest(_downloader.Config.RequestSize);

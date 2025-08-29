@@ -4,14 +4,14 @@ namespace BitTorrentClient.Helpers.DataStructures;
 
 public class PooledList<T>
 {
-    private IMemoryOwner<T> _buffer;
+    private T[] _buffer;
     private int _expectedCapacity;
     private int _length;
 
     public PooledList(int size)
     {
         _expectedCapacity = int.Max(size, 8);
-        _buffer = MemoryPool<T>.Shared.Rent(size);
+        _buffer = ArrayPool<T>.Shared.Rent(size);
     }
 
     public PooledList() : this(-1)
@@ -23,24 +23,22 @@ public class PooledList<T>
 
     public void Add(T item)
     {
-        var buffer = _buffer.Memory;
-        if (_length == buffer.Length)
+        if (_length == _buffer.Length)
         {
-            _expectedCapacity = buffer.Length * 2;
-            var newBuffer = MemoryPool<T>.Shared.Rent(_expectedCapacity);
-            buffer[.._length].CopyTo(newBuffer.Memory);
-            _buffer.Dispose();
+            _expectedCapacity = _buffer.Length * 2;
+            var newBuffer = ArrayPool<T>.Shared.Rent(_expectedCapacity);
+            _buffer.AsSpan(0, _length).CopyTo(newBuffer);
             _buffer = newBuffer;
         }
-        buffer.Span[_length++] = item;
+        _buffer[_length++] = item;
     }
 
-    public IMemoryOwner<T> Take()
+    public MaybeRentedArray<T> Take()
     {
-        var old = new SlicedMemoryOwner<T>(_buffer, 0.._length);
-        int expectedCapacity = _length < _expectedCapacity ? _expectedCapacity : _buffer.Memory.Length;
+        var old = new MaybeRentedArray<T>(_buffer, _length, rented: true);
+        var expectedCapacity = _length < _expectedCapacity ? _expectedCapacity : _buffer.Length;
         _length = 0;
-        _buffer = MemoryPool<T>.Shared.Rent(expectedCapacity);
+        _buffer = ArrayPool<T>.Shared.Rent(expectedCapacity);
         return old;
     }
 }

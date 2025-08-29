@@ -18,7 +18,7 @@ public class PeerEventHandler : IPeerEventHandler
 
     public async Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default)
     {
-        if (bitfield.Length != _peer.DownloadedPieces.Size)
+        if (bitfield.Length != _peer.DownloadedPieces.Buffer.Length)
         {
             throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
         }

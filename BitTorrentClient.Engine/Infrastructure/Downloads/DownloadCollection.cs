@@ -9,6 +9,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
+using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Engine.Infrastructure.Downloads;
 
@@ -17,10 +18,10 @@ public class DownloadCollection : IDownloadRepository
     private readonly ConcurrentDictionary<DownloadId, PeerManagerHandle> _downloads;
     private readonly string _clientId;
     private readonly Config _config;
-    private readonly ITrackerFinder _trackerFinder;
+    private readonly TrackerFinder _trackerFinder;
     private readonly IDownloadLauncher _launcher;
 
-    public DownloadCollection(string clientId, Config config, ITrackerFinder trackerFinder, IDownloadLauncher launcher)
+    public DownloadCollection(string clientId, Config config, TrackerFinder trackerFinder, IDownloadLauncher launcher)
     {
         _clientId = clientId;
         _config = config;
@@ -29,10 +30,10 @@ public class DownloadCollection : IDownloadRepository
         _downloads = new();
     }
 
-    public async Task<DownloadHandle> AddDownloadAsync(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default)
+    public DownloadHandle AddDownload(DownloadData data, StorageStream storage, CancellationToken cancellationToken = default)
     {
-        var tracker = await _trackerFinder.FindTrackerAsync(data.Trackers);
         var download = new Download(_clientId, data, _config);
+        var tracker = new LazyTrackerFinder(_trackerFinder, data.Trackers);
         var handle = _launcher.LaunchDownload(download, storage, tracker);
         _downloads.TryAdd(new(data.InfoHash), handle);
         return new(handle.State, handle.StateWriter);
@@ -54,12 +55,6 @@ public class DownloadCollection : IDownloadRepository
         return _downloads.Values.Select(handle => new DownloadHandle(handle.State, handle.StateWriter));
     }
 
-    public DownloadHandle GetDownload(DownloadId id)
-    {
-        var handle = _downloads[id];
-        return new(handle.State, handle.StateWriter);
-    }
-
     public async Task AddPeerAsync(PendingPeerWireStream<InitialReadDataPhase> peer,
         CancellationToken cancellationToken = default)
     {
@@ -76,6 +71,7 @@ public class DownloadCollection : IDownloadRepository
         {
             await download.Value.Canceller.CancelAsync();
         }
+        await Task.WhenAll(_downloads.Values.Select(d => d.FinishedTask));
         _downloads.Clear();
     }
 
@@ -85,6 +81,7 @@ public class DownloadCollection : IDownloadRepository
         {
             download.Value.Canceller.Cancel();
         }
+        Task.WhenAll(_downloads.Values.Select(d => d.FinishedTask)).GetAwaiter().GetResult();
         _downloads.Clear();
     }
 }

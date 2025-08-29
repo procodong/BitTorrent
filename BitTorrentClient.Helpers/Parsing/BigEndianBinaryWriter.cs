@@ -22,7 +22,7 @@ public readonly struct BigEndianBinaryWriter
     public void Write(string text)
     {
         var buffer = _writer.GetSpan(text.Length);
-        int len = Encoding.UTF8.GetBytes(text, buffer);
+        var len = Encoding.UTF8.GetBytes(text, buffer);
         _writer.Advance(len);
     }
 

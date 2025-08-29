@@ -1,8 +1,8 @@
 ﻿namespace BitTorrentClient.Helpers.DataStructures;
 public class DataTransferCounter
 {
-    private long _downloaded = 0;
-    private long _uploaded = 0;
+    private long _downloaded;
+    private long _uploaded;
 
     public DataTransferCounter(DataTransferVector vector)
     {
@@ -19,8 +19,8 @@ public class DataTransferCounter
 
     public DataTransferVector FetchReplace(DataTransferVector vector)
     {
-        long downloaded = Interlocked.Exchange(ref _downloaded, vector.Download);
-        long uploaded = Interlocked.Exchange(ref _uploaded, vector.Upload);
+        var downloaded = Interlocked.Exchange(ref _downloaded, vector.Download);
+        var uploaded = Interlocked.Exchange(ref _uploaded, vector.Upload);
         return new(downloaded, uploaded);
     }
 

@@ -12,7 +12,7 @@ public class PriorityStack<T>(int size, IComparer<T> comparer) : IEnumerable<T>
         {
             _stack.RemoveAt(_stack.Count - 1);
         }
-        int index = _stack.TakeWhile(other => _comparer.Compare(other, item) > 0).Count();
+        var index = _stack.TakeWhile(other => _comparer.Compare(other, item) > 0).Count();
         _stack.Insert(index, item);
     }
 

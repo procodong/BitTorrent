@@ -47,7 +47,7 @@ public class ConcatStream : Stream
         switch (_current)
         {
             case CurentStream.First:
-                int read = _firstStream.Read(buffer);
+                var read = _firstStream.Read(buffer);
                 if (read == 0)
                 {
                     _current = CurentStream.Second;
@@ -56,7 +56,7 @@ public class ConcatStream : Stream
                 _positon += read;
                 return read;
             case CurentStream.Second:
-                int count = _secondStream.Read(buffer);
+                var count = _secondStream.Read(buffer);
                 _positon += count;
                 return count;
         }
@@ -68,7 +68,7 @@ public class ConcatStream : Stream
         switch (_current)
         {
             case CurentStream.First:
-                int read = await _firstStream.ReadAsync(buffer, cancellationToken);
+                var read = await _firstStream.ReadAsync(buffer, cancellationToken);
                 if (read == 0)
                 {
                     _current = CurentStream.Second;
@@ -77,7 +77,7 @@ public class ConcatStream : Stream
                 _positon += read;
                 return read;
             case CurentStream.Second:
-                int count = await _secondStream.ReadAsync(buffer, cancellationToken);
+                var count = await _secondStream.ReadAsync(buffer, cancellationToken);
                 _positon += count;
                 return count;
             default:

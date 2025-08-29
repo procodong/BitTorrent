@@ -71,7 +71,7 @@ public class FrameStream : Stream
             await _reader.ReadAsync(cancellationToken);
             buffered = _reader.GetMemory();
         }
-        int read = int.Min(buffered.Length, buffer.Length);
+        var read = int.Min(buffered.Length, buffer.Length);
         buffered[..read].CopyTo(buffer);
         _reader.Advance(read);
         return read;

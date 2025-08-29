@@ -15,7 +15,7 @@ public class BlockCursor
 
     public Block GetRequest(int requestSize)
     {
-        int size = int.Min(_block.Length - _position, requestSize);
+        var size = int.Min(_block.Length - _position, requestSize);
         var block = new Block(_block.Piece, _block.Begin + _position, size);
         _position += size;
         return block;

@@ -29,7 +29,7 @@ public class BlockStream : Stream
     {
         if (!_cursor.TryGetPart(out var part)) return 0;
         var stream = await part.StreamData.Handle.Value;
-        int readCount = await stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], part.Position, cancellationToken);
+        var readCount = await stream.ReadAsync(buffer[..CapReadCount(buffer.Length)], part.Position, cancellationToken);
         _cursor.Advance(readCount);
         return readCount;
     }
@@ -38,7 +38,7 @@ public class BlockStream : Stream
     {
         if (!_cursor.TryGetPart(out var part)) return 0;
         var stream = part.StreamData.Handle.Value.GetAwaiter().GetResult();
-        int readCount = stream.Read(buffer[..CapReadCount(buffer.Length)], part.Position);
+        var readCount = stream.Read(buffer[..CapReadCount(buffer.Length)], part.Position);
         _cursor.Advance(readCount);
         return readCount;
     }
@@ -50,12 +50,12 @@ public class BlockStream : Stream
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        int writtenBytes = 0;
+        var writtenBytes = 0;
         while (writtenBytes < buffer.Length)
         {
             if (!_cursor.TryGetPart(out var part)) return;
             var handle = await part.StreamData.Handle.Value;
-            int writeLen = CapReadCount(buffer.Length - writtenBytes);
+            var writeLen = CapReadCount(buffer.Length - writtenBytes);
             await handle.WriteAsync(buffer.Slice(writtenBytes, writeLen), part.Position, cancellationToken);
             _cursor.Advance(writeLen);
             writtenBytes += writeLen;

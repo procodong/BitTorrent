@@ -3,24 +3,25 @@ public class LazyBitArray
 {
     private ZeroCopyBitArray _bitfield;
     private BitfieldState _state;
-    private readonly int _size;
+    private readonly int _bitSize;
 
     public bool AllSet => _state == BitfieldState.AllSet;
     public bool NoneSet => _state == BitfieldState.NoneSet;
-    public int Size => _size;
+    public int BitSize => _bitSize;
     public byte[] Buffer => _bitfield.Buffer;
 
     public LazyBitArray(ZeroCopyBitArray bitfield)
     {
         _bitfield = bitfield;
         _state = BitfieldState.Unknown;
-        _size = bitfield.Length;
+        _bitSize = bitfield.Length;
     }
 
-    public LazyBitArray(int size, bool allSet = false)
+    public LazyBitArray(int bitSize, bool allSet = false)
     {
         _state = allSet ? BitfieldState.AllSet : BitfieldState.NoneSet;
-        _size = size;
+        _bitSize = bitSize;
+        
     }
 
     public bool this[int index]
@@ -38,13 +39,13 @@ public class LazyBitArray
             {
                 case BitfieldState.AllSet:
                     if (value) return;
-                    _bitfield = new(_size);
+                    _bitfield = new(_bitSize);
                     _bitfield.Buffer.AsSpan().Fill(byte.MaxValue);
                     _state = BitfieldState.Unknown;
                     break;
                 case BitfieldState.NoneSet:
                     if (!value) return;
-                    _bitfield = new(_size);
+                    _bitfield = new(_bitSize);
                     _state = BitfieldState.Unknown;
                     break;
             }

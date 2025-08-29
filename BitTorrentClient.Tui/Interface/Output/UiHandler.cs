@@ -40,7 +40,7 @@ public class UiHandler
 
     public void Update(IEnumerable<DownloadUpdate> updates)
     {
-        bool any = false;
+        var any = false;
         foreach (var update in updates)
         {
             any = true;
@@ -54,7 +54,7 @@ public class UiHandler
             }
             else
             {
-                int index = _downloadsTable.Rows.Count;
+                var index = _downloadsTable.Rows.Count;
                 _downloadsTable.AddRow(update.DownloadName, update.Size.ToString(), update.ExecutionState.ToString(), $"{progress}%", update.Transfer.Download.ToString(), update.Transfer.Upload.ToString());
                 _downloads.Add(update.Identifier, index);
             }

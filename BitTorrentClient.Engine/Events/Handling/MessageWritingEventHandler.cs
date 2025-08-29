@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 using BitTorrentClient.Engine.Models.Messages;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Handling;
@@ -16,11 +17,10 @@ public class MessageWritingEventHandler : IMessageWritingEventHandler
         _sender = sender;
     }
 
-    public async Task OnMessageAsync(IMemoryOwner<Message> messages, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task OnMessageAsync(MaybeRentedArray<Message> messages, IPieceDelayer delayer, CancellationToken cancellationToken = default)
     {
         using var _ = messages;
-        var iter = MemoryMarshal.ToEnumerable<Message>(messages.Memory);
-        foreach (var message in iter)
+        foreach (var message in messages.Data)
         {
             switch (message.Type)
             {
