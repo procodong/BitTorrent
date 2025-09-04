@@ -4,7 +4,6 @@ using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
-using BitTorrentClient.Protocol.Transport.Trackers;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 using Microsoft.Extensions.Logging;
 

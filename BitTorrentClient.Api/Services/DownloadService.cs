@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using BencodeNET.IO;
 using BencodeNET.Torrents;
@@ -6,7 +5,6 @@ using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Infrastructure.Storage.Data;
-using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using Microsoft.Extensions.Logging;
 
@@ -15,14 +13,10 @@ namespace BitTorrentClient.Api.Services;
 internal class DownloadService : IDownloadService
 {
     private readonly IDownloadRepository _downloads;
-    private readonly ConcurrentDictionary<DownloadId, IDownloadController> _controllers;
-    private readonly ILogger _logger;
 
-    public DownloadService(IDownloadRepository downloads, ILogger logger)
+    public DownloadService(IDownloadRepository downloads)
     {
         _downloads = downloads;
-        _logger = logger;
-        _controllers = new();
     }
     
     public async Task<IDownloadController> AddDownloadAsync(FileInfo downloadFile, DirectoryInfo targetDirectory, string? name = null)
@@ -42,9 +36,7 @@ internal class DownloadService : IDownloadService
         var data = new DownloadData(torrent.GetInfoHashBytes(), torrent.Pieces, torrent.Trackers.Select(v => v.Select(s => new Uri(s)).ToArray()).ToArray(), files, (int)torrent.PieceSize, torrent.NumberOfPieces, torrent.TotalSize, name ?? torrent.DisplayName, path);
         var storage = CreateStorage(data);
         var handle = _downloads.AddDownload(data, storage);
-        var controller = new DownloadController(handle.Writer, handle.State);
-        _controllers.TryAdd(new(data.InfoHash), controller);
-        return controller;
+        return new DownloadController(handle.Writer, handle.State);
     }
 
     public IDownloadController AddDownload(DownloadModel data)
@@ -56,16 +48,23 @@ internal class DownloadService : IDownloadService
 
     public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)
     {
-        var successful = await _downloads.RemoveDownloadAsync(new(id));
-        if (successful) _controllers.Remove(new(id), out _);
-        return successful;
+        return await _downloads.RemoveDownloadAsync(new(id));
     }
 
-    public IEnumerable<IDownloadController> GetDownloads()
+    public IEnumerable<DownloadUpdate> GetDownloadUpdates()
     {
         foreach (var download in _downloads.GetDownloads())
         {
-            yield return _controllers.GetOrAdd(new(download.State.Download.Data.InfoHash), _ => new DownloadController(download.Writer, download.State));
+            var state = download.State;
+            yield return new(state.Download.Data.Name, state.DataTransfer.Fetch(), state.TransferRate, state.Download.Data.Size, (Information.DownloadExecutionState)state.ExecutionState, state.Download.Data.InfoHash);;
+        }
+    }
+
+    public IEnumerable<DownloadModel> GetDownloads()
+    {
+        foreach (var download in _downloads.GetDownloads())
+        {
+            yield return new(download.State.Download.Data);
         }
     }
 

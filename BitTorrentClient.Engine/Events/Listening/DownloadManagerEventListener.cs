@@ -4,12 +4,12 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 
 namespace BitTorrentClient.Engine.Events.Listening;
 
-public class DownloadEventListener : IEventListener
+public class DownloadManagerEventListener : IEventListener
 {
-    private readonly IDownloadEventHandler _handler;
+    private readonly IDownloadManagerEventHandler _handler;
     private readonly IPeerReceiver _peerReceiver;
 
-    public DownloadEventListener(IDownloadEventHandler handler, IPeerReceiver peerReceiver)
+    public DownloadManagerEventListener(IDownloadManagerEventHandler handler, IPeerReceiver peerReceiver)
     {
         _handler = handler;
         _peerReceiver = peerReceiver;

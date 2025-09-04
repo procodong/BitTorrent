@@ -5,11 +5,9 @@ using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
 using BitTorrentClient.Engine.Launchers.Interface;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Engine.Models.Downloads;
-using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;
-using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Engine.Infrastructure.Downloads;
 

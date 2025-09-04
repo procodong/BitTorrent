@@ -1,5 +1,4 @@
 ﻿using System.Threading.Channels;
-using BitTorrentClient.Api;
 using BitTorrentClient.Api.Downloads;
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +35,7 @@ public class UiUpdater
             {
                 var update = await updateTask;
                 if (!update) break;
-                _uiHandler.Update(_downloadService.GetDownloads().Select(c => c.State));
+                _uiHandler.Update(_downloadService.GetDownloadUpdates());
                 updateTask = _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask();
             }
         }

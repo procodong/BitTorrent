@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
+﻿using BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 using BitTorrentClient.Engine.Models.Messages;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;

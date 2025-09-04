@@ -32,11 +32,11 @@ public static class ClientLauncher
         var trackerFinder = new TrackerFinder(logger, trackerConnector);
         var downloadLauncher = new DownloadLauncher(logger);
         var downloads = new DownloadCollection(clientId, config, trackerFinder, downloadLauncher);
-        var downloadEventHandler = new DownloadEventHandler(downloads);
+        var downloadEventHandler = new DownloadManagerEventHandler(downloads);
         var peerReceiver = new TcpPeerReceiver(socket, peerBufferSize);
-        var downloadEventListener = new DownloadEventListener(downloadEventHandler, peerReceiver);
+        var downloadEventListener = new DownloadManagerEventListener(downloadEventHandler, peerReceiver);
         _ = downloadEventListener.ListenAsync(cancellationToken);
-        return new DownloadService(downloads, logger);
+        return new DownloadService(downloads);
     }
 
     private static (int, TcpListener) FindPort()

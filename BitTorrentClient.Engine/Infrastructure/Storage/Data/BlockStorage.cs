@@ -2,8 +2,6 @@
 using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
-using BitTorrentClient.Engine.Models.Downloads;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
@@ -28,9 +26,11 @@ public class BlockStorage
         await readStream;
         lock (block.Piece.Hasher)
         {
-            foreach (var (offset, buffer) in block.Piece.Hasher.HashReadyBlocks())
+            var writeTask = Task.WhenAll(block.Piece.Hasher.HashReadyBlocks().Select(write =>
+                _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + write.Offset, write.Buffer)));
+            if (block.Piece.Hasher.FinishedHashing)
             {
-                _ = _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + offset, buffer);
+                writeTask.ContinueWith(_ => _haveWriter.WriteAsync(block.Piece.Index, CancellationToken.None).AsTask());
             }
         }
         var newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
@@ -42,7 +42,6 @@ public class BlockStorage
         {
             throw new InvalidDataException();
         }
-        await _haveWriter.WriteAsync(block.Piece.Index, CancellationToken.None); // SEND AFTER DATA IS WRITTEN TO STORAGE
     }
 
     public BlockStream RequestBlock(BlockRequest request)

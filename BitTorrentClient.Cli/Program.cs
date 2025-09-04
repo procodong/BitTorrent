@@ -46,6 +46,6 @@ while (true)
         });
     Console.WriteLine(logReader.LatestMessage);
     Console.WriteLine("Press enter to resume download");
-    Console.ReadLine();
+    await Console.In.ReadLineAsync();
     await download.ResumeAsync();
 }

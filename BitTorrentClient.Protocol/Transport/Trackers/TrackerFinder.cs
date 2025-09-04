@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Sockets;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
@@ -20,7 +18,7 @@ public class TrackerFinder
     public async Task<ITrackerFetcher> FindTrackerAsync(Uri[][] uris, TrackerUpdate initialUpdate, CancellationToken cancellationToken = default)
     {
         var canceller = new CancellationTokenSource();
-        cancellationToken.Register(() => canceller.Cancel());
+        await using var _ = cancellationToken.Register(() => canceller.Cancel());
         var tasks = uris
             .SelectMany(uri => uri.OrderBy(_ => Random.Shared.Next()))
             .Select(uri => _trackerConnector.ConnectAsync(uri, initialUpdate, canceller.Token))

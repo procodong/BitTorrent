@@ -27,18 +27,29 @@ public class DataStorage : IDisposable, IAsyncDisposable
 
     public async Task WriteDataAsync(long offset, MaybeRentedArray<byte> array)
     {
-        var stream = _stream.GetStream(offset);
+        bool failedInitialWrite = false;
         try
         {
+            var stream = _stream.GetStream(offset);
             await stream.WriteAsync(array.Data, _cancellationToken);
         }
         catch (IOException)
         {
-            _failedWrites.Push(new(offset, array));
-            await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, _cancellationToken);
-            return;
+            failedInitialWrite = true;
+            bool success;
+            do
+            {
+
+                var callback = Channel.CreateBounded<bool>(4);
+                _failedWrites.Push(new(offset, array, callback));
+                await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, _cancellationToken);
+                success = await callback.Reader.ReadAsync(_cancellationToken);
+            } while (!success);
         }
-        array.Dispose();
+        finally
+        {
+            if (!failedInitialWrite) array.Dispose();
+        }
     }
 
     public void TryWritesAgain()
@@ -47,8 +58,8 @@ public class DataStorage : IDisposable, IAsyncDisposable
         var count = _failedWrites.TryPopRange(writes);
         for (var i = 0; i < count; i++)
         {
-            ref var write = ref writes[i];
-            _ = WriteDataAsync(write.Offset, write.Array);
+            var write = writes[i];
+            _ = WriteDataAsync(write.Offset, write.Array).ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask());
         }
     }
 
@@ -63,4 +74,4 @@ public class DataStorage : IDisposable, IAsyncDisposable
     }
 }
 
-readonly record struct FailedWrite(long Offset, MaybeRentedArray<byte> Array);
+readonly record struct FailedWrite(long Offset, MaybeRentedArray<byte> Array, ChannelWriter<bool> Callback);

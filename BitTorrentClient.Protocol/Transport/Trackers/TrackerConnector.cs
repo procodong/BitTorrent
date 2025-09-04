@@ -58,7 +58,7 @@ public class TrackerConnector : ITrackerConnector
     private async Task<ITrackerFetcher> ConnectHttpAsync(Uri uri, TrackerUpdate update, CancellationToken cancellationToken = default)
     {
         var fetcher = new HttpTrackerFetcher(_client, uri, _port, _peerBufferSize);
-        var response = await fetcher.FetchAsync(update, cancellationToken);
+        fetcher.InitialResponse = await fetcher.FetchAsync(update, cancellationToken);
         return fetcher;
     }
 }

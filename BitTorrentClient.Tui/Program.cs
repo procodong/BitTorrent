@@ -1,7 +1,6 @@
 ﻿using System.Threading.Channels;
 using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Api.PersistentState;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Tui;
 using Microsoft.Extensions.Logging;
 using BitTorrentClient.Helpers.Utility;
@@ -43,4 +42,4 @@ Console.CancelKeyPress += (_, e) =>
     closingWaiter.SetResult();
 };
 await closingWaiter.Task;
-await fileProvider.SaveStateAsync(downloadService.GetDownloads().Select(d => d.Download));
+await fileProvider.SaveStateAsync(downloadService.GetDownloads());

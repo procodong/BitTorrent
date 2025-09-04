@@ -5,11 +5,11 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Events.Handling;
 
-public class DownloadEventHandler : IDownloadEventHandler
+public class DownloadManagerEventHandler : IDownloadManagerEventHandler
 {
     private readonly IDownloadRepository _downloads;
 
-    public DownloadEventHandler(IDownloadRepository downloads)
+    public DownloadManagerEventHandler(IDownloadRepository downloads)
     {
         _downloads = downloads;
     }

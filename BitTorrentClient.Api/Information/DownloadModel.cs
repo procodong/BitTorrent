@@ -2,7 +2,7 @@ using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Api.Information;
 
-public readonly struct DownloadModel
+public class DownloadModel
 {
     internal DownloadData Data { get; }
     

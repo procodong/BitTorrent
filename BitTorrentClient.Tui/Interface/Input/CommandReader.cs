@@ -1,6 +1,5 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
-using BitTorrentClient.Api;
 using BitTorrentClient.Api.Downloads;
 using Microsoft.Extensions.Logging;
 

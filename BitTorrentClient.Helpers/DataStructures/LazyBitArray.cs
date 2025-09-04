@@ -21,7 +21,6 @@ public class LazyBitArray
     {
         _state = allSet ? BitfieldState.AllSet : BitfieldState.NoneSet;
         _bitSize = bitSize;
-        
     }
 
     public bool this[int index]
