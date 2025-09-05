@@ -14,7 +14,7 @@ public class CommandReader
     private readonly Command _continueCommand;
     private readonly IDownloadService _downloadService;
     private readonly ILogger _logger;
-    private readonly List<IDownloadController> _downloads;
+    private readonly List<IDownloadHandle> _downloads;
 
     private CommandReader(RootCommand commands, Command createCommand, Command removeCommand, Command pauseCommand, Command continueCommand, IDownloadService actionWriter, ILogger logger)
     {
@@ -140,7 +140,7 @@ public class CommandReader
         }
     }
 
-    private bool TryFindDownload(CommandResult result, IList<Option> options, out IDownloadController download)
+    private bool TryFindDownload(CommandResult result, IList<Option> options, out IDownloadHandle download)
     {
 
         var name = result.GetValue((Option<string>)options[0]);

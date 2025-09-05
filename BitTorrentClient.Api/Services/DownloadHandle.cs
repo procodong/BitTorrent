@@ -6,12 +6,12 @@ using DownloadExecutionState = BitTorrentClient.Engine.Models.Downloads.Download
 
 namespace BitTorrentClient.Api.Services;
 
-internal class DownloadController : IDownloadController
+internal class DownloadHandle : IDownloadHandle
 {
     private readonly ChannelWriter<DownloadExecutionState> _stateWriter;
     private readonly DownloadState _downloadState;
 
-    public DownloadController(ChannelWriter<DownloadExecutionState> stateWriter, DownloadState downloadState)
+    public DownloadHandle(ChannelWriter<DownloadExecutionState> stateWriter, DownloadState downloadState)
     {
         _stateWriter = stateWriter;
         _downloadState = downloadState;

@@ -2,7 +2,7 @@ using BitTorrentClient.Api.Information;
 
 namespace BitTorrentClient.Api.Downloads;
 
-public interface IDownloadController
+public interface IDownloadHandle
 {
     public Task ResumeAsync(CancellationToken cancellationToken = default);
     public Task PauseAsync(CancellationToken cancellationToken = default);

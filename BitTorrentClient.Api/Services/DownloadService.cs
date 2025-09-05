@@ -19,7 +19,7 @@ internal class DownloadService : IDownloadService
         _downloads = downloads;
     }
     
-    public async Task<IDownloadController> AddDownloadAsync(FileInfo downloadFile, DirectoryInfo targetDirectory, string? name = null)
+    public async Task<IDownloadHandle> AddDownloadAsync(FileInfo downloadFile, DirectoryInfo targetDirectory, string? name = null)
     {
         await using var file = File.Open(downloadFile.FullName, new FileStreamOptions
         {
@@ -36,14 +36,14 @@ internal class DownloadService : IDownloadService
         var data = new DownloadData(torrent.GetInfoHashBytes(), torrent.Pieces, torrent.Trackers.Select(v => v.Select(s => new Uri(s)).ToArray()).ToArray(), files, (int)torrent.PieceSize, torrent.NumberOfPieces, torrent.TotalSize, name ?? torrent.DisplayName, path);
         var storage = CreateStorage(data);
         var handle = _downloads.AddDownload(data, storage);
-        return new DownloadController(handle.Writer, handle.State);
+        return new DownloadHandle(handle.Writer, handle.State);
     }
 
-    public IDownloadController AddDownload(DownloadModel data)
+    public IDownloadHandle AddDownload(DownloadModel data)
     {
         var storage = CreateStorage(data.Data);
         var handle = _downloads.AddDownload(data.Data, storage);
-        return new DownloadController(handle.Writer, handle.State);
+        return new DownloadHandle(handle.Writer, handle.State);
     }
 
     public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)

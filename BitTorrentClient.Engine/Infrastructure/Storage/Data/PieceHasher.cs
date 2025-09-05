@@ -16,7 +16,7 @@ public class PieceHasher
         _hasher = SHA1.Create();
     }
 
-    public bool FinishedHashing => _hashedOffset == _buffers.Length;
+    public bool Finished => _hashedOffset == _buffers.Length;
     
     public Task SaveBlockAsync(Stream stream, int offset, CancellationToken cancellationToken = default)
     {
