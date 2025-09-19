@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Interface;
 public interface IBlockRequester
 {
-    IEnumerable<BlockRequest> DrainRequests();
+    void ClearRequests();
     bool TryGetBlock(BlockRequest request, out Stream stream);
     Task SaveBlockAsync(BlockData data, CancellationToken cancellationToken = default);
     bool TryRequestDownload(LazyBitArray pieces, out Block block);

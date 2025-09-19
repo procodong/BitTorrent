@@ -2,7 +2,7 @@ using System.Buffers;
 
 namespace BitTorrentClient.Helpers.DataStructures;
 
-public class PooledList<T>
+public sealed class PooledList<T>
 {
     private T[] _buffer;
     private int _expectedCapacity;

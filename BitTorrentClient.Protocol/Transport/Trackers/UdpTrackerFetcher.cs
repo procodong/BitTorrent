@@ -8,7 +8,7 @@ using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
-public class UdpTrackerFetcher : ITrackerFetcher
+public sealed class UdpTrackerFetcher : ITrackerFetcher
 {
     private readonly UdpClient _client;
     private readonly Random _random;

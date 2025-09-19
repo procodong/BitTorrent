@@ -9,9 +9,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Events.Listening;
 
-public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDisposable
+public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDisposable
 {
-    private readonly ChannelReader<int?> _peerRemovalReader;
+    private readonly ChannelReader<ReadOnlyMemory<byte>?> _peerRemovalReader;
     private readonly ChannelReader<int> _pieceCompletionReader;
     private readonly ChannelReader<PeerWireStream> _peerReader;
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
@@ -20,7 +20,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     private readonly IPeerManagerEventHandler _handler;
     private readonly ILogger _logger;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<int?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, ILogger logger)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<ReadOnlyMemory<byte>?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, ILogger logger)
     {
         _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
@@ -35,7 +35,7 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
         var peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
-        Task updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
+        var updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
         var peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
         var pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
         var fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
@@ -173,13 +173,14 @@ public class PeerManagerEventListener : IEventListener, IDisposable, IAsyncDispo
     {
         await _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Stopped), CancellationToken.None);
         _trackerFetcher.Dispose();
-        if (_handler is IAsyncDisposable handlerAsyncDisposable)
+        switch (_handler)
         {
-            await handlerAsyncDisposable.DisposeAsync();
-        }
-        else if (_handler is IDisposable handlerDisposable)
-        {
-            handlerDisposable.Dispose();
+            case IAsyncDisposable handlerAsyncDisposable:
+                await handlerAsyncDisposable.DisposeAsync();
+                break;
+            case IDisposable handlerDisposable:
+                handlerDisposable.Dispose();
+                break;
         }
     }
 }

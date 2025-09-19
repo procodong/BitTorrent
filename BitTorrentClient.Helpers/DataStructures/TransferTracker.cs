@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 
 namespace BitTorrentClient.Helpers.DataStructures;
-public class TransferTracker
+public sealed class TransferTracker
 {
     private readonly Stopwatch _uploadTimer;
     private long _transfer;

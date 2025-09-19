@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Input;
 
-public class CommandReader
+public sealed class CommandReader
 {
     private readonly RootCommand _commands;
     private readonly Command _createCommand;
@@ -16,7 +16,7 @@ public class CommandReader
     private readonly ILogger _logger;
     private readonly List<IDownloadHandle> _downloads;
 
-    private CommandReader(RootCommand commands, Command createCommand, Command removeCommand, Command pauseCommand, Command continueCommand, IDownloadService actionWriter, ILogger logger)
+    private CommandReader(RootCommand commands, Command createCommand, Command removeCommand, Command pauseCommand, Command continueCommand, IDownloadService actionWriter, List<IDownloadHandle> downloads, ILogger logger)
     {
         _commands = commands;
         _createCommand = createCommand;
@@ -25,10 +25,10 @@ public class CommandReader
         _continueCommand = continueCommand;
         _downloadService = actionWriter;
         _logger = logger;
-        _downloads = [];
+        _downloads = downloads;
     }
 
-    public static CommandReader Create(IDownloadService actionWriter, ILogger logger)
+    public static CommandReader Create(IDownloadService actionWriter, List<IDownloadHandle> downloads, ILogger logger)
     {
         var createCommand = new Command("download")
         {
@@ -58,14 +58,14 @@ public class CommandReader
             pauseCommand,
             continueCommand
         };
-        return new(commands, createCommand, removeCommand, pauseCommand, continueCommand, actionWriter, logger);
+        return new(commands, createCommand, removeCommand, pauseCommand, continueCommand, actionWriter, downloads, logger);
     }
-
-    public async Task ReadAsync(CancellationToken cancellationToken = default)
+    
+    public async Task ReadAsync(TextReader reader, CancellationToken cancellationToken = default)
     {
         while (true)
         {
-            var line = await Console.In.ReadLineAsync(cancellationToken);
+            var line = await reader.ReadLineAsync(cancellationToken);
             if (line is null) return;
             var parsed = _commands.Parse(line);
             foreach (var error in parsed.Errors)
@@ -101,7 +101,7 @@ public class CommandReader
             {
                 try
                 {
-                    await _downloadService.RemoveDownloadAsync(download.Download.Identifier);
+                    _downloadService.RemoveDownload(download.Download.Identifier);
                     _downloads.Remove(download);
                 }
                 catch (Exception ex)

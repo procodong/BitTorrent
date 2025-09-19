@@ -4,7 +4,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Sending;
-public class PipedPeerWireWriter : IPeerWireWriter
+public sealed class PipedPeerWireWriter : IPeerWireWriter
 {
     private readonly PipeWriter _pipe;
     private BigEndianBinaryWriter Writer => new(_pipe);
@@ -51,7 +51,7 @@ public class PipedPeerWireWriter : IPeerWireWriter
         MessageEncoder.EncodePieceRequest(Writer, request);
     }
 
-    public virtual async Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
+    public async Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
     {
         MessageEncoder.EncodeHeader(Writer, new(block.Request.Length + 9, MessageType.Piece));
         MessageEncoder.EncodePieceHeader(Writer, new(block.Request.Index, block.Request.Begin));

@@ -1,17 +1,14 @@
 ﻿using System.Collections;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 using BitTorrentClient.Engine.Launchers.Interface;
-using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Utility;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
+public sealed class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
 {
-    private readonly SlotMap<PeerHandle> _peers = [];
-    private readonly HashSet<ReadOnlyMemory<byte>> _peerIds;
+    private readonly Dictionary<ReadOnlyMemory<byte>, PeerHandle> _peers;
     private readonly PeerConnector _connector;
     private readonly IPeerLauncher _launcher;
     private IEnumerable<IPeerConnector> _potentialPeers = [];
@@ -22,30 +19,29 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
 
     public PeerCollection(PeerConnector connector, IPeerLauncher launcher, int maxParallelPeers)
     {
+        _peers = new(new MemoryComparer<byte>());
         _connector = connector;
         _launcher = launcher;
         _missedPeers = maxParallelPeers;
         _peerCursor = DefaultValueEnumerator<(int, IPeerConnector)>.Instance;
-        _peerIds = new(new MemoryComparer<byte>());
     }
 
     public void Add(PeerWireStream stream)
     {
-        var peerId = stream.ReceivedHandshake.PeerId;
-        if (!_peerIds.Add(peerId))
+        if (_peers.ContainsKey(stream.ReceivedHandshake.PeerId))
         {
-            ConnectNext();
-            return;
+            stream.Dispose();
         }
-        _peers.Add(i => _launcher.LaunchPeer(stream, i));
+        _peers.Add(stream.ReceivedHandshake.PeerId, _launcher.LaunchPeer(stream));
     }
 
-    public void Remove(int? index)
+    public void Remove(ReadOnlyMemory<byte>? id)
     {
-        if (index is not null)
+        if (id is not null)
         {
-            _peers[index.Value].Canceller.Cancel();
-            _peers.Remove(index.Value);
+            var peer = _peers[id.Value];
+            peer.Canceller.Cancel();
+            _peers.Remove(id.Value);
         }
         ConnectNext();
     }
@@ -64,12 +60,12 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return _peers.GetEnumerator();
+        return _peers.Values.GetEnumerator();
     }
 
     public IEnumerator<PeerHandle> GetEnumerator()
     {
-        return _peers.GetEnumerator();
+        return _peers.Values.GetEnumerator();
     }
 
     public void Feed(IEnumerable<IPeerConnector> addresses)
@@ -77,7 +73,7 @@ public class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>
         var oldPeers = _potentialPeers.Take(_peerCursor.Current.Index).ToHashSet();
         _potentialPeers = addresses.Where(old => !oldPeers.Contains(old));
         _peerCursor.Dispose();
-        _peerCursor = _potentialPeers.Indexed().GetEnumerator();
+        _peerCursor = _potentialPeers.Index().GetEnumerator();
         int i;
         for (i = 0; i < _missedPeers && _peerCursor.MoveNext(); i++)
         {

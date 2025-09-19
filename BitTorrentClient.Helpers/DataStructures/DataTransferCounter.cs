@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.DataStructures;
-public class DataTransferCounter
+public sealed class DataTransferCounter
 {
     private long _downloaded;
     private long _uploaded;

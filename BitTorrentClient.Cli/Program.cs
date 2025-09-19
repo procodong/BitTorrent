@@ -16,8 +16,7 @@ var logger = new ChannelLogger(messageChannel.Writer, logFile);
 var logReader = new LogReader();
 _ = logReader.ReadLogs(messageChannel.Reader);
 
-var canceller = new CancellationTokenSource();
-await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger, canceller.Token);
+await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger);
 
 if (args.Length != 2)
 {

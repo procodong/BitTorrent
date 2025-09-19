@@ -7,7 +7,7 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Listening;
-public class MessageWritingEventListener : IEventListener
+public sealed class MessageWritingEventListener : IEventListener
 {
     private readonly IMessageWritingEventHandler _handler;
     private readonly ChannelReader<MaybeRentedArray<Message>> _messageReader;

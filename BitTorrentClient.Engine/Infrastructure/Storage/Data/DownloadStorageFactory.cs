@@ -4,9 +4,9 @@ using BitTorrentClient.Protocol.Presentation.Torrent;
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
 public static class DownloadStorageFactory
 {
-    public static StorageStream CreateMultiFileStorage(string path, IReadOnlyList<FileData> files)
+    public static StorageStream CreateMultiFileStorage(string path, FileData[] files)
     {
-        var createdFiles = new List<StreamData>(files.Count);
+        var createdFiles = new List<StreamData>(files.Length);
         long createdBytes = 0;
         foreach (var file in files)
         {

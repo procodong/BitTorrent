@@ -2,12 +2,11 @@
 using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
-using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-public class BlockStorage
+public sealed class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;
     private readonly DataStorage _storage;
@@ -23,17 +22,17 @@ public class BlockStorage
     public async Task SaveBlockAsync(Stream stream, Block block, CancellationToken cancellationToken = default)
     {
         Task readStream;
-        lock (block.Piece.Hasher) readStream = block.Piece.Hasher.SaveBlockAsync(stream, block.Begin, cancellationToken);
+        using (block.Piece.HashingLock.EnterScope()) readStream = block.Piece.Hasher.SaveBlockAsync(stream, block.Begin, cancellationToken);
         await readStream;
         _ = WriteBlockAsync(block);
     }
 
     private async Task WriteBlockAsync(Block block)
     {
-        List<(int Offset, MaybeRentedArray<byte> Array)> buffers;
-        lock (block.Piece.Hasher) buffers = block.Piece.Hasher.HashReadyBlocks().ToList();
-        await Task.WhenAll(buffers.Select(write =>
-            _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + write.Offset, write.Array)));
+        Task writeTask;
+        using (block.Piece.HashingLock.EnterScope()) writeTask = Task.WhenAll(block.Piece.Hasher.HashReadyBlocks().Select(write =>
+            _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + write.Offset, write.Buffer)));
+        await writeTask;
         var newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         if (newDownloaded < block.Piece.Size)
         {

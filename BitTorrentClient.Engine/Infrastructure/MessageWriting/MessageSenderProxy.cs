@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting;
-public class MessageSenderProxy : IPeerWireWriter
+public sealed class MessageSenderProxy : IPeerWireWriter
 {
     private readonly ChannelWriter<MaybeRentedArray<Message>> _messageWriter;
     private readonly ChannelWriter<BlockRequest> _cancellationWriter;

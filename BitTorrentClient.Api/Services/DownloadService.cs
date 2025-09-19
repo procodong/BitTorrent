@@ -6,17 +6,20 @@ using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Protocol.Presentation.Torrent;
-using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Api.Services;
 
 internal class DownloadService : IDownloadService
 {
     private readonly IDownloadRepository _downloads;
+    private readonly CancellationTokenSource _canceller;
+    private readonly Task _clientTask;
 
-    public DownloadService(IDownloadRepository downloads)
+    public DownloadService(IDownloadRepository downloads, CancellationTokenSource canceller, Task clientTask)
     {
         _downloads = downloads;
+        _canceller = canceller;
+        _clientTask = clientTask;
     }
     
     public async Task<IDownloadHandle> AddDownloadAsync(FileInfo downloadFile, DirectoryInfo targetDirectory, string? name = null)
@@ -24,7 +27,6 @@ internal class DownloadService : IDownloadService
         await using var file = File.Open(downloadFile.FullName, new FileStreamOptions
         {
             Options = FileOptions.Asynchronous,
-            
         });
         var parser = new TorrentParser();
         var stream = new PipeBencodeReader(PipeReader.Create(file));
@@ -46,9 +48,9 @@ internal class DownloadService : IDownloadService
         return new DownloadHandle(handle.Writer, handle.State);
     }
 
-    public async Task<bool> RemoveDownloadAsync(ReadOnlyMemory<byte> id)
+    public bool RemoveDownload(ReadOnlyMemory<byte> id)
     {
-        return await _downloads.RemoveDownloadAsync(new(id));
+        return _downloads.RemoveDownload(new(id));
     }
 
     public IEnumerable<DownloadUpdate> GetDownloadUpdates()
@@ -56,16 +58,13 @@ internal class DownloadService : IDownloadService
         foreach (var download in _downloads.GetDownloads())
         {
             var state = download.State;
-            yield return new(state.Download.Data.Name, state.DataTransfer.Fetch(), state.TransferRate, state.Download.Data.Size, (Information.DownloadExecutionState)state.ExecutionState, state.Download.Data.InfoHash);;
+            yield return new(state.Download.Data.Name, state.DataTransfer.Fetch(), state.TransferRate, state.Download.Data.Size, (DownloadExecutionState)state.ExecutionState, state.Download.Data.InfoHash);;
         }
     }
 
     public IEnumerable<DownloadModel> GetDownloads()
     {
-        foreach (var download in _downloads.GetDownloads())
-        {
-            yield return new(download.State.Download.Data);
-        }
+        return _downloads.GetDownloads().Select(download => new DownloadModel(download.State.Download.Data));
     }
 
     private static StorageStream CreateStorage(DownloadData data)
@@ -77,11 +76,13 @@ internal class DownloadService : IDownloadService
     
     public void Dispose()
     {
-        _downloads.Dispose();
+        _canceller.Cancel();
+        _clientTask.GetAwaiter().GetResult();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return _downloads.DisposeAsync();
+        await _canceller.CancelAsync();
+        await _clientTask;
     }
 }

@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Events.Handling;
-public class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IAsyncDisposable
+public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IAsyncDisposable
 {
     private readonly IPeerManager _peerManager;
     private readonly IPeerRelationHandler _relationHandler;
@@ -30,7 +30,7 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IA
         return Task.CompletedTask;
     }
 
-    public Task OnPeerRemovalAsync(int? peer, CancellationToken cancellationToken = default)
+    public Task OnPeerRemovalAsync(ReadOnlyMemory<byte>? peer, CancellationToken cancellationToken = default)
     {
         _peerManager.Peers.Remove(peer);
         return Task.CompletedTask;
@@ -57,15 +57,20 @@ public class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IA
     {
         if (_tick % _relationUpdateInterval == 0)
         {
-            var stats = _peerManager.GetStatistics();
-            var relations = _peerManager.GetPeerStatistics().Select(peer => _relationHandler.GetRelation(peer, stats));
-            await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
+            await UpdateRelationsAsync(cancellationToken);
         }
-        _peerManager.ResetResentDataTransfer();
+        _peerManager.ResetRecentDataTransfer();
         unchecked
         {
             _tick++;
         }
+    }
+
+    private async Task UpdateRelationsAsync(CancellationToken cancellationToken = default)
+    {
+        var stats = _peerManager.GetStatistics();
+        var relations = _peerManager.GetPeerStatistics().Select(peer => _relationHandler.GetRelation(peer, stats));
+        await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
     }
 
     public Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default)

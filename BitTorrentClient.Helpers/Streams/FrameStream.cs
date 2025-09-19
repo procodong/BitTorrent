@@ -1,6 +1,6 @@
 namespace BitTorrentClient.Helpers.Streams;
 
-public class FrameStream : Stream
+public sealed class FrameStream : Stream
 {
     private readonly FrameReader _reader;
     private readonly int _length;

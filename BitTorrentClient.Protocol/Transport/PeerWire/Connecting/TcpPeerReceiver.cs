@@ -4,7 +4,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-public class TcpPeerReceiver : IPeerReceiver
+public sealed class TcpPeerReceiver : IPeerReceiver
 {
     private readonly TcpListener _listener;
     private readonly int _peerBufferSize;
@@ -22,5 +22,10 @@ public class TcpPeerReceiver : IPeerReceiver
         var buffer = new BufferCursor(_peerBufferSize);
         var handler = new HandshakeHandler(stream, buffer);
         return new(handler);
+    }
+
+    public void Dispose()
+    {
+        _listener.Dispose();
     }
 }

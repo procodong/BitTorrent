@@ -13,16 +13,15 @@ await using var logFile = fileProvider.GetLog();
 var messageChannel = Channel.CreateBounded<(LogLevel, string)>(8);
 var logger = new ChannelLogger(messageChannel.Writer, logFile);
 
-var canceller = new CancellationTokenSource();
+await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger);
 
-await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger, canceller.Token);
-
-
+var downloadHandles = new List<IDownloadHandle>();
 foreach (var download in downloads)
 {
     try
     {
-        downloadService.AddDownload(download);
+        var handle = downloadService.AddDownload(download);
+        downloadHandles.Add(handle);
     }
     catch (Exception ex)
     {
@@ -32,12 +31,14 @@ foreach (var download in downloads)
 
 var interfaceLauncher = new InterfaceLauncher(TimeSpan.FromSeconds(1), logger);
 
-interfaceLauncher.LaunchInterface(downloadService, messageChannel.Reader, canceller.Token);
+var interfaceCanceller = new CancellationTokenSource();
+
+interfaceLauncher.LaunchInterface(downloadService, downloadHandles, messageChannel.Reader, interfaceCanceller.Token);
 
 var closingWaiter = new TaskCompletionSource();
 Console.CancelKeyPress += (_, e) =>
 {
-    canceller.Cancel();
+    interfaceCanceller.Cancel();
     e.Cancel = true;
     closingWaiter.SetResult();
 };

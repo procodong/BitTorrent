@@ -3,7 +3,7 @@ using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 
-public class LazyTrackerFinder : ITrackerFetcher
+public sealed class LazyTrackerFinder : ITrackerFetcher
 {
     private readonly Uri[][] _trackerUris;
     private readonly TrackerFinder _trackerFinder;
@@ -23,9 +23,6 @@ public class LazyTrackerFinder : ITrackerFetcher
     
     public void Dispose()
     {
-        if (_innerFetcher is not null)
-        {
-            _innerFetcher.Dispose();
-        }
+        _innerFetcher?.Dispose();
     }
 }

@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-public class TcpPeerConnector : IPeerConnector
+public sealed class TcpPeerConnector : IPeerConnector
 {
     private readonly IPEndPoint _address;
     private readonly int _bufferSize;

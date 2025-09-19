@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Cli;
 
-public class LogReader
+public sealed class LogReader
 {
     private volatile string _latestMessage = string.Empty;
 

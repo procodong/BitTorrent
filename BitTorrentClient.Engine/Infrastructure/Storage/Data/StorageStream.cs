@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-public class StorageStream : IDisposable, IAsyncDisposable
+public sealed class StorageStream : IDisposable, IAsyncDisposable
 {
     private readonly List<StreamData> _saves;
     private readonly long _size;

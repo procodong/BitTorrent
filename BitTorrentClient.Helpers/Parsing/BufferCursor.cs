@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.Parsing;
-public class BufferCursor : IBufferReader
+public sealed class BufferCursor : IBufferReader
 {
     private readonly byte[] _buffer;
     private int _end;

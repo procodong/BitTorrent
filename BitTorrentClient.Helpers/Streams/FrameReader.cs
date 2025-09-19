@@ -3,7 +3,7 @@ using BitTorrentClient.Helpers.Parsing;
 
 namespace BitTorrentClient.Helpers.Streams;
 
-public class FrameReader : IBufferReader
+public sealed class FrameReader : IBufferReader
 {
     private readonly BufferCursor _cursor;
     private readonly Stream _stream;

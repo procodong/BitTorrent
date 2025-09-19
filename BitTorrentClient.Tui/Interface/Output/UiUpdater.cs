@@ -3,7 +3,7 @@ using BitTorrentClient.Api.Downloads;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Output;
-public class UiUpdater
+public sealed class UiUpdater
 {
     private readonly UiHandler _uiHandler;
     private readonly ChannelReader<(LogLevel, string)> _messageReader;

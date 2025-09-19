@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 
 namespace BitTorrentClient.Helpers.DataStructures;
-public class SlotMap<T> : IEnumerable<T>
+public sealed class SlotMap<T> : IEnumerable<T>
 {
     private readonly List<Slot<T>> _buffer;
     private readonly Stack<int> _freePlaces;
@@ -28,18 +28,16 @@ public class SlotMap<T> : IEnumerable<T>
         _count--;
     }
 
-    public int Add(T item) 
+    public int Add(T item)
     {
         if (_freePlaces.TryPop(out var place))
         {
             _buffer[place] = new(item);
             return place;
         }
-        else
-        {
-            _buffer.Add(new(item));
-            return _buffer.Count - 1;
-        }
+
+        _buffer.Add(new(item));
+        return _buffer.Count - 1;
     }
 
     public T Add(Func<int, T> func)
@@ -50,12 +48,10 @@ public class SlotMap<T> : IEnumerable<T>
             _buffer[place] = new(item);
             return item;
         }
-        else
-        {
-            var value = func(_buffer.Count);
-            _buffer.Add(new(value));
-            return value;
-        }
+
+        var value = func(_buffer.Count);
+        _buffer.Add(new(value));
+        return value;
     }
 
     public IEnumerator<T> GetEnumerator()

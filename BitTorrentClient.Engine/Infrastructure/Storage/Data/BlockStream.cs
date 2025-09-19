@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-public class BlockStream : Stream
+public sealed class BlockStream : Stream
 {
     private readonly PartsCursor _cursor;
     private readonly long _length;

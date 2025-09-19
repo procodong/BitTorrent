@@ -5,7 +5,7 @@ using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 
-public class TrackerConnector : ITrackerConnector
+public sealed class TrackerConnector : ITrackerConnector
 {
     private readonly HttpClient _client;
     private readonly int _port;
@@ -60,5 +60,10 @@ public class TrackerConnector : ITrackerConnector
         var fetcher = new HttpTrackerFetcher(_client, uri, _port, _peerBufferSize);
         fetcher.InitialResponse = await fetcher.FetchAsync(update, cancellationToken);
         return fetcher;
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
     }
 }

@@ -2,9 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BitTorrentClient.Engine.Models.Downloads;
 
-public readonly struct DownloadId
+public readonly struct DownloadId : IEquatable<DownloadId>
 {
-    public ReadOnlyMemory<byte> Raw { get; }
+    private ReadOnlyMemory<byte> Raw { get; }
 
     public DownloadId(ReadOnlyMemory<byte> id)
     {
@@ -21,6 +21,11 @@ public readonly struct DownloadId
         return hash.ToHashCode();
     }
 
+    public bool Equals(DownloadId other)
+    {
+        return Raw.Span.SequenceEqual(other.Raw.Span);
+    }
+
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
         if (obj is DownloadId id)
@@ -28,5 +33,15 @@ public readonly struct DownloadId
             return Raw.Span.SequenceEqual(id.Raw.Span);
         }
         return false;
+    }
+
+    public static bool operator ==(DownloadId left, DownloadId right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(DownloadId left, DownloadId right)
+    {
+        return !(left == right);
     }
 }

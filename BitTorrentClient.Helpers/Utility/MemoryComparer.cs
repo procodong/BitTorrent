@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.Utility;
-public class MemoryComparer<T> : IEqualityComparer<ReadOnlyMemory<T>>
+public sealed class MemoryComparer<T> : IEqualityComparer<ReadOnlyMemory<T>>
 {
     public bool Equals(ReadOnlyMemory<T> x, ReadOnlyMemory<T> y)
     {

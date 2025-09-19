@@ -6,7 +6,7 @@ enum CurentStream
     Second
 }
 
-public class ConcatStream : Stream
+public sealed class ConcatStream : Stream
 {
     private readonly Stream _firstStream;
     private readonly Stream _secondStream;

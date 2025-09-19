@@ -1,10 +1,9 @@
-﻿using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
-using BitTorrentClient.Engine.Models.Downloads;
+﻿using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Downloads;
 
-public class DownloadState
+public sealed class DownloadState
 {
     public LazyBitArray DownloadedPieces { get; }
     public DataTransferCounter DataTransfer { get; }

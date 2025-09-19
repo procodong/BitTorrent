@@ -3,7 +3,7 @@
 namespace BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 public record struct TrackerUpdate(
     ReadOnlyMemory<byte> InfoHash,
-    string ClientId,
+    ReadOnlyMemory<byte> ClientId,
     DataTransferVector DataTransfer,
     long Left,
     TrackerEvent TrackerEvent

@@ -1,9 +1,9 @@
 ﻿namespace BitTorrentClient.Helpers.Streams;
-public class LimitedStream : Stream
+public sealed class LimitedStream : Stream
 {
     private readonly Stream _stream;
     private readonly long _length;
-    private long _position = 0;
+    private long _position;
 
     internal LimitedStream(Stream stream, int length)
     {

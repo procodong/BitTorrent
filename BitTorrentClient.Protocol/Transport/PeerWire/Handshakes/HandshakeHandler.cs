@@ -12,7 +12,7 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 
-public class HandshakeHandler : IHandshakeHandler
+public sealed class HandshakeHandler : IHandshakeHandler
 {
     private const string Protocol = "BitTorrent protocol";
 

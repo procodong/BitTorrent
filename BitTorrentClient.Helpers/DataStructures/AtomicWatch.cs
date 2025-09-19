@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.DataStructures;
-public class AtomicWatch
+public sealed class AtomicWatch
 {
 
     private long _start;

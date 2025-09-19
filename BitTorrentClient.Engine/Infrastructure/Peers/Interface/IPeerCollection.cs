@@ -5,6 +5,6 @@ namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 public interface IPeerCollection
 {
     void Add(PeerWireStream peer);
-    void Remove(int? peer);
+    void Remove(ReadOnlyMemory<byte>? id);
     void Feed(IEnumerable<IPeerConnector> peers);
 }

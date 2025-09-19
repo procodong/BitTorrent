@@ -4,7 +4,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
-public class MessageFrameReader : IMessageFrameReader
+public sealed class MessageFrameReader : IMessageFrameReader
 {
     private readonly FrameReader _reader;
     private readonly MessageType _type;

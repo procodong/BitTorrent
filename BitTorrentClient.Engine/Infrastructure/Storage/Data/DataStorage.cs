@@ -5,7 +5,7 @@ using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
 
-public class DataStorage : IDisposable, IAsyncDisposable
+public sealed class DataStorage : IDisposable, IAsyncDisposable
 {
     private readonly StorageStream _stream;
     private readonly ChannelWriter<DownloadExecutionState> _downloadStateWriter;
@@ -27,7 +27,7 @@ public class DataStorage : IDisposable, IAsyncDisposable
 
     public async Task WriteDataAsync(long offset, MaybeRentedArray<byte> array)
     {
-        bool failedInitialWrite = false;
+        var failedInitialWrite = false;
         try
         {
             var stream = _stream.GetStream(offset);

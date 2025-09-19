@@ -1,6 +1,7 @@
 ﻿using BencodeNET.Objects;
 using BencodeNET.Parsing;
 using System.Net;
+using System.Text;
 using System.Web;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
@@ -8,7 +9,7 @@ using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
-public class HttpTrackerFetcher : ITrackerFetcher
+public sealed class HttpTrackerFetcher : ITrackerFetcher
 {
     private readonly HttpClient _httpClient;
     private readonly int _peerBufferSize;
@@ -41,7 +42,7 @@ public class HttpTrackerFetcher : ITrackerFetcher
         };
         var query = HttpUtility.ParseQueryString(builder.Query);
         query["info_hash"] = Uri.EscapeDataString(Convert.ToBase64String(request.InfoHash.Span));
-        query["peer_id"] = request.ClientId;
+        query["peer_id"] = Encoding.ASCII.GetString(request.ClientId.Span);
         query["port"] = request.Port.ToString();
         query["uploaded"] = request.Uploaded.ToString();
         query["downloaded"] = request.Downloaded.ToString();

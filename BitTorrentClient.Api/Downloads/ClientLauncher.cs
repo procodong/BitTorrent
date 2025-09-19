@@ -7,11 +7,13 @@ using BitTorrentClient.Api.Services;
 using BitTorrentClient.Engine.Events.Handling;
 using BitTorrentClient.Engine.Events.Listening;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
+using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Launchers;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
+using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +21,7 @@ namespace BitTorrentClient.Api.Downloads;
 
 public static class ClientLauncher
 {
-    public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger, CancellationToken cancellationToken)
+    public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger)
     {
         var config = configBuilder.Build(Config.Default);
         var peerBufferSize = config.RequestSize + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte);
@@ -32,11 +34,22 @@ public static class ClientLauncher
         var trackerFinder = new TrackerFinder(logger, trackerConnector);
         var downloadLauncher = new DownloadLauncher(logger);
         var downloads = new DownloadCollection(clientId, config, trackerFinder, downloadLauncher);
-        var downloadEventHandler = new DownloadManagerEventHandler(downloads);
         var peerReceiver = new TcpPeerReceiver(socket, peerBufferSize);
-        var downloadEventListener = new DownloadManagerEventListener(downloadEventHandler, peerReceiver);
-        _ = downloadEventListener.ListenAsync(cancellationToken);
-        return new DownloadService(downloads);
+
+        var canceller = new CancellationTokenSource();
+        var clientTask = ListenAsync(downloads, peerReceiver, canceller.Token);
+        return new DownloadService(downloads, canceller, clientTask);
+    }
+    
+    private static async Task ListenAsync(DownloadCollection downloads, TcpPeerReceiver peerReceiver, CancellationToken cancellationToken = default)
+    {
+        await using var _ = downloads;
+        using var __ = peerReceiver;
+        while (true)
+        {
+            var peer = await peerReceiver.ReceivePeerAsync(cancellationToken);
+            await downloads.AddPeerAsync(peer, cancellationToken);
+        }
     }
 
     private static (int, TcpListener) FindPort()

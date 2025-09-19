@@ -9,7 +9,7 @@ public interface IPeerManager
     IPeerCollection Peers { get; }
     
     DownloadStatistics GetStatistics();
-    void ResetResentDataTransfer();
+    void ResetRecentDataTransfer();
     IEnumerable<PeerStatistics> GetPeerStatistics();
     Task PauseAsync(PauseType type, CancellationToken cancellationToken = default);
     Task ResumeAsync(CancellationToken cancellationToken = default);

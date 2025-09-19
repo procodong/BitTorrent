@@ -6,7 +6,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-public class Peer : IPeer, IDisposable
+public sealed class Peer : IPeer, IDisposable
 {
     private readonly PeerState _state;
     private readonly IPeerWireWriter _sender;
@@ -26,7 +26,7 @@ public class Peer : IPeer, IDisposable
         {
             if (!value)
             {
-                CancelAll();
+                _requester.ClearRequests();
             }
             _state.RelationToMe = _state.RelationToMe with { Choked = !value };
         }
@@ -90,16 +90,9 @@ public class Peer : IPeer, IDisposable
         await _sender.FlushAsync(cancellationToken);
     }
 
-    private void CancelAll()
-    {
-        foreach (var request in _requester.DrainRequests())
-        {
-            _sender.SendCancel(request);
-        }
-    }
 
     public void Dispose()
     {
-        CancelAll();
+        _requester.ClearRequests();
     }
 }

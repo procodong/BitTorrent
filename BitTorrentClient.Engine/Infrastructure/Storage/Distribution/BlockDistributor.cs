@@ -6,14 +6,14 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
 
-public class BlockDistributor : IBlockRequester
+public sealed class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
-    private readonly Downloader _downloader;
+    private readonly SynchronizedDownloader _downloader;
     private readonly BlockStorage _storage;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(Downloader downloader, BlockStorage storage)
+    public BlockDistributor(SynchronizedDownloader downloader, BlockStorage storage)
     {
         _requests = new(downloader.Config.RequestQueueSize);
         _downloader = downloader;
@@ -21,7 +21,7 @@ public class BlockDistributor : IBlockRequester
         _blockCursor = new(default);
     }
     
-    public IEnumerable<BlockRequest> DrainRequests()
+    public void ClearRequests()
     {
         Block? currentBlock = default;
         foreach (var block in _requests)
@@ -37,13 +37,9 @@ public class BlockDistributor : IBlockRequester
             }
             else
             {
-                lock (_downloader)
-                {
-                    _downloader.Cancel(currentBlock.Value);
-                }
+                _downloader.Cancel(currentBlock.Value);
                 currentBlock = block;
             }
-            yield return block;
         }
         _requests.Clear();
     }
@@ -74,10 +70,7 @@ public class BlockDistributor : IBlockRequester
         }
         catch (InvalidDataException)
         {
-            lock (_downloader)
-            {
-                _downloader.Cancel(block);
-            }
+            _downloader.Cancel(block);
 
             throw new BadPeerException(PeerErrorReason.InvalidPiece);
         }
@@ -97,18 +90,15 @@ public class BlockDistributor : IBlockRequester
         var request = _blockCursor.GetRequest(_downloader.Config.RequestSize);
         if (request.Length == 0)
         {
-            lock (_downloader)
+            if (_downloader.TryAssignBlock(pieces, out var newBlock))
             {
-                if (_downloader.TryAssignBlock(pieces, out var newBlock))
-                {
-                    _blockCursor = new(newBlock);
-                    request = _blockCursor.GetRequest(_downloader.Config.RequestSize);
-                }
-                else
-                {
-                    block = default;
-                    return false;
-                }
+                _blockCursor = new(newBlock);
+                request = _blockCursor.GetRequest(_downloader.Config.RequestSize);
+            }
+            else
+            {
+                block = default;
+                return false;
             }
         }
         _requests.Add(request);

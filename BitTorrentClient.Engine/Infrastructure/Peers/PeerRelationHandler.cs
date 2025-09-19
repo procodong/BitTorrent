@@ -4,7 +4,7 @@ using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
 
-public class PeerRelationHandler : IPeerRelationHandler
+public sealed class PeerRelationHandler : IPeerRelationHandler
 {
     public DataTransferVector GetRelation(PeerStatistics peerStatistics, DownloadStatistics downloadStatistics)
     {

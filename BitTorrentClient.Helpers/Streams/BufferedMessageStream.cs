@@ -4,7 +4,7 @@ using BitTorrentClient.Helpers.Parsing;
 
 namespace BitTorrentClient.Helpers.Streams;
 
-public class BufferedMessageStream : IDisposable, IAsyncDisposable
+public sealed class BufferedMessageStream : IDisposable, IAsyncDisposable
 {
     private readonly BufferCursor _cursor;
     private readonly Stream _stream;

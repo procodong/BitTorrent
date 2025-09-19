@@ -5,7 +5,7 @@ using Spectre.Console;
 
 namespace BitTorrentClient.Tui.Interface.Output;
 
-public class UiHandler
+public sealed class UiHandler
 {
     private readonly Table _ui;
     private readonly Table _downloadsTable;

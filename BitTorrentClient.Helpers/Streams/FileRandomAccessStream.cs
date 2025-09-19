@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.Streams;
-public class FileRandomAccessStream : IRandomAccesStream
+public sealed class FileRandomAccessStream : IRandomAccesStream
 {
     private readonly FileStream _stream;
     public FileRandomAccessStream(FileStream file)

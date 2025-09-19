@@ -22,7 +22,7 @@ public class PeerWireStream : IDisposable, IAsyncDisposable
         Reader.Dispose();
     }
 
-    public  ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {  
         return Reader.DisposeAsync();
     }

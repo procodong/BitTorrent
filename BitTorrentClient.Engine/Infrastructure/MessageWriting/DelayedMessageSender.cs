@@ -6,7 +6,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting;
-public class DelayedMessageSender : IDelayedMessageSender
+public sealed class DelayedMessageSender : IDelayedMessageSender
 {
     private readonly IPeerWireWriter _sender;
     private readonly List<BlockData> _queuedBlocks;

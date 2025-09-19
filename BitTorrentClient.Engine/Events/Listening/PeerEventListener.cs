@@ -7,7 +7,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
 namespace BitTorrentClient.Engine.Events.Listening;
-public class PeerEventListener : IEventListener
+public sealed class PeerEventListener : IEventListener
 {
     private readonly IPeerWireReader _connection;
     private readonly IPeerEventHandler _handler;

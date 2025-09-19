@@ -1,29 +1,29 @@
 ﻿using System.Net.Sockets;
-using System.Text;
 using System.Threading.Channels;
-using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
+using BitTorrentClient.Engine.Models.Downloads;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-public class PeerConnector : IPeerSpawner
+public sealed class PeerConnector : IPeerSpawner
 {
-    private readonly DownloadState _downloadState;
+    private readonly Download _download;
+    private readonly LazyBitArray _downloadedPieces;
     private readonly ILogger _logger;
-    private readonly ChannelWriter<int?> _peerRemovalWriter;
+    private readonly ChannelWriter<ReadOnlyMemory<byte>?> _peerRemovalWriter;
     private readonly ChannelWriter<PeerWireStream> _peerAdderWriter;
-    private readonly byte[] _peerId;
 
-    public PeerConnector(DownloadState downloader, ILogger logger, ChannelWriter<int?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, byte[] peerId)
+    public PeerConnector(Download downloader, LazyBitArray downloadedPieces, ChannelWriter<ReadOnlyMemory<byte>?> peerRemovalWriter, ChannelWriter<PeerWireStream> peerWriter, ILogger logger)
     {
-        _downloadState = downloader;
+        _downloadedPieces = downloadedPieces;
+        _download = downloader;
         _logger = logger;
         _peerRemovalWriter = peerRemovalWriter;
         _peerAdderWriter = peerWriter;
-        _peerId = peerId;
     }
 
     public async Task SpawnConnect(IPeerConnector address, CancellationToken cancellationToken = default)
@@ -33,10 +33,10 @@ public class PeerConnector : IPeerSpawner
             var sender = await address.ConnectAsync(cancellationToken);
             try
             {
-                var handshakeData = new HandshakeData(0, _downloadState.Download.Data.InfoHash, _peerId);
-                var reader = await sender.SendDataAsync(handshakeData, _downloadState.DownloadedPieces, cancellationToken);
+                var handshakeData = new HandshakeData(0, _download.Data.InfoHash, _download.ClientId);
+                var reader = await sender.SendDataAsync(handshakeData, _downloadedPieces, cancellationToken);
                 var stream = await reader.ReadDataAsync(cancellationToken);
-                if (!stream.ReceivedHandshake.InfoHash.Span.SequenceEqual(_downloadState.Download.Data.InfoHash.Span))
+                if (!stream.ReceivedHandshake.InfoHash.Span.SequenceEqual(_download.Data.InfoHash.Span))
                 {
                     _logger.LogInformation("Encountered a peer with an invalid info hash");
                     return;
@@ -64,9 +64,8 @@ public class PeerConnector : IPeerSpawner
     {
         try
         {
-            var handshakeData = new HandshakeData(0, _downloadState.Download.Data.InfoHash,
-                Encoding.ASCII.GetBytes(_downloadState.Download.ClientId));
-            var stream = await peer.SendDataAsync(handshakeData, _downloadState.DownloadedPieces, cancellationToken);
+            var handshakeData = new HandshakeData(0, _download.Data.InfoHash, _download.ClientId);
+            var stream = await peer.SendDataAsync(handshakeData, _downloadedPieces, cancellationToken);
             await _peerAdderWriter.WriteAsync(stream, cancellationToken);
         }
         catch (Exception ex)

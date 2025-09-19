@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.Streams;
-internal class RandomAccessStream : IRandomAccesStream
+internal sealed class RandomAccessStream : IRandomAccesStream
 {
     private readonly Stream _stream;
     private readonly SemaphoreSlim _lock;

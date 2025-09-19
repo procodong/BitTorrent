@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace BitTorrentClient.Helpers.Utility;
 
-public class DefaultValueEnumerator<T> : IEnumerator<T?>
+public sealed class DefaultValueEnumerator<T> : IEnumerator<T?>
 {
     public static readonly DefaultValueEnumerator<T> Instance = new();
 

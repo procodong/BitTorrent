@@ -16,12 +16,12 @@ public static class StreamExt
 
     public static async Task<int> ReadAsync(this Stream stream, Parsing.BufferCursor reader, CancellationToken cancellationToken = default)
     {
-        return await ReadWithAsync(reader, (b) => stream.ReadAsync(b, cancellationToken));
+        return await ReadWithAsync(reader, b => stream.ReadAsync(b, cancellationToken));
     }
 
     public static async Task<int> ReadAtLeastAsync(this Stream stream, Parsing.BufferCursor reader, int minimumBytes, CancellationToken cancellationToken = default)
     {
-        return await ReadWithAsync(reader, (b) => stream.ReadAtLeastAsync(b, minimumBytes, cancellationToken: cancellationToken));
+        return await ReadWithAsync(reader, b => stream.ReadAtLeastAsync(b, minimumBytes, cancellationToken: cancellationToken));
     }
 
 }

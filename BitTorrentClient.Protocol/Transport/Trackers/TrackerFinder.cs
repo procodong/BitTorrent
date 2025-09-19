@@ -4,7 +4,7 @@ using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
-public class TrackerFinder
+public sealed class TrackerFinder : IDisposable
 {
     private readonly ITrackerConnector _trackerConnector;
     private readonly ILogger _logger;
@@ -25,10 +25,9 @@ public class TrackerFinder
             .ToList();
         
         ITrackerFetcher? fetcher = null;
-        var readyTasks = new HashSet<Task>(tasks.Count);
-        while (tasks.Count != readyTasks.Count)
+        for (var readyTasks = 0; readyTasks < tasks.Count; readyTasks++)
         {
-            var trackerTask = await Task.WhenAny(tasks.Where(t => !readyTasks.Contains(t)));
+            var trackerTask = await Task.WhenAny(tasks);
             try
             {
                 var tracker = await trackerTask;
@@ -37,9 +36,9 @@ public class TrackerFinder
                     fetcher = tracker;
                     await canceller.CancelAsync();
                 }
-                else if (fetcher is IDisposable disposable)
+                else
                 {
-                    disposable.Dispose();
+                    tracker.Dispose();
                 }
             }
             catch (Exception ex)
@@ -49,8 +48,26 @@ public class TrackerFinder
                     _logger.LogError(ex, "Tracker exception connecting to tracker: {}", ex);
                 }
             }
-            readyTasks.Add(trackerTask);
+
+            for (var i = 0; i < tasks.Count; i++)
+            {
+                if (tasks[i] == trackerTask)
+                {
+                    tasks[i] = Never<ITrackerFetcher>();
+                }
+            }
         }
         return fetcher ?? throw new NoValidTrackerException();
+    }
+
+    private static async Task<T> Never<T>()
+    {
+        await Task.Delay(-1);
+        return default!;
+    }
+
+    public void Dispose()
+    {
+        _trackerConnector.Dispose();
     }
 }

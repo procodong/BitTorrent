@@ -7,7 +7,7 @@ using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
-public class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
+public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
 {
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
@@ -20,7 +20,7 @@ public class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
         _storage = storage;
     }
 
-    public void ResetResentDataTransfer()
+    public void ResetRecentDataTransfer()
     {
         foreach (var peer in _peers)
         {
@@ -73,6 +73,7 @@ public class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
 
     public async Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default)
     {
+        if (_downloadState.ExecutionState != DownloadExecutionState.Running) return;
         foreach (var (peer, relation) in _peers.Zip(relations))
         {
             await peer.RelationEventWriter.WriteAsync(relation, cancellationToken);

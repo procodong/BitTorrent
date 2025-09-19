@@ -6,7 +6,7 @@ namespace BitTorrentClient.Engine.Events.Handling.Interface;
 public interface IPeerManagerEventHandler
 {
     Task OnPeerCreationAsync(PeerWireStream stream, CancellationToken cancellationToken = default);
-    Task OnPeerRemovalAsync(int? peer, CancellationToken cancellationToken = default);
+    Task OnPeerRemovalAsync(ReadOnlyMemory<byte>? peer, CancellationToken cancellationToken = default);
     Task OnPieceCompletionAsync(int piece, CancellationToken cancellationToken = default);
     Task OnTickAsync(CancellationToken cancellationToken = default);
     Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default);

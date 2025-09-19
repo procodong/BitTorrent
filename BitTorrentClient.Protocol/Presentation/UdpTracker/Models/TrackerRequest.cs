@@ -1,7 +1,7 @@
 ﻿namespace BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 public record class TrackerRequest(
     ReadOnlyMemory<byte> InfoHash,
-    string ClientId,
+    ReadOnlyMemory<byte> ClientId,
     int Port,
     long Uploaded,
     long Downloaded,

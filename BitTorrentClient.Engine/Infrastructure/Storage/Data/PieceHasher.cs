@@ -2,7 +2,7 @@
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-public class PieceHasher
+public sealed class PieceHasher
 {
     private readonly HashUnit[] _buffers;
     private readonly int _bufferSize;

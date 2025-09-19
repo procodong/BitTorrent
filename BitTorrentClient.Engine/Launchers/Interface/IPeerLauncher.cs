@@ -4,5 +4,5 @@ using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 namespace BitTorrentClient.Engine.Launchers.Interface;
 public interface IPeerLauncher
 {
-    PeerHandle LaunchPeer(PeerWireStream stream, int peerIndex);
+    PeerHandle LaunchPeer(PeerWireStream stream);
 }

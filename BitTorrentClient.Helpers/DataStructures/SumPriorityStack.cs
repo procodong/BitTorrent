@@ -2,7 +2,7 @@
 using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.Helpers.DataStructures;
-public class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Priority)>
+public sealed class SumPriorityStack<T>(int capacity) : IEnumerable<(T Item, int Priority)>
 {
     private readonly List<(T Item, int Priority)> _stack = [];
     private readonly int _capacity = capacity;

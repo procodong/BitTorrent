@@ -6,7 +6,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Handling;
 
-public class MessageWritingEventHandler : IMessageWritingEventHandler
+public sealed class MessageWritingEventHandler : IMessageWritingEventHandler
 {
     private readonly IDelayedMessageSender _sender;
     

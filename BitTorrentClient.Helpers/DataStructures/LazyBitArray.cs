@@ -1,5 +1,5 @@
 ﻿namespace BitTorrentClient.Helpers.DataStructures;
-public class LazyBitArray
+public sealed class LazyBitArray
 {
     private ZeroCopyBitArray _bitfield;
     private BitfieldState _state;

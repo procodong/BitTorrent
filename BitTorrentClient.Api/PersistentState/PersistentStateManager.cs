@@ -19,8 +19,7 @@ public class PersistentStateManager
         await using var configFile = _fileProvider.GetConfigFile();
         if (configFile.Length == 0) return new();
         var config = await JsonSerializer.DeserializeAsync<ConfigBuilder>(configFile);
-        if (config is null) return new();
-        return config;
+        return config ?? new();
     }
 
     public async Task SaveConfigAsync(Config config)

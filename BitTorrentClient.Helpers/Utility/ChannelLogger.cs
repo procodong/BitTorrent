@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Helpers.Utility;
 
-public class ChannelLogger : ILogger, IDisposable, IAsyncDisposable
+public sealed class ChannelLogger : ILogger, IDisposable, IAsyncDisposable
 {
     private readonly ChannelWriter<(LogLevel, string)> _messageWriter;
     private readonly StreamWriter _fullOutput;

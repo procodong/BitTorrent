@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui;
 
-internal class InterfaceLauncher
+internal sealed class InterfaceLauncher
 {
     private readonly ILogger _logger;
     private readonly TimeSpan _tickInterval;
@@ -17,14 +17,14 @@ internal class InterfaceLauncher
         _logger = logger;
     }
 
-    public void LaunchInterface(IDownloadService downloadService, ChannelReader<(LogLevel, string)> messageReader, CancellationToken cancellationToken = default)
+    public void LaunchInterface(IDownloadService downloadService, List<IDownloadHandle> downloads, ChannelReader<(LogLevel, string)> messageReader, CancellationToken cancellationToken = default)
     {
         var handler = UiHandler.Create(10);
         var updater = new UiUpdater(handler, downloadService, messageReader, new(_tickInterval));
         _ = updater.ListenAsync(cancellationToken);
 
-        var commandReader = CommandReader.Create(downloadService, _logger);
-        _ = commandReader.ReadAsync(cancellationToken);
+        var commandReader = CommandReader.Create(downloadService, downloads, _logger);
+        _ = commandReader.ReadAsync(Console.In, cancellationToken);
     }
 
 }
