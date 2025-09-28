@@ -1,4 +1,4 @@
 ﻿using BitTorrentClient.Helpers.Streams;
 
 namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
-public readonly record struct StreamData(long ByteOffset, long Size, Lazy<Task<IRandomAccesStream>> Handle);
+public readonly record struct StreamData(long ByteOffset, long Size, Lazy<Task<IRandomAccesStream>> Stream);

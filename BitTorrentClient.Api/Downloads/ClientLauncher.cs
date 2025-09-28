@@ -4,16 +4,12 @@ using System.Runtime.CompilerServices;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Api.PersistentState;
 using BitTorrentClient.Api.Services;
-using BitTorrentClient.Engine.Events.Handling;
-using BitTorrentClient.Engine.Events.Listening;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
-using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 using BitTorrentClient.Engine.Launchers;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;
 

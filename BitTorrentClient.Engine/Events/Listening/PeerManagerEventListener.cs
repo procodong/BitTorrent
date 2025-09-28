@@ -2,6 +2,7 @@
 using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
+using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
@@ -34,116 +35,59 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        var peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
-        var updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
-        var peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
-        var pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
-        var fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
-        Task trackerUpdateTask = _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken);
+        var taskListener = new TaskListener<EventType>(cancellationToken);
+        taskListener.AddTask(EventType.PeerAddition, () => _peerReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.UpdateInterval, () => _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.PeerRemoval, () => _peerRemovalReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.PieceCompletion, () => _pieceCompletionReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.FileException, () => _stateReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
         while (true)
         {
-            var ready = await Task.WhenAny(peerAdditionTask, updateIntervalTask, peerRemovalTask, trackerUpdateTask, pieceCompletionTask);
-            if (ready == peerAdditionTask)
+            var (eventType, readyTask) = await taskListener.WaitAsync();
+            try
             {
-                try
-                {
-                    var stream = await peerAdditionTask;
-                    await _handler.OnPeerCreationAsync(stream, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                {
-                    await HandleError(ex, cancellationToken);
-                }
-                finally
-                {
-                    peerAdditionTask = _peerReader.ReadAsync(cancellationToken).AsTask();
-                }
+                await HandleEventAsync(eventType, readyTask, taskListener, cancellationToken);
             }
-            else if (ready == updateIntervalTask)
+            catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
             {
-                try
-                {
-                    await updateIntervalTask;
-                    await _handler.OnTickAsync(cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                {
-                    await HandleError(ex, cancellationToken);
-                }
-                finally
-                {
-                    updateIntervalTask = _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask();
-                }
+                await HandleError(ex, cancellationToken);
             }
-            else if (ready == peerRemovalTask)
-            {
-                try
-                {
-                    var peer = await peerRemovalTask;
-                    await _handler.OnPeerRemovalAsync(peer, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                {
-                    await HandleError(ex, cancellationToken);
-                }
-                finally
-                {
-                    peerRemovalTask = _peerRemovalReader.ReadAsync(cancellationToken).AsTask();
-                }
-            }
-            else if (ready == trackerUpdateTask)
-            {
-                if (trackerUpdateTask is Task<TrackerResponse> responseTask)
-                {
-                    try
-                    {
-                        var response = await responseTask;
-                        await _handler.OnTrackerUpdate(response, cancellationToken);
-                        trackerUpdateTask = Task.Delay(response.Interval * 1000, cancellationToken);
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                    {
-                        trackerUpdateTask = Task.Delay(5000, cancellationToken);
-                        await HandleError(ex, cancellationToken);
-                    }
-                }
-                else
-                {
-                    trackerUpdateTask = _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken);
-                }
-            }
-            else if (ready == fileExceptionTask)
-            {
-                try
-                {
-                    var state = await fileExceptionTask;
-                    await _handler.OnStateChange(state, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                {
-                    await HandleError(ex, cancellationToken);
-                }
-                finally
-                {
-                    fileExceptionTask = _stateReader.ReadAsync(cancellationToken).AsTask();
-                }
-            }
-            else if (ready == pieceCompletionTask)
-            {
-                try
-                {
-                    var piece = await pieceCompletionTask;
-                    await _handler.OnPieceCompletionAsync(piece, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
-                {
-                    await HandleError(ex, cancellationToken);
-                }
-                finally
-                {
-                    pieceCompletionTask = _pieceCompletionReader.ReadAsync(cancellationToken).AsTask();
-                }
-            }
+        }
+    }
+
+    private async Task HandleEventAsync(EventType eventType, Task readyTask, TaskListener<EventType> taskListener, CancellationToken cancellationToken)
+    {
+        
+        switch (eventType)
+        {
+            case EventType.PeerAddition:
+                var stream = await (Task<PeerWireStream>)readyTask;
+                await _handler.OnPeerCreationAsync(stream, cancellationToken);
+                break;
+            case EventType.UpdateInterval:
+                await _handler.OnTickAsync(cancellationToken);
+                break;
+            case EventType.PeerRemoval:
+                var peer = await (Task<ReadOnlyMemory<byte>>)readyTask;
+                await _handler.OnPeerRemovalAsync(peer, cancellationToken);
+                break;
+            case EventType.TrackerUpdate:
+                var response = await (Task<TrackerResponse>)readyTask;
+                await _handler.OnTrackerUpdate(response, cancellationToken);
+                taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval * 1000, cancellationToken));
+                break;
+            case EventType.TrackerInterval:
+                taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken));
+                break;
+            case EventType.FileException:
+                var state = await (Task<DownloadExecutionState>)readyTask;
+                await _handler.OnStateChange(state, cancellationToken);
+                break;
+            case EventType.PieceCompletion:
+                var piece = await (Task<int>)readyTask;
+                await _handler.OnPieceCompletionAsync(piece, cancellationToken);
+                break;
         }
     }
 
@@ -182,5 +126,15 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                 handlerDisposable.Dispose();
                 break;
         }
+    }
+
+    enum EventType {
+        PeerAddition,
+        UpdateInterval,
+        PeerRemoval,
+        TrackerUpdate,
+        TrackerInterval,
+        FileException,
+        PieceCompletion
     }
 }

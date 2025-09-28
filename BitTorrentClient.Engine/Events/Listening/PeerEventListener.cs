@@ -24,29 +24,29 @@ public sealed class PeerEventListener : IEventListener
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        var receiveTask = _connection.ReceiveAsync(cancellationToken);
-        var transferLimitTask = _transferLimitReader.ReadAsync(cancellationToken).AsTask();
-        var haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
+        var taskListener = new TaskListener<EventType>(cancellationToken);
+        taskListener.AddTask(EventType.Receive, _connection.ReceiveAsync(cancellationToken));
+        taskListener.AddTask(EventType.TransferLimit, () => _transferLimitReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.Have, () => _haveMessageReader.ReadAsync(cancellationToken).AsTask());
         while (true)
         {
-            var readyTask = await Task.WhenAny(receiveTask, transferLimitTask, haveTask);
-            if (readyTask == receiveTask)
+            var (eventType, readyTask) = await taskListener.WaitAsync();
+            switch (eventType)
             {
-                var message = await receiveTask;
-                await HandleMessage(message, cancellationToken);
-                receiveTask = _connection.ReceiveAsync(cancellationToken);
-            }
-            else if (readyTask == transferLimitTask)
-            {
-                var relation = await transferLimitTask;
-                await _handler.OnClientRelationAsync(relation, cancellationToken);
-                transferLimitTask = _transferLimitReader.ReadAsync(cancellationToken).AsTask();
-            }
-            else if (readyTask == haveTask)
-            {
-                var have = await haveTask;
-                await _handler.OnClientHaveAsync(have, cancellationToken);
-                haveTask = _haveMessageReader.ReadAsync(cancellationToken).AsTask();
+                case EventType.Receive:
+                    var message = await (Task<IMessageFrameReader>)readyTask;
+                    await HandleMessage(message, cancellationToken);
+                    taskListener.AddTask(EventType.Receive, _connection.ReceiveAsync(cancellationToken));
+                    break;
+                case EventType.TransferLimit:
+                    var transferLimit = await (Task<DataTransferVector>)readyTask;
+                    await _handler.OnClientRelationAsync(transferLimit, cancellationToken);
+                    break;
+                case EventType.Have:
+                    var have = await (Task<int>)readyTask;
+                    await _handler.OnClientHaveAsync(have, cancellationToken);
+                    break;
+
             }
         }
     }
@@ -89,5 +89,12 @@ public sealed class PeerEventListener : IEventListener
             default:
                 throw new BadPeerException(PeerErrorReason.InvalidProtocol);
         }
+    }
+
+    enum EventType
+    {
+        Receive,
+        TransferLimit,
+        Have
     }
 }

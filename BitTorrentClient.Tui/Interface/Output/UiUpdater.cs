@@ -1,5 +1,6 @@
 ﻿using System.Threading.Channels;
 using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Helpers.DataStructures;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Output;
@@ -20,24 +21,32 @@ public sealed class UiUpdater
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        var messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        var updateTask = _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask();
+        var taskListener = new TaskListener<EventType>(cancellationToken);
+        taskListener.AddTask(EventType.Message, () => _messageReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.Update, () => _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask());
         while (true)
         {
-            var ready = await Task.WhenAny(messageTask, updateTask);
-            if (ready == messageTask)
+            var (eventType, readyTask) = await taskListener.WaitAsync();
+
+            switch (eventType)
             {
-                var (level, message) = await messageTask;
-                _uiHandler.AddMessage(level, message);
-                messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-            }
-            else if (ready == updateTask)
-            {
-                var update = await updateTask;
-                if (!update) break;
-                _uiHandler.Update(_downloadService.GetDownloadUpdates());
-                updateTask = _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask();
+                case EventType.Message:
+                    var (level, message) = await (Task<(LogLevel, string)>)readyTask;
+                    _uiHandler.AddMessage(level, message);
+                    break;
+                case EventType.Update:
+                    var update = await (Task<bool>)readyTask;
+                    if (!update) break;
+                    _uiHandler.Update(_downloadService.GetDownloadUpdates());
+                    break;
+
             }
         }
+    }
+
+    enum EventType
+    {
+        Message,
+        Update
     }
 }

@@ -11,8 +11,8 @@ public static class DownloadStorageFactory
         foreach (var file in files)
         {
             var filePath = Path.Combine(path, file.Path);
-            var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.Size)), true);
-            createdFiles.Add(new(createdBytes, file.Size, handle));
+            var stream = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(filePath, file.Size)), true);
+            createdFiles.Add(new(createdBytes, file.Size, stream));
             createdBytes += file.Size;
         }
         return new(createdFiles, createdBytes);
@@ -20,8 +20,8 @@ public static class DownloadStorageFactory
     
     public static StorageStream CreateSingleFileStorage(FileData file)
     {
-        var handle = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(file.Path, file.Size)), true);
-        var streamData = new StreamData(0, file.Size, handle);
+        var stream = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(file.Path, file.Size)), true);
+        var streamData = new StreamData(0, file.Size, stream);
         return new([streamData], file.Size);
     }
 

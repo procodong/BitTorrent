@@ -58,9 +58,9 @@ public sealed class StorageStream : IDisposable, IAsyncDisposable
     {
         foreach (var fileData in _saves)
         {
-            if (fileData.Handle.IsValueCreated)
+            if (fileData.Stream.IsValueCreated)
             {
-                fileData.Handle.Value.Result.Dispose();
+                fileData.Stream.Value.Result.Dispose();
             }
         }
     }
@@ -69,9 +69,9 @@ public sealed class StorageStream : IDisposable, IAsyncDisposable
     {
         foreach (var fileData in _saves)
         {
-            if (fileData.Handle.IsValueCreated)
+            if (fileData.Stream.IsValueCreated)
             {
-                await fileData.Handle.Value.Result.DisposeAsync();
+                await fileData.Stream.Value.Result.DisposeAsync();
             }
         }
     }
