@@ -24,44 +24,52 @@ public sealed class MessageWritingEventListener : IEventListener
 
     public async Task ListenAsync(CancellationToken cancellationToken = default)
     {
-        var messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-        var cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
-        var delayTask = Task.Delay(-1, cancellationToken);
-        var keepAliveTask = _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask();
+        var taskListener = new TaskListener<EventType>(cancellationToken);
+        taskListener.AddTask(EventType.Message, () => _messageReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.CancelledBlock, () => _cancellationReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.KeepAlive, () => _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask());
 
         var delayer = new PieceDelayingHandle();
 
         while (true)
         {
-            var ready = await Task.WhenAny(messageTask, cancelledBlockTask, delayTask, keepAliveTask);
-            if (ready == messageTask)
+            var (eventType, readyTask) = await taskListener.WaitAsync();
+
+            switch (eventType)
             {
-                var message = await messageTask;
-                delayer.Changed = false;
-                await _handler.OnMessageAsync(message, delayer, cancellationToken);
-                if (delayer.Changed)
-                {
-                    delayTask = Task.Delay(delayer.DelayMilliSeconds, cancellationToken);
-                }
-                messageTask = _messageReader.ReadAsync(cancellationToken).AsTask();
-            }
-            else if (ready == cancelledBlockTask)
-            {
-                var cancel = await cancelledBlockTask;
-                await _handler.OnCancelAsync(cancel, cancellationToken);
-                cancelledBlockTask = _cancellationReader.ReadAsync(cancellationToken).AsTask();
-            }
-            else if (ready == delayTask)
-            {
-                delayer.Reset();
-                await _handler.OnDelayEnd(delayer, cancellationToken);
-                delayTask = Task.Delay(delayer.DelayMilliSeconds, cancellationToken);
-            }
-            else if (ready == keepAliveTask)
-            {
-                await _handler.OnKeepAliveAsync(cancellationToken);
-                keepAliveTask = _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask();
+                case EventType.Message:
+                    var message = await (Task<MaybeRentedArray<Message>>)readyTask;
+                    delayer.Changed = false;
+                    await _handler.OnMessageAsync(message, delayer, cancellationToken);
+                    if (delayer.Changed)
+                    {
+                        taskListener.AddTask(EventType.Delay, Task.Delay(delayer.DelayMilliSeconds, cancellationToken));
+                    }
+                    break;
+                case EventType.CancelledBlock:
+                    var cancel = await (Task<BlockRequest>)readyTask;
+                    await _handler.OnCancelAsync(cancel, cancellationToken);
+                    break;
+                case EventType.Delay:
+                    delayer.Reset();
+                    await _handler.OnDelayEnd(delayer, cancellationToken);
+                    if (delayer.DelayMilliSeconds != -1)
+                    {
+                        taskListener.AddTask(EventType.Delay, Task.Delay(delayer.DelayMilliSeconds, cancellationToken));
+                    }
+                    break;
+                case EventType.KeepAlive:
+                    await _handler.OnKeepAliveAsync(cancellationToken);
+                    break;
+
             }
         }
+    }
+    enum EventType
+    {
+        Message,
+        CancelledBlock,
+        Delay,
+        KeepAlive
     }
 }

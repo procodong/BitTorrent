@@ -23,22 +23,15 @@ public sealed class DownloadLauncher : IDownloadLauncher
 
     public PeerManagerHandle LaunchDownload(Download download, StorageStream storage, ITrackerFetcher tracker)
     {
-        var peerAdditionChannel = Channel.CreateBounded<PeerWireStream>(new BoundedChannelOptions(8)
+        var options = new BoundedChannelOptions(8)
         {
             SingleWriter = false
-        });
-        var peerRemovalChannel = Channel.CreateBounded<ReadOnlyMemory<byte>?>(new BoundedChannelOptions(8)
-        {
-            SingleWriter = false
-        });
-        var stateChannel = Channel.CreateBounded<DownloadExecutionState>(new BoundedChannelOptions(8)
-        {
-            SingleWriter = false
-        });
-        var haveChannel = Channel.CreateBounded<int>(new BoundedChannelOptions(8)
-        {
-            SingleWriter = false
-        });
+        };
+        var peerAdditionChannel = Channel.CreateBounded<PeerWireStream>(options);
+        var peerRemovalChannel = Channel.CreateBounded<ReadOnlyMemory<byte>?>(options);
+        var stateChannel = Channel.CreateBounded<DownloadExecutionState>(options);
+        var haveChannel = Channel.CreateBounded<int>(options);
+        
         var downloadState = new DownloadState(download);
         var canceller = new CancellationTokenSource();
         var downloader = new Downloader(downloadState);
