@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+namespace BitTorrentClient.Engine.Storage.Data;
 public sealed class PieceHasher
 {
     private readonly HashUnit[] _buffers;
@@ -16,7 +16,6 @@ public sealed class PieceHasher
         _hasher = SHA1.Create();
     }
 
-    public bool Finished => _hashedOffset == _buffers.Length;
     
     public Task SaveBlockAsync(Stream stream, int offset, CancellationToken cancellationToken = default)
     {
@@ -33,7 +32,7 @@ public sealed class PieceHasher
             .AsTask().ContinueWith(t =>
             {
                 if (t.IsCompletedSuccessfully) Interlocked.Add(ref _buffers[index].Written, (int)stream.Length);
-            });
+            }, cancellationToken);
     }
 
     public IEnumerable<(int Offset, MaybeRentedArray<byte> Buffer)> HashReadyBlocks()

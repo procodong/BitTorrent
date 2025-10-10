@@ -1,6 +1,6 @@
 ﻿using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-using BitTorrentClient.Engine.Infrastructure.Storage.Interface;
 using BitTorrentClient.Engine.Models.Peers;
+using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Sending;

@@ -40,7 +40,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         taskListener.AddTask(EventType.UpdateInterval, () => _updateInterval.WaitForNextTickAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.PeerRemoval, () => _peerRemovalReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.PieceCompletion, () => _pieceCompletionReader.ReadAsync(cancellationToken).AsTask());
-        taskListener.AddTask(EventType.FileException, () => _stateReader.ReadAsync(cancellationToken).AsTask());
+        taskListener.AddTask(EventType.StateUpdate, () => _stateReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
         while (true)
         {
@@ -80,7 +80,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
             case EventType.TrackerInterval:
                 taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken));
                 break;
-            case EventType.FileException:
+            case EventType.StateUpdate:
                 var state = await (Task<DownloadExecutionState>)readyTask;
                 await _handler.OnStateChange(state, cancellationToken);
                 break;
@@ -134,7 +134,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         PeerRemoval,
         TrackerUpdate,
         TrackerInterval,
-        FileException,
+        StateUpdate,
         PieceCompletion
     }
 }

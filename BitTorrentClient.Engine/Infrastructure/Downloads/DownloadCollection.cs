@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Launchers.Interface;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Engine.Models.Downloads;
+using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Protocol.Transport.Trackers;

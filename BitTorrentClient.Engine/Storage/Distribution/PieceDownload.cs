@@ -1,6 +1,6 @@
-﻿using BitTorrentClient.Engine.Infrastructure.Storage.Data;
+﻿using BitTorrentClient.Engine.Storage.Data;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
     public int Downloaded;

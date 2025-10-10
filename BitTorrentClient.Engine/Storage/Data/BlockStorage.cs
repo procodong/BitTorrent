@@ -1,11 +1,11 @@
 ﻿using System.Security.Cryptography;
 using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
-using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+using BitTorrentClient.Engine.Storage.Distribution;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+namespace BitTorrentClient.Engine.Storage.Data;
 public sealed class BlockStorage
 {
     private readonly ChannelWriter<int> _haveWriter;

@@ -1,7 +1,7 @@
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+namespace BitTorrentClient.Engine.Storage.Distribution;
 
 public class SynchronizedDownloader
 {

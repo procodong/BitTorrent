@@ -4,7 +4,7 @@ using BencodeNET.Torrents;
 using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
+using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Api.Services;

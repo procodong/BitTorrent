@@ -1,5 +1,5 @@
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Models.Downloads;
+using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
 

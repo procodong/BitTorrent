@@ -1,8 +1,8 @@
 ﻿using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Engine.Models.Peers;
+using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 

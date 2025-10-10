@@ -1,11 +1,11 @@
 ﻿using BitTorrentClient.Engine.Infrastructure.Downloads;
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
 using BitTorrentClient.Engine.Models;
+using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class Downloader
 {
     private readonly DownloadState _state;

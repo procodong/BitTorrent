@@ -1,4 +1,4 @@
-﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+﻿namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class BlockCursor
 {
     private readonly Block _block;

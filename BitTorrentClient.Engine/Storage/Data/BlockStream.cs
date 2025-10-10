@@ -1,4 +1,4 @@
-﻿namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+﻿namespace BitTorrentClient.Engine.Storage.Data;
 public sealed class BlockStream : Stream
 {
     private readonly PartsCursor _cursor;
@@ -22,7 +22,7 @@ public sealed class BlockStream : Stream
 
     private int CapReadCount(int count)
     {
-        return int.Min(count, _cursor.RemainingInPart);
+        return int.Min(count, (int)_cursor.RemainingInPart);
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)

@@ -3,7 +3,7 @@ using System.Threading.Channels;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Helpers.DataStructures;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+namespace BitTorrentClient.Engine.Storage.Data;
 
 public sealed class DataStorage : IDisposable, IAsyncDisposable
 {
@@ -27,7 +27,6 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
 
     public async Task WriteDataAsync(long offset, MaybeRentedArray<byte> array)
     {
-        var failedInitialWrite = false;
         try
         {
             var stream = _stream.GetStream(offset);
@@ -35,20 +34,14 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
         }
         catch (IOException)
         {
-            failedInitialWrite = true;
             bool success;
             do
             {
-
                 var callback = Channel.CreateBounded<bool>(4);
                 _failedWrites.Push(new(offset, array, callback));
                 await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, _cancellationToken);
                 success = await callback.Reader.ReadAsync(_cancellationToken);
             } while (!success);
-        }
-        finally
-        {
-            if (!failedInitialWrite) array.Dispose();
         }
     }
 
@@ -59,7 +52,7 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
         for (var i = 0; i < count; i++)
         {
             var write = writes[i];
-            _ = WriteDataAsync(write.Offset, write.Array).ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask());
+            _ = WriteDataAsync(write.Offset, write.Array).ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask(), _cancellationToken);
         }
     }
 

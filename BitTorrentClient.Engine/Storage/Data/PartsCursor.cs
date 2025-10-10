@@ -1,9 +1,10 @@
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+namespace BitTorrentClient.Engine.Storage.Data;
 
 public sealed class PartsCursor
 {
     private readonly IEnumerator<StreamPart> _parts;
-    private int _filePosition;
+    private long _filePosition;
+    private long _fileLength;
 
     public PartsCursor(IEnumerable<StreamPart> parts)
     {
@@ -11,12 +12,16 @@ public sealed class PartsCursor
         _parts.MoveNext();
     }
 
-    public int RemainingInPart => _parts.Current.Length - _filePosition;
+    public long RemainingInPart => _fileLength - _filePosition;
     
     private bool Next()
     {
-        _filePosition = 0;
-        return _parts.MoveNext();
+        var ret = _parts.MoveNext();
+        if (!ret) return false;
+        var current = _parts.Current;
+        _filePosition = current.Position;
+        _fileLength = current.Length;
+        return true;
     }
 
     private bool UpdateCurrentFile()
@@ -35,7 +40,7 @@ public sealed class PartsCursor
             part = default;
             return false;
         }
-        part = _parts.Current;
+        part = _parts.Current with {Position = _filePosition};
         return true;
     }
 

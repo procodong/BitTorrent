@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Helpers.Streams;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Data;
+namespace BitTorrentClient.Engine.Storage.Data;
 public static class DownloadStorageFactory
 {
     public static StorageStream CreateMultiFileStorage(string path, FileData[] files)

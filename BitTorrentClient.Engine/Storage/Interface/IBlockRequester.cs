@@ -1,8 +1,8 @@
-﻿using BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+﻿using BitTorrentClient.Engine.Storage.Distribution;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Interface;
+namespace BitTorrentClient.Engine.Storage.Interface;
 public interface IBlockRequester
 {
     void ClearRequests();

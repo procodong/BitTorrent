@@ -1,10 +1,10 @@
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
-using BitTorrentClient.Engine.Infrastructure.Storage.Data;
-using BitTorrentClient.Engine.Infrastructure.Storage.Interface;
+using BitTorrentClient.Engine.Storage.Data;
+using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
-namespace BitTorrentClient.Engine.Infrastructure.Storage.Distribution;
+namespace BitTorrentClient.Engine.Storage.Distribution;
 
 public sealed class BlockDistributor : IBlockRequester
 {
