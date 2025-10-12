@@ -51,12 +51,12 @@ public sealed class DelayedMessageSender : IDelayedMessageSender
         _sender.SendKeepAlive();
     }
 
-    public async Task SendBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task SendBlockAsync(BlockData block, DelaySchedulingHandle delayer, CancellationToken cancellationToken = default)
     {
-        var delay = _tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded);
-        if (_tracker.TimeUntilTransferRate(_state.TransferLimit.Uploaded) < 0)
+        var delay = _tracker.SecondsUntilTransferRate(_state.TransferLimit.Uploaded);
+        if (_tracker.SecondsUntilTransferRate(_state.TransferLimit.Uploaded) < 0)
         {
-            delayer.DelayNextPiece(-delay);
+            delayer.Schedule(TimeSpan.FromSeconds(-delay));
             _queuedBlocks.Add(block);
         }
         else
@@ -67,7 +67,7 @@ public sealed class DelayedMessageSender : IDelayedMessageSender
         }
     }
 
-    public Task SendBlockAsync(IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public Task SendBlockAsync(DelaySchedulingHandle delayer, CancellationToken cancellationToken = default)
     {
         if (_queuedBlocks.Count != 0)
         {

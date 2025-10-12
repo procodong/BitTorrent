@@ -31,7 +31,7 @@ public sealed class BlockStorage
     {
         Task writeTask;
         using (block.Piece.HashingLock.EnterScope()) writeTask = Task.WhenAll(block.Piece.Hasher.HashReadyBlocks().Select(write =>
-            _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + write.Offset, write.Buffer)));
+            _storage.WriteDataAsync(block.Piece.Index * _downloadData.PieceSize + write.Offset, write.Buffer).ContinueWith(_ => write.Buffer.Dispose())));
         await writeTask;
         var newDownloaded = Interlocked.Add(ref block.Piece.Downloaded, block.Length);
         if (newDownloaded < block.Piece.Size)

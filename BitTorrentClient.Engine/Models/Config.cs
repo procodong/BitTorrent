@@ -1,4 +1,7 @@
-﻿namespace BitTorrentClient.Engine.Models;
+﻿using System.Runtime.CompilerServices;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+
+namespace BitTorrentClient.Engine.Models;
 
 public record class Config(
     int TargetDownload,
@@ -14,7 +17,8 @@ public record class Config(
     int UiUpdateInterval,
     int PieceSegmentSize,
     int MaxParallelPeers,
-    int TransferRateResetInterval
+    int TransferRateResetInterval,
+    int PeerBufferSize
 )
 {
     public static Config Default => new(
@@ -31,6 +35,7 @@ public record class Config(
         UiUpdateInterval: 1000,
         PieceSegmentSize: 1 << 17,
         MaxParallelPeers: 30,
-        TransferRateResetInterval: 10
+        TransferRateResetInterval: 10,
+        PeerBufferSize: (1 << 14) + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte)
         );
 }

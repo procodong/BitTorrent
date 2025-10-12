@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Api.PersistentState;
 using BitTorrentClient.Api.Services;
@@ -8,7 +7,6 @@ using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Launchers;
 using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Protocol.Presentation.PeerWire;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
 using BitTorrentClient.Protocol.Transport.Trackers;
 using Microsoft.Extensions.Logging;
@@ -20,17 +18,15 @@ public static class ClientLauncher
     public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger)
     {
         var config = configBuilder.Build(Config.Default);
-        var peerBufferSize = config.RequestSize + Unsafe.SizeOf<BlockShareHeader>() + sizeof(int) + sizeof(byte);
+        var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
 
         var (port, socket) = FindPort();
-
-        var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
         var httpClient = new HttpClient();
-        var trackerConnector = new TrackerConnector(httpClient, port, peerBufferSize);
-        var trackerFinder = new TrackerFinder(logger, trackerConnector);
+        var trackerConnector = new TrackerConnector(httpClient, port, config.PeerBufferSize);
+        var trackerFinder = new TrackerFinder(trackerConnector, logger);
         var downloadLauncher = new DownloadLauncher(logger);
         var downloads = new DownloadCollection(clientId, config, trackerFinder, downloadLauncher);
-        var peerReceiver = new TcpPeerReceiver(socket, peerBufferSize);
+        var peerReceiver = new TcpPeerReceiver(socket, config.PeerBufferSize);
 
         var canceller = new CancellationTokenSource();
         var clientTask = ListenAsync(downloads, peerReceiver, canceller.Token);
@@ -39,12 +35,16 @@ public static class ClientLauncher
     
     private static async Task ListenAsync(DownloadCollection downloads, TcpPeerReceiver peerReceiver, CancellationToken cancellationToken = default)
     {
-        await using var _ = downloads;
-        using var __ = peerReceiver;
-        while (true)
+        await using (downloads)
         {
-            var peer = await peerReceiver.ReceivePeerAsync(cancellationToken);
-            await downloads.AddPeerAsync(peer, cancellationToken);
+            using (peerReceiver)
+            {
+                while (true)
+                {
+                    var peer = await peerReceiver.ReceivePeerAsync(cancellationToken);
+                    _ = downloads.AddPeerAsync(peer, cancellationToken);
+                }
+            }
         }
     }
 

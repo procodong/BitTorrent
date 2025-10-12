@@ -6,27 +6,20 @@ using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Protocol.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
-public sealed class Downloader
+public sealed class BlockAssigner
 {
-    private readonly DownloadState _state;
+    private readonly int _segmentSize;
+    private readonly DownloadData _download;
     private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
     private readonly List<int> _rarestPieces = [];
     private int _requestedPiecesOffset;
 
-    public Downloader(DownloadState state)
+    public BlockAssigner(DownloadData download, int segmentSize)
     {
-        _state = state;
-        _requestedPieces = new(state.Download.Data.PieceCount);
-    }
-
-    public LazyBitArray DownloadedPieces => _state.DownloadedPieces;
-    public DownloadData Torrent => _state.Download.Data;
-    public Config Config => _state.Download.Config;
-
-    public void RegisterDownloaded(long download)
-    {
-        _state.DataTransfer.AtomicAddDownload(download);
+        _segmentSize = segmentSize;
+        _download = download;
+        _requestedPieces = new(download.PieceCount);
     }
 
     public void Cancel(Block block)
@@ -36,11 +29,6 @@ public sealed class Downloader
 
     public bool TryAssignBlock(LazyBitArray ownedPieces, out Block block)
     {
-        if (_state.TransferRate.Download > Config.TargetDownload)
-        {
-            block = default;
-            return false;
-        }
         var slot = SearchPiece(ownedPieces);
         if (!slot.HasValue)
         {
@@ -49,7 +37,7 @@ public sealed class Downloader
         }
         var index = slot.Value;
         var download = _pieceRegisters[index];
-        var request = download.GetRequest(Config.PieceSegmentSize);
+        var request = download.GetRequest(_segmentSize);
         if (download.Remaining == 0)
         {
             _pieceRegisters.SwapRemove(index);
@@ -88,7 +76,7 @@ public sealed class Downloader
                 return rarePiece;
             }
         }
-        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, Torrent.PieceCount - _requestedPiecesOffset), ownedPieces);
+        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, _download.PieceCount - _requestedPiecesOffset), ownedPieces);
     }
 
     private bool CanBeRequested(int pieceIndex, LazyBitArray ownedPieces)
@@ -101,13 +89,12 @@ public sealed class Downloader
         var piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;
         var size = PieceSize(piece.Value);
-        var bufferSize = _state.Download.Config.RequestSize * 4;
-        var hasher = new PieceHasher(bufferSize, size.DivWithRemainder(bufferSize));
+        var hasher = new PieceHasher(_segmentSize, size.DivWithRemainder(_segmentSize));
         return new(size, piece.Value, hasher);
     }
 
     private int PieceSize(int piece)
     {
-        return (int)long.Min(Torrent.PieceSize, Torrent.Size - piece * Torrent.PieceSize);
+        return (int)long.Min(_download.PieceSize, _download.Size - piece * _download.PieceSize);
     }
 }

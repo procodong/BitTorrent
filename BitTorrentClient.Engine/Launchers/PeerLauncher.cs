@@ -2,6 +2,7 @@
 using BitTorrentClient.Engine.Events.Handling;
 using BitTorrentClient.Engine.Events.Listening;
 using BitTorrentClient.Engine.Events.Listening.Interface;
+using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Infrastructure.MessageWriting;
 using BitTorrentClient.Engine.Infrastructure.Peers;
 using BitTorrentClient.Engine.Launchers.Interface;
@@ -17,15 +18,17 @@ using Microsoft.Extensions.Logging;
 namespace BitTorrentClient.Engine.Launchers;
 public sealed class PeerLauncher : IPeerLauncher
 {
-    private readonly SynchronizedDownloader _downloader;
+    private readonly SynchronizedBlockAssigner _downloader;
+    private readonly DownloadState _state;
     private readonly ChannelWriter<ReadOnlyMemory<byte>?> _peerRemovalWriter;
     private readonly BlockStorage _storage;
     private readonly ILogger _logger;
     private readonly int _pieceCount;
     private readonly TimeSpan _keepAliveInterval;
 
-    public PeerLauncher(SynchronizedDownloader downloader, ChannelWriter<ReadOnlyMemory<byte>?> peerRemovalWriter, int pieceCount, TimeSpan keepAliveInterval, BlockStorage storage, ILogger logger)
+    public PeerLauncher(SynchronizedBlockAssigner downloader, DownloadState state, ChannelWriter<ReadOnlyMemory<byte>?> peerRemovalWriter, int pieceCount, TimeSpan keepAliveInterval, BlockStorage storage, ILogger logger)
     {
+        _state = state;
         _downloader = downloader;
         _peerRemovalWriter = peerRemovalWriter;
         _storage = storage;
@@ -48,9 +51,9 @@ public sealed class PeerLauncher : IPeerLauncher
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader, new(_keepAliveInterval));
 
-        var distributor = new BlockDistributor(_downloader, _storage);
+        var distributor = new BlockDistributor(_downloader, _state, _storage);
         var peer = new Peer(state, distributor, sender);
-        var eventHandler = new PeerEventHandler(peer, _downloader.PieceSize);
+        var eventHandler = new PeerEventHandler(peer, _state.Download.Data.PieceSize);
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveChannel.Reader, relationChannel.Reader);
 
         var canceller = new CancellationTokenSource();
@@ -58,7 +61,7 @@ public sealed class PeerLauncher : IPeerLauncher
         return new(state, haveChannel.Writer, relationChannel.Writer, canceller);
     }
 
-    private async Task StartPeer(PeerWireStream stream, IEventListener peerEventListener, IEventListener writingEventListener, CancellationToken cancellationToken)
+    private async Task StartPeer(PeerWireStream stream, PeerEventListener peerEventListener, MessageWritingEventListener writingEventListener, CancellationToken cancellationToken)
     {
         try
         {

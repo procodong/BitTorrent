@@ -2,7 +2,7 @@ using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Protocol.Transport.PeerWire.Reading;
 
-public interface IMessageFrameReader
+public interface IMessageFrameReader : IAsyncDisposable
 {
     MessageType Type { get; }
     Task<int> ReadHaveAsync(CancellationToken cancellationToken = default);

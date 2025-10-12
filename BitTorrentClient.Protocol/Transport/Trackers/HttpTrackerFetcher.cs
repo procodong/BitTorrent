@@ -104,6 +104,5 @@ public sealed class HttpTrackerFetcher : ITrackerFetcher
 
     public void Dispose()
     {
-        _httpClient.Dispose();
     }
 }

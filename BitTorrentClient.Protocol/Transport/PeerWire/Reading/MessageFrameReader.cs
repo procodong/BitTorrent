@@ -8,11 +8,13 @@ public sealed class MessageFrameReader : IMessageFrameReader
 {
     private readonly FrameReader _reader;
     private readonly MessageType _type;
+    private readonly SemaphoreSlim _readLock;
 
-    public MessageFrameReader(FrameReader reader, MessageType type)
+    public MessageFrameReader(FrameReader reader, MessageType type, SemaphoreSlim readLock)
     {
         _reader = reader;
         _type = type;
+        _readLock = readLock;
     }
 
     private BigEndianBinaryReader Reader => new(_reader);
@@ -43,4 +45,20 @@ public sealed class MessageFrameReader : IMessageFrameReader
     {
         return _reader.GetStream();
     }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_reader.Remaining != 0)
+            {
+                await _reader.ReadToEndAsync();
+            }
+        }
+        finally
+        {
+            _readLock.Release();
+        }
+    }
+
 }

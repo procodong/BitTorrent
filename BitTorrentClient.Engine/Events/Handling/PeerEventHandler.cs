@@ -43,6 +43,7 @@ public sealed class PeerEventHandler : IPeerEventHandler
     {
         _peer.Uploading = transferLimit.Upload >= _interestMin;
         _peer.WantsToDownload = transferLimit.Download >= _interestMin;
+        _peer.TransferLimit = transferLimit;
         await _peer.UpdateAsync(cancellationToken);
     }
 

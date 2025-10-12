@@ -18,6 +18,7 @@ public class ConfigBuilder
     public int? PieceSegmentSize { get; set; }
     public int? MaxParallelPeers { get; set; }
     public int? TransferRateResetInterval { get; set; }
+    public int? PeerBufferSize { get; set; }
 
 
     internal Config Build(Config defaultConfig) => new(
@@ -34,6 +35,7 @@ public class ConfigBuilder
         UiUpdateInterval ?? defaultConfig.UiUpdateInterval,
         PieceSegmentSize ?? defaultConfig.PieceSegmentSize,
         MaxParallelPeers ?? defaultConfig.MaxParallelPeers,
-        TransferRateResetInterval ?? defaultConfig.TransferRateResetInterval
+        TransferRateResetInterval ?? defaultConfig.TransferRateResetInterval,
+        PeerBufferSize ?? defaultConfig.PeerBufferSize
     );
 }

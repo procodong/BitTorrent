@@ -1,3 +1,4 @@
+using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Engine.Storage.Interface;
@@ -9,13 +10,15 @@ namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
-    private readonly SynchronizedDownloader _downloader;
+    private readonly SynchronizedBlockAssigner _downloader;
+    private readonly DownloadState _state;
     private readonly BlockStorage _storage;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(SynchronizedDownloader downloader, BlockStorage storage)
+    public BlockDistributor(SynchronizedBlockAssigner downloader, DownloadState state, BlockStorage storage)
     {
-        _requests = new(downloader.Config.RequestQueueSize);
+        _state = state;
+        _requests = new(state.Download.Config.RequestQueueSize);
         _downloader = downloader;
         _storage = storage;
         _blockCursor = new(default);
@@ -46,13 +49,29 @@ public sealed class BlockDistributor : IBlockRequester
 
     public bool TryGetBlock(BlockRequest request, out Stream stream)
     {
-        if (!_downloader.DownloadedPieces[request.Index])
+        ValidateRequest(request);
+        if (!_state.DownloadedPieces[request.Index])
         {
             stream = null!;
             return false;
         }
         stream = _storage.RequestBlock(request);
         return true;
+    }
+
+    private void ValidateRequest(BlockRequest request)
+    {
+        var size = PieceSize(request.Index);
+        var end = request.Begin + request.Length;
+        if (end > size || end < 0)
+        {
+            throw new BadPeerException(PeerErrorReason.InvalidRequest);
+        }
+    }
+
+    private int PieceSize(int piece)
+    {
+        return (int)long.Min(_state.Download.Data.PieceSize, _state.Download.Data.Size - piece * _state.Download.Data.PieceSize);
     }
 
     public async Task SaveBlockAsync(BlockData data, CancellationToken cancellationToken = default)
@@ -66,7 +85,7 @@ public sealed class BlockDistributor : IBlockRequester
         try
         {
             await _storage.SaveBlockAsync(data.Stream, block, cancellationToken);
-            _downloader.RegisterDownloaded(data.Request.Length);
+            _state.DataTransfer.AtomicAddDownload(data.Request.Length);
         }
         catch (InvalidDataException)
         {
@@ -82,18 +101,18 @@ public sealed class BlockDistributor : IBlockRequester
 
     public bool TryRequestDownload(LazyBitArray pieces, out Block block)
     {
-        if (_requests.Count == _downloader.Config.RequestQueueSize)
+        if (_requests.Count == _state.Download.Config.RequestQueueSize)
         {
             block = default;
             return false;
         }
-        var request = _blockCursor.GetRequest(_downloader.Config.RequestSize);
+        var request = _blockCursor.GetRequest(_state.Download.Config.RequestSize);
         if (request.Length == 0)
         {
             if (_downloader.TryAssignBlock(pieces, out var newBlock))
             {
                 _blockCursor = new(newBlock);
-                request = _blockCursor.GetRequest(_downloader.Config.RequestSize);
+                request = _blockCursor.GetRequest(_state.Download.Config.RequestSize);
             }
             else
             {

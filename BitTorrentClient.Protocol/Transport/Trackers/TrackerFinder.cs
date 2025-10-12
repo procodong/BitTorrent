@@ -2,6 +2,7 @@
 using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
 using BitTorrentClient.Protocol.Transport.Trackers.Exceptions;
 using BitTorrentClient.Protocol.Transport.Trackers.Interface;
+using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Protocol.Transport.Trackers;
 public sealed class TrackerFinder : IDisposable
@@ -9,28 +10,31 @@ public sealed class TrackerFinder : IDisposable
     private readonly ITrackerConnector _trackerConnector;
     private readonly ILogger _logger;
 
-    public TrackerFinder(ILogger logger, ITrackerConnector connector)
+    public TrackerFinder(ITrackerConnector connector, ILogger logger)
     {
-        _logger = logger;
         _trackerConnector = connector;
+        _logger = logger;
     }
 
     public async Task<ITrackerFetcher> FindTrackerAsync(Uri[][] uris, TrackerUpdate initialUpdate, CancellationToken cancellationToken = default)
     {
         var canceller = new CancellationTokenSource();
         await using var _ = cancellationToken.Register(() => canceller.Cancel());
-        var tasks = uris
-            .SelectMany(uri => uri.OrderBy(_ => Random.Shared.Next()))
-            .Select(uri => _trackerConnector.ConnectAsync(uri, initialUpdate, canceller.Token))
-            .ToList();
-        
-        ITrackerFetcher? fetcher = null;
-        for (var readyTasks = 0; readyTasks < tasks.Count; readyTasks++)
+        var trackers = new TaskListener<EventType>();
+        int trackerCount = 0;
+        foreach (var uri in uris.SelectMany(uri => uri.OrderBy(_ => Random.Shared.Next())))
         {
-            var trackerTask = await Task.WhenAny(tasks);
+            trackerCount++;
+            trackers.AddTask(EventType.Value, _trackerConnector.ConnectAsync(uri, initialUpdate, canceller.Token));
+        }
+
+        ITrackerFetcher? fetcher = null;
+        for (var readyTasks = 0; readyTasks < trackerCount; readyTasks++)
+        {
+            var (_, trackerTask) = await trackers.WaitAsync();
             try
             {
-                var tracker = await trackerTask;
+                var tracker = await (Task<ITrackerFetcher>)trackerTask;
                 if (fetcher is null)
                 {
                     fetcher = tracker;
@@ -48,26 +52,14 @@ public sealed class TrackerFinder : IDisposable
                     _logger.LogError(ex, "Tracker exception connecting to tracker: {}", ex);
                 }
             }
-
-            for (var i = 0; i < tasks.Count; i++)
-            {
-                if (tasks[i] == trackerTask)
-                {
-                    tasks[i] = Never<ITrackerFetcher>();
-                }
-            }
         }
         return fetcher ?? throw new NoValidTrackerException();
-    }
-
-    private static async Task<T> Never<T>()
-    {
-        await Task.Delay(-1);
-        return default!;
     }
 
     public void Dispose()
     {
         _trackerConnector.Dispose();
     }
+    
+    enum EventType {Value}
 }

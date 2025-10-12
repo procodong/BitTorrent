@@ -31,6 +31,7 @@ public sealed class Peer : IPeer, IDisposable
             _state.RelationToMe = _state.RelationToMe with { Choked = !value };
         }
     }
+    public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
     public bool WantsToDownload
     {
         get => _state.Relation.Interested;
@@ -52,8 +53,13 @@ public sealed class Peer : IPeer, IDisposable
             _sender.SendRelation(value ? RelationUpdate.Unchoke : RelationUpdate.Choke);
         }
     }
-    public bool WantsToUpload { get => _state.RelationToMe.Interested; set => _state.RelationToMe = _state.RelationToMe with { Interested = value }; }
+    public DataTransferVector TransferLimit
+    {
+        get => _state.TransferLimit.Fetch();
+        set => _state.TransferLimit.FetchReplace(value);
+    }
     public LazyBitArray DownloadedPieces { get => _state.OwnedPieces; set => _state.OwnedPieces = value; }
+
 
     public Task CancelUploadAsync(BlockRequest request)
     {
@@ -63,7 +69,7 @@ public sealed class Peer : IPeer, IDisposable
 
     public async Task RequestUploadAsync(BlockRequest request, CancellationToken cancellationToken = default)
     {
-        if (!Uploading) return;
+        if (_state.Relation.Choked) return;
         if (_requester.TryGetBlock(request, out var stream))
         {
             await _sender.SendBlockAsync(new(request, stream), cancellationToken);

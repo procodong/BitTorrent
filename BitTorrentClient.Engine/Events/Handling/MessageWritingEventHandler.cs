@@ -15,9 +15,8 @@ public sealed class MessageWritingEventHandler : IMessageWritingEventHandler
         _sender = sender;
     }
 
-    public async Task OnMessageAsync(MaybeRentedArray<Message> messages, IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task OnMessageAsync(MaybeRentedArray<Message> messages, DelaySchedulingHandle delayer, CancellationToken cancellationToken = default)
     {
-        using var _ = messages;
         foreach (var message in messages.Data)
         {
             switch (message.Type)
@@ -54,7 +53,7 @@ public sealed class MessageWritingEventHandler : IMessageWritingEventHandler
         return Task.CompletedTask;
     }
 
-    public async Task OnDelayEnd(IPieceDelayer delayer, CancellationToken cancellationToken = default)
+    public async Task OnDelayEnd(DelaySchedulingHandle delayer, CancellationToken cancellationToken = default)
     {
         await _sender.SendBlockAsync(delayer, cancellationToken);
     }

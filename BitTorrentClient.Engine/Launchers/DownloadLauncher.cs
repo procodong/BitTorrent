@@ -34,10 +34,10 @@ public sealed class DownloadLauncher : IDownloadLauncher
         
         var downloadState = new DownloadState(download);
         var canceller = new CancellationTokenSource();
-        var downloader = new Downloader(downloadState);
+        var blockAssigner = new BlockAssigner(download.Data, download.Config.PieceSegmentSize);
         var dataStorage = new DataStorage(storage, stateChannel.Writer, canceller.Token);
         var blockStorage = new BlockStorage(downloadState.Download.Data, dataStorage, haveChannel.Writer);
-        var launcher = new PeerLauncher(new(downloader), peerRemovalChannel.Writer, download.Data.PieceCount, TimeSpan.FromMilliseconds(download.Config.KeepAliveInterval), blockStorage, _logger);
+        var launcher = new PeerLauncher(new(blockAssigner), downloadState, peerRemovalChannel.Writer, download.Data.PieceCount, TimeSpan.FromMilliseconds(download.Config.KeepAliveInterval), blockStorage, _logger);
         var spawner = new PeerConnector(downloadState.Download, downloadState.DownloadedPieces, peerRemovalChannel.Writer, peerAdditionChannel.Writer, _logger);
         var peers = new PeerCollection(spawner, launcher, downloadState.Download.Config.MaxParallelPeers);
         var peerManager = new PeerManager(peers, downloadState, dataStorage);

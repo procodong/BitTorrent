@@ -13,7 +13,7 @@ public sealed class TransferTracker
         _uploadTimer = Stopwatch.StartNew();
     }
 
-    public void RegisterTransfer(int transfer)
+    public void RegisterTransfer(long transfer)
     {
         _transfer += transfer;
     }
@@ -24,8 +24,8 @@ public sealed class TransferTracker
         _uploadTimer.Restart();
     }
 
-    public int TimeUntilTransferRate(long rate)
+    public double SecondsUntilTransferRate(long rate)
     {
-        return (int)((double)_transfer / rate - _uploadTimer.Elapsed.TotalSeconds);
+        return (double)_transfer / rate - _uploadTimer.Elapsed.TotalSeconds;
     }
 }

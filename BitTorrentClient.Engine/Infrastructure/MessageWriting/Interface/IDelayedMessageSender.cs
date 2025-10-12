@@ -1,4 +1,5 @@
-﻿using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+﻿using BitTorrentClient.Helpers.DataStructures;
+using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 public interface IDelayedMessageSender
@@ -8,8 +9,8 @@ public interface IDelayedMessageSender
     void SendRequest(BlockRequest request);
     void SendCancel(BlockRequest cancel);
     void SendKeepAlive();
-    Task SendBlockAsync(BlockData block, IPieceDelayer delayer, CancellationToken cancellationToken = default);
-    Task SendBlockAsync(IPieceDelayer delayer, CancellationToken cancellationToken = default);
+    Task SendBlockAsync(BlockData block, DelaySchedulingHandle delayer, CancellationToken cancellationToken = default);
+    Task SendBlockAsync(DelaySchedulingHandle delayer, CancellationToken cancellationToken = default);
     bool TryCancelUpload(BlockRequest request);
     Task FlushAsync(CancellationToken cancellationToken = default);
 }

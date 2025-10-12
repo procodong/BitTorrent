@@ -3,24 +3,15 @@ using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 
-public class SynchronizedDownloader
+public class SynchronizedBlockAssigner
 {
-    private readonly Downloader _downloader;
+    private readonly BlockAssigner _downloader;
     private readonly Lock _lock;
 
-    public SynchronizedDownloader(Downloader downloader)
+    public SynchronizedBlockAssigner(BlockAssigner downloader)
     {
         _downloader = downloader;
         _lock = new();
-    }
-    
-    public LazyBitArray DownloadedPieces => _downloader.DownloadedPieces;
-    public Config Config => _downloader.Config;
-    public int PieceSize => _downloader.Torrent.PieceSize;
-    
-    public void RegisterDownloaded(long download)
-    {
-        _downloader.RegisterDownloaded(download);
     }
 
     public void Cancel(Block block)
