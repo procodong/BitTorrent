@@ -17,11 +17,20 @@ public sealed class TcpPeerReceiver : IPeerReceiver
 
     public async Task<PendingPeerWireStream<InitialReadDataPhase>> ReceivePeerAsync(CancellationToken cancellationToken = default)
     {
-        var socket = await _listener.AcceptSocketAsync(cancellationToken);
-        var stream = new NetworkStream(socket, true);
-        var buffer = new BufferCursor(_peerBufferSize);
-        var handler = new HandshakeHandler(stream, buffer);
-        return new(handler);
+        var client = await _listener.AcceptTcpClientAsync(cancellationToken);
+        try
+        {
+            client.SendBufferSize = _peerBufferSize;
+            var stream = new NetworkStream(client.Client, true);
+            var buffer = new BufferCursor(_peerBufferSize);
+            var handler = new HandshakeHandler(stream, buffer);
+            return new(handler);
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
     }
 
     public void Dispose()

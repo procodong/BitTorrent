@@ -21,7 +21,7 @@ public sealed class TcpPeerConnector : IPeerConnector
         var client = new TcpClient();
         try
         {
-
+            client.SendBufferSize = _bufferSize;
             await client.ConnectAsync(_address, cancellationToken);
             var stream = new NetworkStream(client.Client, true);
             var buffer = new BufferCursor(_bufferSize);

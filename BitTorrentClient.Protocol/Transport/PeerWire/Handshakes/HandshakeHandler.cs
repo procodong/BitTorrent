@@ -29,7 +29,7 @@ public sealed class HandshakeHandler : IHandshakeHandler
     {
         _stream = stream;
         _cursor = cursor;
-        _writer = PipeWriter.Create(stream);
+        _writer = PipeWriter.Create(stream, new(minimumBufferSize: cursor.AvailableBuffer));
     }
 
     private BigEndianBinaryWriter Writer => new(_writer);
