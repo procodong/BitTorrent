@@ -1,7 +1,7 @@
 using System.Text.Json;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Engine.Models;
-using BitTorrentClient.Protocol.Presentation.Torrent;
+using BitTorrentClient.Core.Presentation.Torrent;
 
 namespace BitTorrentClient.Api.PersistentState;
 

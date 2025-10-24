@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Tui", "BitTorrentClient.Tui\BitTorrentClient.Tui.csproj", "{3AC570A7-D251-42A6-B951-52B671E0C5DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Protocol", "BitTorrentClient.Protocol\BitTorrentClient.Protocol.csproj", "{1E5DE8C6-E831-49BE-8445-D64197F3ADA5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Core", "BitTorrentClient.Core\BitTorrentClient.Core.csproj", "{1E5DE8C6-E831-49BE-8445-D64197F3ADA5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentClient.Helpers", "BitTorrentClient.Helpers\BitTorrentClient.Helpers.csproj", "{0A009D00-993A-4AB0-9178-0A38EE440725}"
 EndProject

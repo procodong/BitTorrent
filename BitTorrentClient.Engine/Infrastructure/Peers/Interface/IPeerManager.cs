@@ -1,7 +1,7 @@
 ﻿using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
+using BitTorrentClient.Core.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 public interface IPeerManager

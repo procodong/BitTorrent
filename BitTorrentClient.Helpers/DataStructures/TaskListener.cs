@@ -5,12 +5,12 @@ namespace BitTorrentClient.Helpers.DataStructures;
 public class TaskListener<TIdentifier>
     where TIdentifier : struct, Enum
 {
-    private readonly Channel<(TaskFactory<TIdentifier>, Task)> _taskChannel;
+    private readonly Channel<Event<TIdentifier>> _taskChannel;
     private readonly CancellationToken _cancellationToken;
 
     public TaskListener(CancellationToken cancellationToken = default)
     {
-        _taskChannel = Channel.CreateBounded<(TaskFactory<TIdentifier>, Task)>(new BoundedChannelOptions(4)
+        _taskChannel = Channel.CreateBounded<Event<TIdentifier>>(new BoundedChannelOptions(4)
         {
             SingleWriter = false
         });
@@ -19,25 +19,20 @@ public class TaskListener<TIdentifier>
 
     public void AddTask(TIdentifier identifier, Func<Task> factory)
     {
-        _ = ListenAsync(factory(), new(factory, identifier));
+        _ = ListenAsync(identifier, factory);
     }
 
     public void AddTask(TIdentifier identifier, Task task)
     {
-        _ = ListenAsync(task, new(null, identifier));
+        _ = ListenAsync(identifier, task);
     }
 
-    public async Task<(TIdentifier, Task)> WaitAsync()
+    public ValueTask<Event<TIdentifier>> WaitAsync()
     {
-        var (factory, task) = await _taskChannel.Reader.ReadAsync();
-        if (factory.Factory is not null)
-        {
-            _ = ListenAsync(factory.Factory(), factory);
-        }
-        return (factory.Identifier, task);
+        return _taskChannel.Reader.ReadAsync(_cancellationToken);
     }
 
-    private async Task ListenAsync(Task task, TaskFactory<TIdentifier> taskFactory)
+    private async Task ListenAsync(TIdentifier identifier, Task task)
     {
         try
         {
@@ -45,9 +40,40 @@ public class TaskListener<TIdentifier>
         }
         finally
         {
-            await _taskChannel.Writer.WriteAsync((taskFactory, task), _cancellationToken);
+            await _taskChannel.Writer.WriteAsync(new(identifier, task), _cancellationToken);
+        }
+    }
+
+    private async Task ListenAsync(TIdentifier identifier, Func<Task> taskFactory)
+    {
+        while (!_cancellationToken.IsCancellationRequested)
+        {
+            var task = taskFactory();
+            try
+            {
+                await task;
+            }
+            finally
+            {
+                await _taskChannel.Writer.WriteAsync(new(identifier, task), _cancellationToken);
+            }
         }
     }
 }
 
-readonly record struct TaskFactory<T>(Func<Task>? Factory, T Identifier);
+public readonly struct Event<TIdentifier>
+{
+    private readonly Task _task;
+    
+    public TIdentifier EventType { get; }
+
+    public T GetValue<T>() => ((Task<T>)_task).GetAwaiter().GetResult();
+
+    public Event(TIdentifier eventType, Task task)
+    {
+        EventType = eventType;
+        _task = task;
+    }
+    
+    
+}

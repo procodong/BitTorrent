@@ -3,7 +3,7 @@ using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
-using BitTorrentClient.Protocol.Presentation.Torrent;
+using BitTorrentClient.Core.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class BlockAssigner

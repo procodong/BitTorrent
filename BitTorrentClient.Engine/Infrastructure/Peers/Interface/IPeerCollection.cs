@@ -1,5 +1,5 @@
-﻿using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+﻿using BitTorrentClient.Core.Transport.PeerWire.Connecting.Interface;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 public interface IPeerCollection

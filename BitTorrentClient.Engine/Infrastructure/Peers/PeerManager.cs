@@ -4,7 +4,7 @@ using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
+using BitTorrentClient.Core.Presentation.UdpTracker.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
 public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable

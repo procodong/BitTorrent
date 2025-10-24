@@ -1,6 +1,6 @@
 ﻿using BitTorrentClient.Engine.Storage.Distribution;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Storage.Interface;
 public interface IBlockRequester

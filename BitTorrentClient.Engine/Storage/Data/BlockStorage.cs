@@ -2,8 +2,8 @@
 using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Storage.Distribution;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-using BitTorrentClient.Protocol.Presentation.Torrent;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Storage.Data;
 public sealed class BlockStorage

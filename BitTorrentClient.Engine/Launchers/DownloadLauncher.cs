@@ -7,8 +7,8 @@ using BitTorrentClient.Engine.Launchers.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Engine.Storage.Distribution;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
-using BitTorrentClient.Protocol.Transport.Trackers.Interface;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Transport.Trackers.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Launchers;

@@ -1,2 +1,0 @@
-﻿namespace BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-public readonly record struct HandShake(string Protocol, ulong Extensions, ReadOnlyMemory<byte> InfoHash, ReadOnlyMemory<byte> PeerId);

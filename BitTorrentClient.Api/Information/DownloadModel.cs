@@ -1,4 +1,4 @@
-using BitTorrentClient.Protocol.Presentation.Torrent;
+using BitTorrentClient.Core.Presentation.Torrent;
 
 namespace BitTorrentClient.Api.Information;
 

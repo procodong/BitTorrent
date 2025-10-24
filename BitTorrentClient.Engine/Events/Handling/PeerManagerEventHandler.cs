@@ -1,8 +1,8 @@
 ﻿using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
-using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Presentation.UdpTracker.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Events.Handling;
 public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposable, IAsyncDisposable

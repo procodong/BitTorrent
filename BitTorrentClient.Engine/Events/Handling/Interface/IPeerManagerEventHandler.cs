@@ -1,6 +1,6 @@
 ﻿using BitTorrentClient.Engine.Models.Downloads;
-using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Presentation.UdpTracker.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Events.Handling.Interface;
 public interface IPeerManagerEventHandler

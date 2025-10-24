@@ -1,5 +1,5 @@
 ﻿using BitTorrentClient.Helpers.Streams;
-using BitTorrentClient.Protocol.Presentation.Torrent;
+using BitTorrentClient.Core.Presentation.Torrent;
 
 namespace BitTorrentClient.Engine.Storage.Data;
 public static class DownloadStorageFactory

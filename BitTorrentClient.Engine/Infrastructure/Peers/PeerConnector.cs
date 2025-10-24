@@ -3,9 +3,9 @@ using System.Threading.Channels;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Connecting.Interface;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;

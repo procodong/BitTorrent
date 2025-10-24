@@ -3,7 +3,7 @@ using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 

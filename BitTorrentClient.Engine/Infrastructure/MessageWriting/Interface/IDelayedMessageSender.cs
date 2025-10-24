@@ -1,5 +1,5 @@
 ﻿using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
 public interface IDelayedMessageSender

@@ -11,8 +11,8 @@ using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Engine.Storage.Distribution;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Launchers;
@@ -65,7 +65,7 @@ public sealed class PeerLauncher : IPeerLauncher
     {
         try
         {
-            await Task.WhenAll(peerEventListener.ListenAsync(cancellationToken), writingEventListener.ListenAsync(cancellationToken));
+            await Task.WhenAny(peerEventListener.ListenAsync(cancellationToken), writingEventListener.ListenAsync(cancellationToken));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

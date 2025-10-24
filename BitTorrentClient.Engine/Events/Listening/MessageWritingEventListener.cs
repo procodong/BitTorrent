@@ -4,7 +4,7 @@ using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Infrastructure.MessageWriting;
 using BitTorrentClient.Engine.Models.Messages;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Events.Listening;
 public sealed class MessageWritingEventListener : IEventListener
@@ -32,19 +32,19 @@ public sealed class MessageWritingEventListener : IEventListener
         var delayer = new DelaySchedulingHandle(delay => taskListener.AddTask(EventType.Delay, Task.Delay(delay, cancellationToken)));
         while (true)
         {
-            var (eventType, readyTask) = await taskListener.WaitAsync();
+            var ready = await taskListener.WaitAsync();
 
-            switch (eventType)
+            switch (ready.EventType)
             {
                 case EventType.Message:
                 {
-                    using var message = await (Task<MaybeRentedArray<Message>>)readyTask;
+                    using var message = ready.GetValue<MaybeRentedArray<Message>>();
                     await _handler.OnMessageAsync(message, delayer, cancellationToken);
                     break;
                 }
                 case EventType.CancelledBlock:
                 {
-                    var cancel = await (Task<BlockRequest>)readyTask;
+                    var cancel = ready.GetValue<BlockRequest>();
                     await _handler.OnCancelAsync(cancel, cancellationToken);
                     break;
                 }
@@ -54,7 +54,6 @@ public sealed class MessageWritingEventListener : IEventListener
                 case EventType.KeepAlive:
                     await _handler.OnKeepAliveAsync(cancellationToken);
                     break;
-
             }
         }
     }

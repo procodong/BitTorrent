@@ -1,7 +1,7 @@
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Engine.Storage.Data;
-using BitTorrentClient.Protocol.Presentation.Torrent;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Presentation.Torrent;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Downloads.Interface;
 

@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+﻿using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 public interface IPeerSpawner

@@ -2,8 +2,8 @@
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 using BitTorrentClient.Engine.Launchers.Interface;
 using BitTorrentClient.Helpers.Utility;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting.Interface;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Transport.PeerWire.Connecting.Interface;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
 public sealed class PeerCollection : IPeerCollection, IEnumerable<PeerHandle>

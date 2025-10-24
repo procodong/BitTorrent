@@ -2,8 +2,8 @@
 using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Sending;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Sending;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
 public sealed class Peer : IPeer, IDisposable

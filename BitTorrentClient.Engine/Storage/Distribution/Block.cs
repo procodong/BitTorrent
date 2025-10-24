@@ -1,4 +1,4 @@
-﻿using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
+﻿using BitTorrentClient.Core.Presentation.PeerWire.Models;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 public readonly record struct Block(PieceDownload Piece, int Begin, int Length)

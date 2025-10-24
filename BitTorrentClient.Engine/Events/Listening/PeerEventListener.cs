@@ -3,8 +3,8 @@ using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.PeerWire.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Reading;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Reading;
 
 namespace BitTorrentClient.Engine.Events.Listening;
 public sealed class PeerEventListener : IEventListener
@@ -30,21 +30,21 @@ public sealed class PeerEventListener : IEventListener
         taskListener.AddTask(EventType.Have, () => _haveMessageReader.ReadAsync(cancellationToken).AsTask());
         while (true)
         {
-            var (eventType, readyTask) = await taskListener.WaitAsync();
-            switch (eventType)
+            var ready = await taskListener.WaitAsync();
+            switch (ready.EventType)
             {
                 case EventType.Receive:
                 {
-                    await using var message = await (Task<IMessageFrameReader>)readyTask;
+                    await using var message = ready.GetValue<IMessageFrameReader>();
                     await HandleMessage(message, cancellationToken);
                 }
                     break;
                 case EventType.TransferLimit:
-                    var transferLimit = await (Task<DataTransferVector>)readyTask;
+                    var transferLimit = ready.GetValue<DataTransferVector>();
                     await _handler.OnClientRelationAsync(transferLimit, cancellationToken);
                     break;
                 case EventType.Have:
-                    var have = await (Task<int>)readyTask;
+                    var have = ready.GetValue<int>();
                     await _handler.OnClientHaveAsync(have, cancellationToken);
                     break;
 

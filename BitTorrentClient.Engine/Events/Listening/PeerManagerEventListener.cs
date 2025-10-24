@@ -3,9 +3,9 @@ using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Models.Downloads;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Protocol.Presentation.UdpTracker.Models;
-using BitTorrentClient.Protocol.Transport.PeerWire.Handshakes;
-using BitTorrentClient.Protocol.Transport.Trackers.Interface;
+using BitTorrentClient.Core.Presentation.UdpTracker.Models;
+using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
+using BitTorrentClient.Core.Transport.Trackers.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Events.Listening;
@@ -44,10 +44,10 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
         while (true)
         {
-            var (eventType, readyTask) = await taskListener.WaitAsync();
+            var ready = await taskListener.WaitAsync();
             try
             {
-                await HandleEventAsync(eventType, readyTask, taskListener, cancellationToken);
+                await HandleEventAsync(ready, taskListener, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
             {
@@ -56,24 +56,24 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         }
     }
 
-    private async Task HandleEventAsync(EventType eventType, Task readyTask, TaskListener<EventType> taskListener, CancellationToken cancellationToken)
+    private async Task HandleEventAsync(Event<EventType> ready, TaskListener<EventType> taskListener, CancellationToken cancellationToken)
     {
         
-        switch (eventType)
+        switch (ready.EventType)
         {
             case EventType.PeerAddition:
-                var stream = await (Task<PeerWireStream>)readyTask;
+                var stream = ready.GetValue<PeerWireStream>();
                 await _handler.OnPeerCreationAsync(stream, cancellationToken);
                 break;
             case EventType.UpdateInterval:
                 await _handler.OnTickAsync(cancellationToken);
                 break;
             case EventType.PeerRemoval:
-                var peer = await (Task<ReadOnlyMemory<byte>>)readyTask;
+                var peer = ready.GetValue<ReadOnlyMemory<byte>>();
                 await _handler.OnPeerRemovalAsync(peer, cancellationToken);
                 break;
             case EventType.TrackerUpdate:
-                var response = await (Task<TrackerResponse>)readyTask;
+                var response = ready.GetValue<TrackerResponse>();
                 await _handler.OnTrackerUpdate(response, cancellationToken);
                 taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval * 1000, cancellationToken));
                 break;
@@ -81,11 +81,11 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                 taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken));
                 break;
             case EventType.StateUpdate:
-                var state = await (Task<DownloadExecutionState>)readyTask;
+                var state = ready.GetValue<DownloadExecutionState>();
                 await _handler.OnStateChange(state, cancellationToken);
                 break;
             case EventType.PieceCompletion:
-                var piece = await (Task<int>)readyTask;
+                var piece = ready.GetValue<int>();
                 await _handler.OnPieceCompletionAsync(piece, cancellationToken);
                 break;
         }

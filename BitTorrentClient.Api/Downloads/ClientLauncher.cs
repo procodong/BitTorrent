@@ -6,9 +6,9 @@ using BitTorrentClient.Api.Services;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Launchers;
 using BitTorrentClient.Engine.Models;
-using BitTorrentClient.Protocol.Presentation.PeerWire;
-using BitTorrentClient.Protocol.Transport.PeerWire.Connecting;
-using BitTorrentClient.Protocol.Transport.Trackers;
+using BitTorrentClient.Core.Presentation.PeerWire;
+using BitTorrentClient.Core.Transport.PeerWire.Connecting;
+using BitTorrentClient.Core.Transport.Trackers;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Api.Downloads;

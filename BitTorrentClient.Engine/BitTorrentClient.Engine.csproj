@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BitTorrentClient.Helpers\BitTorrentClient.Helpers.csproj" />
-    <ProjectReference Include="..\BitTorrentClient.Protocol\BitTorrentClient.Protocol.csproj" />
+    <ProjectReference Include="..\BitTorrentClient.Core\BitTorrentClient.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
