@@ -15,7 +15,7 @@ public sealed class HttpTrackerFetcher : ITrackerFetcher
     private readonly int _peerBufferSize;
     private readonly Uri _url;
     private readonly int _listenPort;
-    
+
     public TrackerResponse? InitialResponse { get; set; }
 
     public HttpTrackerFetcher(HttpClient httpClient, Uri url, int listenPort, int peerBufferSize)
@@ -34,7 +34,7 @@ public sealed class HttpTrackerFetcher : ITrackerFetcher
             InitialResponse = null;
             return res;
         }
-        
+
         var request = GetRequest(update);
         var builder = new UriBuilder(_url)
         {

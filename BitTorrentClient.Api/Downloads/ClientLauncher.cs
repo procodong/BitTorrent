@@ -32,7 +32,7 @@ public static class ClientLauncher
         var clientTask = ListenAsync(downloads, peerReceiver, canceller.Token);
         return new DownloadService(downloads, canceller, clientTask);
     }
-    
+
     private static async Task ListenAsync(DownloadCollection downloads, TcpPeerReceiver peerReceiver, CancellationToken cancellationToken = default)
     {
         await using (downloads)

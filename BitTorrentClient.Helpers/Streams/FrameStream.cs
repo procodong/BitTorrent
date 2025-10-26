@@ -51,10 +51,10 @@ public sealed class FrameStream : Stream
     {
         get => _length;
     }
-    public override long Position 
-    { 
-        get => throw new NotSupportedException(); 
-        set => throw new NotSupportedException(); 
+    public override long Position
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
     }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)

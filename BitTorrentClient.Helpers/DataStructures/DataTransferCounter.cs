@@ -11,7 +11,7 @@ public sealed class DataTransferCounter
     }
 
     public DataTransferCounter() { }
-    
+
     public long Downloaded => Interlocked.Read(ref _downloaded);
     public long Uploaded => Interlocked.Read(ref _uploaded);
 
@@ -37,7 +37,7 @@ public sealed class DataTransferCounter
         Interlocked.Add(ref _downloaded, vector.Download);
         Interlocked.Add(ref _uploaded, vector.Upload);
     }
-    
+
     public long AtomicAddDownload(long value) => Interlocked.Add(ref _downloaded, value);
     public long AtomicAddUpload(long value) => Interlocked.Add(ref _uploaded, value);
 }

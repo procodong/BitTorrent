@@ -78,7 +78,7 @@ public sealed class UiHandler
 
     private void Update()
     {
-        
+
         AnsiConsole.Clear();
         AnsiConsole.Write(_ui);
         AnsiConsole.WriteLine();

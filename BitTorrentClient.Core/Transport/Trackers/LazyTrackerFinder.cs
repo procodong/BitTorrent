@@ -20,7 +20,7 @@ public sealed class LazyTrackerFinder : ITrackerFetcher
         _innerFetcher ??= await _trackerFinder.FindTrackerAsync(_trackerUris, update, cancellationToken);
         return await _innerFetcher.FetchAsync(update, cancellationToken);
     }
-    
+
     public void Dispose()
     {
         _innerFetcher?.Dispose();

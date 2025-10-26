@@ -28,26 +28,29 @@ public sealed class PeerEventListener : IEventListener
         taskListener.AddTask(EventType.Receive, () => _connection.ReceiveAsync(cancellationToken));
         taskListener.AddTask(EventType.TransferLimit, () => _transferLimitReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.Have, () => _haveMessageReader.ReadAsync(cancellationToken).AsTask());
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
             var ready = await taskListener.WaitAsync();
             switch (ready.EventType)
             {
                 case EventType.Receive:
-                {
-                    await using var message = ready.GetValue<IMessageFrameReader>();
-                    await HandleMessage(message, cancellationToken);
-                }
+                    {
+                        await using var message = ready.GetValue<IMessageFrameReader>();
+                        await HandleMessage(message, cancellationToken);
+                    }
                     break;
                 case EventType.TransferLimit:
-                    var transferLimit = ready.GetValue<DataTransferVector>();
-                    await _handler.OnClientRelationAsync(transferLimit, cancellationToken);
+                    {
+                        var transferLimit = ready.GetValue<DataTransferVector>();
+                        await _handler.OnClientRelationAsync(transferLimit, cancellationToken);
+                    }
                     break;
                 case EventType.Have:
-                    var have = ready.GetValue<int>();
-                    await _handler.OnClientHaveAsync(have, cancellationToken);
+                    {
+                        var have = ready.GetValue<int>();
+                        await _handler.OnClientHaveAsync(have, cancellationToken);
+                    }
                     break;
-
             }
         }
     }

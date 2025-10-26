@@ -16,9 +16,9 @@ public sealed class PooledList<T>
 
     public PooledList() : this(-1)
     {
-        
+
     }
-    
+
     public int Length => _length;
 
     public void Add(T item)

@@ -52,5 +52,5 @@ public class PersistentStateManager
     {
         await using var stateFile = _fileProvider.GetStateFile();
         await JsonSerializer.SerializeAsync(stateFile, state.Select(v => v.Data));
-    } 
+    }
 }

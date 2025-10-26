@@ -17,7 +17,7 @@ public static class DownloadStorageFactory
         }
         return new(createdFiles, createdBytes);
     }
-    
+
     public static StorageStream CreateSingleFileStorage(FileData file)
     {
         var stream = new Lazy<Task<IRandomAccesStream>>(() => Task.Run(() => CreateStream(file.Path, file.Size)), true);

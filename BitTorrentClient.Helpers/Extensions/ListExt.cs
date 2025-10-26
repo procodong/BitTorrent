@@ -18,5 +18,5 @@ public static class ListExt
         var last = list[^1];
         list.RemoveAt(list.Count - 1);
         return last;
-    } 
+    }
 }

@@ -10,7 +10,7 @@ public sealed class FrameReader : IBufferReader
     private readonly int _size;
     private int _bytesRead;
     private int _remainingBuffered;
-    
+
     public int RemainingUnbuffered => _size - _bytesRead;
     public int Buffered => _remainingBuffered;
     public int Remaining => RemainingUnbuffered + Buffered;
@@ -24,7 +24,7 @@ public sealed class FrameReader : IBufferReader
         _bytesRead = int.Min(size, cursor.RemainingInitializedBytes);
         _remainingBuffered = _bytesRead;
     }
-    
+
     public ReadOnlySpan<byte> GetSpan()
     {
         return _cursor.GetSpan()[.._remainingBuffered];

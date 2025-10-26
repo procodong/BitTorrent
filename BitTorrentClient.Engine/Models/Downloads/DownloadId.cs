@@ -10,7 +10,7 @@ public readonly struct DownloadId : IEquatable<DownloadId>
     {
         Raw = id;
     }
-    
+
     public override int GetHashCode()
     {
         var hash = new HashCode();

@@ -4,7 +4,7 @@ namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class PieceDownload(int size, int pieceIndex, PieceHasher hasher)
 {
     public int Downloaded;
-    public int Index { get; }  = pieceIndex;
+    public int Index { get; } = pieceIndex;
     public int Size { get; } = size;
     public Lock HashingLock { get; } = new();
     public PieceHasher Hasher { get; } = hasher;

@@ -60,6 +60,6 @@ public sealed class TrackerFinder : IDisposable
     {
         _trackerConnector.Dispose();
     }
-    
-    enum EventType {Value}
+
+    enum EventType { Value }
 }

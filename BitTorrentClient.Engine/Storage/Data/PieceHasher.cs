@@ -16,7 +16,7 @@ public sealed class PieceHasher
         _hasher = SHA1.Create();
     }
 
-    
+
     public Task SaveBlockAsync(Stream stream, int offset, CancellationToken cancellationToken = default)
     {
         var index = offset / _bufferSize;

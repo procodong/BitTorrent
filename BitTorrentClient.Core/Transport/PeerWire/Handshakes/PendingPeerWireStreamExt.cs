@@ -12,7 +12,7 @@ public static class PendingPeerWireStreamExt
         await stream.Handler.SendBitfieldAsync(bitfield, cancellationToken);
         return new(stream.Handler);
     }
-    
+
     public static async Task<PeerWireStream> SendDataAsync(this PendingPeerWireStream<SendDataPhase> stream, HandshakeData handshake,
         LazyBitArray bitfield, CancellationToken cancellationToken = default)
     {

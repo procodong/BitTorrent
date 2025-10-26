@@ -16,7 +16,7 @@ internal class DownloadHandle : IDownloadHandle
         _stateWriter = stateWriter;
         _downloadState = downloadState;
     }
-    
+
     public DownloadUpdate State => new(_downloadState.Download.Data.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, Download.Data.Size, (Information.DownloadExecutionState)_downloadState.ExecutionState, Download.Data.InfoHash);
     public DownloadModel Download => new(_downloadState.Download.Data);
 

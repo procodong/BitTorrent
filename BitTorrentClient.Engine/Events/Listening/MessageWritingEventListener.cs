@@ -30,29 +30,33 @@ public sealed class MessageWritingEventListener : IEventListener
         taskListener.AddTask(EventType.KeepAlive, () => _keepAliveTimer.WaitForNextTickAsync(cancellationToken).AsTask());
 
         var delayer = new DelaySchedulingHandle(delay => taskListener.AddTask(EventType.Delay, Task.Delay(delay, cancellationToken)));
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
             var ready = await taskListener.WaitAsync();
 
             switch (ready.EventType)
             {
                 case EventType.Message:
-                {
-                    using var message = ready.GetValue<MaybeRentedArray<Message>>();
-                    await _handler.OnMessageAsync(message, delayer, cancellationToken);
+                    {
+                        using var message = ready.GetValue<MaybeRentedArray<Message>>();
+                        await _handler.OnMessageAsync(message, delayer, cancellationToken);
+                    }
                     break;
-                }
                 case EventType.CancelledBlock:
-                {
-                    var cancel = ready.GetValue<BlockRequest>();
-                    await _handler.OnCancelAsync(cancel, cancellationToken);
+                    {
+                        var cancel = ready.GetValue<BlockRequest>();
+                        await _handler.OnCancelAsync(cancel, cancellationToken);
+                    }
                     break;
-                }
                 case EventType.Delay:
-                    await _handler.OnDelayEnd(delayer, cancellationToken);
+                    {
+                        await _handler.OnDelayEnd(delayer, cancellationToken);
+                    }
                     break;
                 case EventType.KeepAlive:
-                    await _handler.OnKeepAliveAsync(cancellationToken);
+                    {
+                        await _handler.OnKeepAliveAsync(cancellationToken);
+                    }
                     break;
             }
         }

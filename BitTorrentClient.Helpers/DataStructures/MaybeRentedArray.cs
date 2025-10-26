@@ -7,7 +7,7 @@ public readonly struct MaybeRentedArray<T> : IDisposable
     public T[] Buffer { get; }
     public int Size { get; }
     private bool Rented { get; }
-    
+
     public ArraySegment<T> Data => new(Buffer, 0, Size);
 
     public MaybeRentedArray(int size, bool rented = true)
@@ -23,7 +23,7 @@ public readonly struct MaybeRentedArray<T> : IDisposable
         Rented = rented;
         Size = size ?? buffer.Length;
     }
-    
+
     public void Dispose()
     {
         if (Rented)

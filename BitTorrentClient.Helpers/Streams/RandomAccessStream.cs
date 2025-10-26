@@ -3,7 +3,7 @@ internal sealed class RandomAccessStream : IRandomAccesStream
 {
     private readonly Stream _stream;
     private readonly SemaphoreSlim _lock;
-    
+
     public RandomAccessStream(Stream stream)
     {
         _stream = stream;

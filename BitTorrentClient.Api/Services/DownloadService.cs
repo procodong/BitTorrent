@@ -21,7 +21,7 @@ internal class DownloadService : IDownloadService
         _canceller = canceller;
         _clientTask = clientTask;
     }
-    
+
     public async Task<IDownloadHandle> AddDownloadAsync(FileInfo downloadFile, DirectoryInfo targetDirectory, string? name = null)
     {
         await using var file = File.Open(downloadFile.FullName, new FileStreamOptions
@@ -58,7 +58,7 @@ internal class DownloadService : IDownloadService
         foreach (var download in _downloads.GetDownloads())
         {
             var state = download.State;
-            yield return new(state.Download.Data.Name, state.DataTransfer.Fetch(), state.TransferRate, state.Download.Data.Size, (DownloadExecutionState)state.ExecutionState, state.Download.Data.InfoHash);;
+            yield return new(state.Download.Data.Name, state.DataTransfer.Fetch(), state.TransferRate, state.Download.Data.Size, (DownloadExecutionState)state.ExecutionState, state.Download.Data.InfoHash); ;
         }
     }
 
@@ -73,7 +73,7 @@ internal class DownloadService : IDownloadService
             ? DownloadStorageFactory.CreateMultiFileStorage(data.SavePath, data.Files)
             : DownloadStorageFactory.CreateSingleFileStorage(new(Path.Combine(data.SavePath, data.Files[0].Path), data.Files[0].Size));
     }
-    
+
     public void Dispose()
     {
         _canceller.Cancel();

@@ -42,11 +42,11 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         taskListener.AddTask(EventType.PieceCompletion, () => _pieceCompletionReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.StateUpdate, () => _stateReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var ready = await taskListener.WaitAsync();
             try
             {
+                var ready = await taskListener.WaitAsync();
                 await HandleEventAsync(ready, taskListener, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException && ex is not ChannelClosedException)
@@ -58,35 +58,49 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
 
     private async Task HandleEventAsync(Event<EventType> ready, TaskListener<EventType> taskListener, CancellationToken cancellationToken)
     {
-        
+
         switch (ready.EventType)
         {
             case EventType.PeerAddition:
-                var stream = ready.GetValue<PeerWireStream>();
-                await _handler.OnPeerCreationAsync(stream, cancellationToken);
+                {
+                    var stream = ready.GetValue<PeerWireStream>();
+                    await _handler.OnPeerCreationAsync(stream, cancellationToken); 
+                }
                 break;
             case EventType.UpdateInterval:
-                await _handler.OnTickAsync(cancellationToken);
+                {
+                    await _handler.OnTickAsync(cancellationToken);
+                }
                 break;
             case EventType.PeerRemoval:
-                var peer = ready.GetValue<ReadOnlyMemory<byte>>();
-                await _handler.OnPeerRemovalAsync(peer, cancellationToken);
+                {
+                    var peer = ready.GetValue<ReadOnlyMemory<byte>>();
+                    await _handler.OnPeerRemovalAsync(peer, cancellationToken); 
+                }
                 break;
             case EventType.TrackerUpdate:
-                var response = ready.GetValue<TrackerResponse>();
-                await _handler.OnTrackerUpdate(response, cancellationToken);
-                taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval * 1000, cancellationToken));
+                {
+                    var response = ready.GetValue<TrackerResponse>();
+                    await _handler.OnTrackerUpdate(response, cancellationToken);
+                    taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval * 1000, cancellationToken)); 
+                }
                 break;
             case EventType.TrackerInterval:
-                taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken));
+                {
+                    taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.None), cancellationToken));
+                }
                 break;
             case EventType.StateUpdate:
-                var state = ready.GetValue<DownloadExecutionState>();
-                await _handler.OnStateChange(state, cancellationToken);
+                {
+                    var state = ready.GetValue<DownloadExecutionState>();
+                    await _handler.OnStateChange(state, cancellationToken);
+                }
                 break;
             case EventType.PieceCompletion:
-                var piece = ready.GetValue<int>();
-                await _handler.OnPieceCompletionAsync(piece, cancellationToken);
+                {
+                    var piece = ready.GetValue<int>();
+                    await _handler.OnPieceCompletionAsync(piece, cancellationToken);
+                }
                 break;
         }
     }
@@ -128,7 +142,8 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         }
     }
 
-    enum EventType {
+    enum EventType
+    {
         PeerAddition,
         UpdateInterval,
         PeerRemoval,

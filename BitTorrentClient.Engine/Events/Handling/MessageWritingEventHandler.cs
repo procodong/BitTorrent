@@ -9,7 +9,7 @@ namespace BitTorrentClient.Engine.Events.Handling;
 public sealed class MessageWritingEventHandler : IMessageWritingEventHandler
 {
     private readonly IDelayedMessageSender _sender;
-    
+
     public MessageWritingEventHandler(IDelayedMessageSender sender)
     {
         _sender = sender;

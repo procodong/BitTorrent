@@ -23,7 +23,7 @@ public sealed class BlockDistributor : IBlockRequester
         _storage = storage;
         _blockCursor = new(default);
     }
-    
+
     public void ClearRequests()
     {
         Block? currentBlock = default;

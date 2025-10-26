@@ -7,7 +7,7 @@ namespace BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 public interface IPeerManager
 {
     IPeerCollection Peers { get; }
-    
+
     DownloadStatistics GetStatistics();
     void ResetRecentDataTransfer();
     IEnumerable<PeerStatistics> GetPeerStatistics();

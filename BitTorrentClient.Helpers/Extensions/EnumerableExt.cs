@@ -9,5 +9,5 @@ public static class EnumerableExt
             if (condition(item)) return item;
         }
         return default;
-    } 
+    }
 }

@@ -27,7 +27,7 @@ public sealed class TrackerConnector : ITrackerConnector
             _ => throw new NotSupportedException($"{uri.Scheme} protocol is not supported.")
         };
     }
-    
+
     private async Task<ITrackerFetcher> ConnectUdpAsync(Uri uri, CancellationToken cancellationToken = default)
     {
         var addresses = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);

@@ -64,7 +64,7 @@ public class TaskListener<TIdentifier>
 public readonly struct Event<TIdentifier>
 {
     private readonly Task _task;
-    
+
     public TIdentifier EventType { get; }
 
     public T GetValue<T>() => ((Task<T>)_task).GetAwaiter().GetResult();
@@ -74,6 +74,6 @@ public readonly struct Event<TIdentifier>
         EventType = eventType;
         _task = task;
     }
-    
-    
+
+
 }

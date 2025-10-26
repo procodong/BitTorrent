@@ -57,15 +57,15 @@ public sealed class PeerLauncher : IPeerLauncher
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveChannel.Reader, relationChannel.Reader);
 
         var canceller = new CancellationTokenSource();
-        _ = StartPeer(stream, eventListener, writingEventListener, canceller.Token);
+        _ = StartPeer(stream, eventListener, writingEventListener, canceller);
         return new(state, haveChannel.Writer, relationChannel.Writer, canceller);
     }
 
-    private async Task StartPeer(PeerWireStream stream, PeerEventListener peerEventListener, MessageWritingEventListener writingEventListener, CancellationToken cancellationToken)
+    private async Task StartPeer(PeerWireStream stream, PeerEventListener peerEventListener, MessageWritingEventListener writingEventListener, CancellationTokenSource cancellationToken)
     {
         try
         {
-            await Task.WhenAny(peerEventListener.ListenAsync(cancellationToken), writingEventListener.ListenAsync(cancellationToken));
+            await Task.WhenAny(peerEventListener.ListenAsync(cancellationToken.Token), writingEventListener.ListenAsync(cancellationToken.Token));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -74,7 +74,11 @@ public sealed class PeerLauncher : IPeerLauncher
         finally
         {
             await stream.DisposeAsync();
-            await _peerRemovalWriter.WriteAsync(stream.ReceivedHandshake.PeerId, cancellationToken);
+            await _peerRemovalWriter.WriteAsync(stream.ReceivedHandshake.PeerId);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                cancellationToken.Cancel();
+            }
         }
     }
 }

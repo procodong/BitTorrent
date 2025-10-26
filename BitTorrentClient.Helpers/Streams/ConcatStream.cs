@@ -27,8 +27,9 @@ public sealed class ConcatStream : Stream
 
     public override long Length => _firstStream.Length + _secondStream.Length;
 
-    public override long Position {
-        get => _positon; 
+    public override long Position
+    {
+        get => _positon;
         set => throw new NotSupportedException();
     }
 

@@ -60,7 +60,7 @@ public sealed class CommandReader
         };
         return new(commands, createCommand, removeCommand, pauseCommand, continueCommand, actionWriter, downloads, logger);
     }
-    
+
     public async Task ReadAsync(TextReader reader, CancellationToken cancellationToken = default)
     {
         while (true)

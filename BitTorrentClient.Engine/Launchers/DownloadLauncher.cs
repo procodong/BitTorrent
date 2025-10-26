@@ -31,7 +31,7 @@ public sealed class DownloadLauncher : IDownloadLauncher
         var peerRemovalChannel = Channel.CreateBounded<ReadOnlyMemory<byte>?>(options);
         var stateChannel = Channel.CreateBounded<DownloadExecutionState>(options);
         var haveChannel = Channel.CreateBounded<int>(options);
-        
+
         var downloadState = new DownloadState(download);
         var canceller = new CancellationTokenSource();
         var blockAssigner = new BlockAssigner(download.Data, download.Config.PieceSegmentSize);

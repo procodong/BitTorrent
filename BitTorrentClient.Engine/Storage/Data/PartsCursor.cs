@@ -13,7 +13,7 @@ public sealed class PartsCursor
     }
 
     public long RemainingInPart => _fileLength - _filePosition;
-    
+
     private bool Next()
     {
         var ret = _parts.MoveNext();
@@ -40,7 +40,7 @@ public sealed class PartsCursor
             part = default;
             return false;
         }
-        part = _parts.Current with {Position = _filePosition};
+        part = _parts.Current with { Position = _filePosition };
         return true;
     }
 

@@ -49,9 +49,9 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
     {
         return new(_downloadState.Download.Data.InfoHash, _downloadState.Download.ClientId, _downloadState.DataTransfer.Fetch(), _downloadState.Download.Data.Size - _downloadState.DataTransfer.Downloaded, trackerEvent);
     }
-    
+
     public IPeerCollection Peers => _peers;
-    
+
     public async Task PauseAsync(PauseType type, CancellationToken cancellationToken = default)
     {
         _downloadState.ExecutionState = type == PauseType.ByUser ? DownloadExecutionState.PausedByUser : DownloadExecutionState.PausedAutomatically;
