@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.IO.Pipelines;
+using System.Net.Sockets;
 using BitTorrentClient.Core.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Helpers.Parsing;
@@ -7,12 +8,12 @@ namespace BitTorrentClient.Core.Transport.PeerWire.Connecting;
 public sealed class TcpPeerReceiver : IPeerReceiver
 {
     private readonly TcpListener _listener;
-    private readonly int _peerBufferSize;
+    private readonly int _bufferSize;
 
     public TcpPeerReceiver(TcpListener listener, int peerBufferSize)
     {
         _listener = listener;
-        _peerBufferSize = peerBufferSize;
+        _bufferSize = peerBufferSize;
     }
 
     public async Task<PendingPeerWireStream<InitialReadDataPhase>> ReceivePeerAsync(CancellationToken cancellationToken = default)
@@ -20,10 +21,11 @@ public sealed class TcpPeerReceiver : IPeerReceiver
         var client = await _listener.AcceptTcpClientAsync(cancellationToken);
         try
         {
-            client.SendBufferSize = _peerBufferSize;
+            client.SendBufferSize = _bufferSize;
             var stream = new NetworkStream(client.Client, true);
-            var buffer = new BufferCursor(_peerBufferSize);
-            var handler = new HandshakeHandler(stream, buffer);
+            var reader = PipeReader.Create(stream, new(bufferSize: _bufferSize));
+            var writer = PipeWriter.Create(stream, new(minimumBufferSize: _bufferSize));
+            var handler = new HandshakeHandler(reader, writer);
             return new(handler);
         }
         catch

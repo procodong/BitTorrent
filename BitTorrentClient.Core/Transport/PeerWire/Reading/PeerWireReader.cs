@@ -1,37 +1,80 @@
-﻿using BitTorrentClient.Core.Presentation.PeerWire.Models;
-using BitTorrentClient.Helpers.Parsing;
+﻿using System.Buffers;
+using System.IO.Pipelines;
+using BitTorrentClient.Core.Presentation.PeerWire;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Streams;
 
 namespace BitTorrentClient.Core.Transport.PeerWire.Reading;
 public sealed class PeerWireReader : IPeerWireReader
 {
-    private readonly BufferedMessageStream _stream;
-    private readonly SemaphoreSlim _readLock;
+    private readonly PipeReader _reader;
+    private readonly int _bitifieldSize;
 
-    public PeerWireReader(BufferedMessageStream stream)
+    public PeerWireReader(PipeReader reader, int bitfieldSize)
     {
-        _readLock = new(1, 1);
-        _stream = stream;
+        _reader = reader;
+        _bitifieldSize = bitfieldSize;
     }
 
-    public async Task<IMessageFrameReader> ReceiveAsync(CancellationToken cancellationToken = default)
+    public async Task<(MessageType, MessageData)> ReceiveAsync(CancellationToken cancellationToken = default)
     {
-        await _readLock.WaitAsync(cancellationToken);
-        var message = await _stream.ReadMessageAsync(cancellationToken);
-        await message.EnsureReadAtLeastAsync(1, cancellationToken);
-        var reader = new BigEndianBinaryReader(message);
-        var type = (MessageType)reader.ReadByte();
-        var frame = new MessageFrameReader(message, type, _readLock);
-        await message.EnsureReadAtLeastAsync(int.Min(message.AvailableBuffer, message.Remaining), cancellationToken);
-        return frame;
+        var data = await _reader.ReadAtLeastAsync(MessageDecoder.HeaderLen, cancellationToken);
+        var reader = new SequenceReader<byte>(data.Buffer);
+        var header = MessageDecoder.DecodeHeader(ref reader);
+        var expectedSize = MessageDecoder.GetExpectedMessageLength(header.Type, _bitifieldSize);
+        if (header.Length != expectedSize)
+        {
+            throw new BadPacketException(header.Length, expectedSize, header.Type);
+        }
+        if (header.Type != MessageType.Block)
+        {
+            _reader.AdvanceTo(reader.Position);
+            data = await _reader.ReadAtLeastAsync(expectedSize, cancellationToken);
+            reader = new SequenceReader<byte>(data.Buffer);
+        }
+        reader = new SequenceReader<byte>(reader.Sequence.Slice(0, header.Length));
+        MessageData message = ReadMessage(ref reader, header.Type);
+        _reader.AdvanceTo(reader.Position);
+        return (header.Type, message);
     }
+
+    private MessageData ReadMessage(ref SequenceReader<byte> reader, MessageType type)
+    {
+        switch (type)
+        {
+            case MessageType.Choke:
+            case MessageType.UnChoke:
+            case MessageType.Interested:
+            case MessageType.NotInterested:
+                return default;
+            case MessageType.Have:
+                reader.TryReadBigEndian(out int piece);
+                return new() { PieceIndex = piece };
+            case MessageType.Bitfield:
+                return new() { Bitfield = new(reader.ReadBytes((int)reader.Remaining)) };
+            case MessageType.Request:
+            case MessageType.Cancel:
+                return new() { Request = MessageDecoder.DecodeRequest(ref reader) };
+            case MessageType.Block:
+                var data = MessageDecoder.DecodePieceHeader(ref reader);
+                _reader.AdvanceTo(reader.Position);
+                var stream = new LimitedStream(_reader.AsStream(), (int)reader.Remaining);
+                var block = new BlockData(new(data.Index, data.Begin, (int)reader.Remaining), stream);
+                return new() { Block = block };
+        }
+        return default;
+    }
+
     public void Dispose()
     {
-        _stream.Dispose();
+        _reader.Complete();
     }
 
     public ValueTask DisposeAsync()
     {
-        return _stream.DisposeAsync();
+        return _reader.CompleteAsync();
     }
 }
+
+public class BadPacketException(int found, int expected, MessageType type) : Exception($"Expected message {type} of length {expected} found length {found}");

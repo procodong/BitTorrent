@@ -52,7 +52,7 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
         for (var i = 0; i < count; i++)
         {
             var write = writes[i];
-            _ = WriteDataAsync(write.Offset, write.Array).ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask(), _cancellationToken);
+            _ = _stream.GetStream(write.Offset).WriteAsync(write.Array.Data, _cancellationToken).AsTask().ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask(), _cancellationToken);
         }
     }
 

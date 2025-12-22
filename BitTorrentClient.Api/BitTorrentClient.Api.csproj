@@ -4,6 +4,7 @@
     <ProjectReference Include="..\BitTorrentClient.Engine\BitTorrentClient.Engine.csproj" >
       <PrivateAssets>all</PrivateAssets>
     </ProjectReference>
+    <ProjectReference Include="..\BitTorrentClient.Core\BitTorrentClient.Core.csproj" />
             
   </ItemGroup>
 

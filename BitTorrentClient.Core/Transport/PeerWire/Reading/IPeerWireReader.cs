@@ -1,6 +1,8 @@
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
+
 namespace BitTorrentClient.Core.Transport.PeerWire.Reading;
 
 public interface IPeerWireReader : IDisposable, IAsyncDisposable
 {
-    Task<IMessageFrameReader> ReceiveAsync(CancellationToken cancellationToken = default);
+    Task<(MessageType, MessageData)> ReceiveAsync(CancellationToken cancellationToken = default);
 }

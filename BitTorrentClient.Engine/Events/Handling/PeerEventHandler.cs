@@ -16,15 +16,10 @@ public sealed class PeerEventHandler : IPeerEventHandler
         _interestMin = interestMin;
     }
 
-    public async Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default)
+    public Task OnBitfieldAsync(ZeroCopyBitArray bitfield, CancellationToken cancellationToken = default)
     {
-        if (bitfield.Length != _peer.DownloadedPieces.Buffer.Length)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidPacketSize);
-        }
-        var buffer = new byte[bitfield.Length];
-        await bitfield.ReadExactlyAsync(buffer, cancellationToken);
-        _peer.DownloadedPieces = new(new(buffer));
+        _peer.DownloadedPieces = new(bitfield);
+        return Task.CompletedTask;
     }
 
     public async Task OnCancelAsync(BlockRequest request, CancellationToken cancellationToken = default)

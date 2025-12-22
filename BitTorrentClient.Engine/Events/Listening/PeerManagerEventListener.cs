@@ -74,7 +74,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                 break;
             case EventType.PeerRemoval:
                 {
-                    var peer = ready.GetValue<ReadOnlyMemory<byte>>();
+                    var peer = ready.GetValue<ReadOnlyMemory<byte>?>();
                     await _handler.OnPeerRemovalAsync(peer, cancellationToken); 
                 }
                 break;
@@ -82,7 +82,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                 {
                     var response = ready.GetValue<TrackerResponse>();
                     await _handler.OnTrackerUpdate(response, cancellationToken);
-                    taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval * 1000, cancellationToken)); 
+                    taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval, cancellationToken)); 
                 }
                 break;
             case EventType.TrackerInterval:

@@ -53,7 +53,7 @@ public sealed class PipedPeerWireWriter : IPeerWireWriter
 
     public async Task SendBlockAsync(BlockData block, CancellationToken cancellationToken = default)
     {
-        MessageEncoder.EncodeHeader(Writer, new(block.Request.Length + 9, MessageType.Piece));
+        MessageEncoder.EncodeHeader(Writer, new(block.Request.Length + 9, MessageType.Block));
         MessageEncoder.EncodePieceHeader(Writer, new(block.Request.Index, block.Request.Begin));
         await block.Stream.CopyToAsync(_pipe, cancellationToken);
     }

@@ -49,7 +49,6 @@ public sealed class BlockDistributor : IBlockRequester
 
     public bool TryGetBlock(BlockRequest request, out Stream stream)
     {
-        ValidateRequest(request);
         if (!_state.DownloadedPieces[request.Index])
         {
             stream = null!;
@@ -57,21 +56,6 @@ public sealed class BlockDistributor : IBlockRequester
         }
         stream = _storage.RequestBlock(request);
         return true;
-    }
-
-    private void ValidateRequest(BlockRequest request)
-    {
-        var size = PieceSize(request.Index);
-        var end = request.Begin + request.Length;
-        if (end > size || end < 0)
-        {
-            throw new BadPeerException(PeerErrorReason.InvalidRequest);
-        }
-    }
-
-    private int PieceSize(int piece)
-    {
-        return (int)long.Min(_state.Download.Data.PieceSize, _state.Download.Data.Size - piece * _state.Download.Data.PieceSize);
     }
 
     public async Task SaveBlockAsync(BlockData data, CancellationToken cancellationToken = default)

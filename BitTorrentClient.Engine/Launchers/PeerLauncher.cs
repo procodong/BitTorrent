@@ -74,11 +74,11 @@ public sealed class PeerLauncher : IPeerLauncher
         finally
         {
             await stream.DisposeAsync();
-            await _peerRemovalWriter.WriteAsync(stream.ReceivedHandshake.PeerId);
             if (!cancellationToken.IsCancellationRequested)
             {
                 cancellationToken.Cancel();
             }
+            await _peerRemovalWriter.WriteAsync(stream.ReceivedHandshake.PeerId);
         }
     }
 }

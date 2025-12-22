@@ -26,16 +26,16 @@ public sealed class UiUpdater
         taskListener.AddTask(EventType.Update, () => _tickTimer.WaitForNextTickAsync(cancellationToken).AsTask());
         while (true)
         {
-            var (eventType, readyTask) = await taskListener.WaitAsync();
+            var eventData = await taskListener.WaitAsync();
 
-            switch (eventType)
+            switch (eventData.EventType)
             {
                 case EventType.Message:
-                    var (level, message) = await (Task<(LogLevel, string)>)readyTask;
+                    var (level, message) = eventData.GetValue<(LogLevel, string)>();
                     _uiHandler.AddMessage(level, message);
                     break;
                 case EventType.Update:
-                    var update = await (Task<bool>)readyTask;
+                    var update = eventData.GetValue<bool>();
                     if (!update) break;
                     _uiHandler.Update(_downloadService.GetDownloadUpdates());
                     break;

@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.IO.Pipelines;
 using BitTorrentClient.Core.Presentation.PeerWire;
 using BitTorrentClient.Core.Presentation.PeerWire.Models;
@@ -17,23 +18,20 @@ public sealed class HandshakeHandler : IHandshakeHandler
     private const string Protocol = "BitTorrent protocol";
 
     private readonly PipeWriter _writer;
-    private readonly BufferCursor _cursor;
-    private readonly Stream _stream;
+    private readonly PipeReader _reader;
     private HandshakeData? _myHandshake;
     private LazyBitArray? _bitfield;
     private bool _finished;
 
     public HandshakeData? ReceivedHandshake { get; private set; }
 
-    public HandshakeHandler(Stream stream, BufferCursor cursor)
+    public HandshakeHandler(PipeReader reader, PipeWriter writer)
     {
-        _stream = stream;
-        _cursor = cursor;
-        _writer = PipeWriter.Create(stream, new(minimumBufferSize: cursor.AvailableBuffer));
+        _writer = writer;
+        _reader = reader;
     }
 
     private BigEndianBinaryWriter Writer => new(_writer);
-    private BigEndianBinaryReader Reader => new(_cursor);
 
     public async Task SendHandShakeAsync(HandshakeData handshake, CancellationToken cancellationToken = default)
     {
@@ -55,8 +53,9 @@ public sealed class HandshakeHandler : IHandshakeHandler
     public async Task ReadHandShakeAsync(CancellationToken cancellationToken = default)
     {
         if (ReceivedHandshake is not null) throw new AlreadyUsedException();
-        await _stream.ReadAtLeastAsync(_cursor, MessageDecoder.HandshakeLen, cancellationToken: cancellationToken);
-        var receivedHandshake = MessageDecoder.DecodeHandShake(Reader);
+        var result = await _reader.ReadAtLeastAsync(MessageDecoder.HandshakeLen, cancellationToken: cancellationToken);
+        var reader = new SequenceReader<byte>(result.Buffer);
+        var receivedHandshake = MessageDecoder.DecodeHandShake(ref reader);
         ReceivedHandshake = new HandshakeData(receivedHandshake.Extensions, receivedHandshake.InfoHash, receivedHandshake.PeerId);
         if (receivedHandshake.Protocol != Protocol)
         {
@@ -66,8 +65,7 @@ public sealed class HandshakeHandler : IHandshakeHandler
 
     public PeerWireStream Finish()
     {
-        var stream = new BufferedMessageStream(_stream, _cursor);
-        var reader = new PeerWireReader(stream);
+        var reader = new PeerWireReader(_reader, _bitfield!.Buffer.Length);
         var sender = new PipedPeerWireWriter(_writer);
         _finished = true;
         return new(ReceivedHandshake!.Value, reader, sender);
@@ -77,16 +75,17 @@ public sealed class HandshakeHandler : IHandshakeHandler
     {
         if (!_finished)
         {
-            _stream.Dispose();
+            _reader.Complete();
+            _writer.Complete();
         }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (!_finished)
         {
-            return _stream.DisposeAsync();
+            await _reader.CompleteAsync();
+            await _writer.CompleteAsync();
         }
-        return ValueTask.CompletedTask;
     }
 }

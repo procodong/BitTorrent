@@ -5,7 +5,7 @@ public sealed class LimitedStream : Stream
     private readonly long _length;
     private long _position;
 
-    internal LimitedStream(Stream stream, int length)
+    public LimitedStream(Stream stream, int length)
     {
         _stream = stream;
         _length = length;

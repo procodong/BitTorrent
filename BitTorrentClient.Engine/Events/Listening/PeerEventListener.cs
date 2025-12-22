@@ -35,8 +35,8 @@ public sealed class PeerEventListener : IEventListener
             {
                 case EventType.Receive:
                     {
-                        await using var message = ready.GetValue<IMessageFrameReader>();
-                        await HandleMessage(message, cancellationToken);
+                        var (type, message) = ready.GetValue<(MessageType, MessageData)>();
+                        await HandleMessage(type, message, cancellationToken);
                     }
                     break;
                 case EventType.TransferLimit:
@@ -55,9 +55,9 @@ public sealed class PeerEventListener : IEventListener
         }
     }
 
-    private async Task HandleMessage(IMessageFrameReader message, CancellationToken cancellationToken = default)
+    private async Task HandleMessage(MessageType type, MessageData message, CancellationToken cancellationToken = default)
     {
-        switch (message.Type)
+        switch (type)
         {
             case MessageType.Choke:
                 await _handler.OnPeerRelationAsync(RelationUpdate.Choke, cancellationToken);
@@ -72,23 +72,19 @@ public sealed class PeerEventListener : IEventListener
                 await _handler.OnPeerRelationAsync(RelationUpdate.NotInterested, cancellationToken);
                 break;
             case MessageType.Have:
-                var have = await message.ReadHaveAsync(cancellationToken);
-                await _handler.OnPeerHaveAsync(have, cancellationToken);
+                await _handler.OnPeerHaveAsync(message.PieceIndex, cancellationToken);
                 break;
             case MessageType.Bitfield:
-                await _handler.OnBitfieldAsync(message.ReadStream(), cancellationToken);
+                await _handler.OnBitfieldAsync(message.Bitfield, cancellationToken);
                 break;
             case MessageType.Request:
-                var request = await message.ReadRequestAsync(cancellationToken);
-                await _handler.OnRequestAsync(request, cancellationToken);
+                await _handler.OnRequestAsync(message.Request, cancellationToken);
                 break;
-            case MessageType.Piece:
-                var piece = await message.ReadPieceAsync(cancellationToken);
-                await _handler.OnPieceAsync(piece, cancellationToken);
+            case MessageType.Block:
+                await _handler.OnPieceAsync(message.Block, cancellationToken);
                 break;
             case MessageType.Cancel:
-                var cancel = await message.ReadRequestAsync(cancellationToken);
-                await _handler.OnCancelAsync(cancel, cancellationToken);
+                await _handler.OnCancelAsync(message.Request, cancellationToken);
                 break;
             default:
                 throw new BadPeerException(PeerErrorReason.InvalidProtocol);

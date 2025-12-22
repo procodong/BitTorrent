@@ -2,8 +2,8 @@
 
 namespace BitTorrentClient.Core.Presentation.UdpTracker.Models;
 public record class TrackerResponse(
-    int Interval,
-    int? MinInterval,
+    TimeSpan Interval,
+    TimeSpan? MinInterval,
     int Complete,
     int Incomplete,
     IEnumerable<IPeerConnector> Peers,

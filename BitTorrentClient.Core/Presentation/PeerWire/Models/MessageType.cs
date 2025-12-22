@@ -8,6 +8,6 @@ public enum MessageType
     Have,
     Bitfield,
     Request,
-    Piece,
+    Block,
     Cancel,
 }

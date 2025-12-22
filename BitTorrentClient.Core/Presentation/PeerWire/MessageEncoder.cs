@@ -18,7 +18,7 @@ public static class MessageEncoder
         writer.Write(block.Begin);
     }
 
-    public static void EncodeHandShake(BigEndianBinaryWriter writer, HandShake handShake)
+    public static void EncodeHandShake(BigEndianBinaryWriter writer, Handshake handShake)
     {
         writer.Write((byte)handShake.Protocol.Length);
         writer.Write(handShake.Protocol);

@@ -8,7 +8,7 @@ public interface IPeerEventHandler
     Task OnClientRelationAsync(DataTransferVector transferLimit, CancellationToken cancellationToken = default);
     Task OnPeerHaveAsync(int piece, CancellationToken cancellationToken = default);
     Task OnClientHaveAsync(int piece, CancellationToken cancellationToken = default);
-    Task OnBitfieldAsync(Stream bitfield, CancellationToken cancellationToken = default);
+    Task OnBitfieldAsync(ZeroCopyBitArray bitfield, CancellationToken cancellationToken = default);
     Task OnRequestAsync(BlockRequest request, CancellationToken cancellationToken = default);
     Task OnPieceAsync(BlockData piece, CancellationToken cancellationToken = default);
     Task OnCancelAsync(BlockRequest request, CancellationToken cancellationToken = default);

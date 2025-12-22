@@ -33,7 +33,7 @@ public sealed class MessageWritingEventHandler : IMessageWritingEventHandler
                 case MessageType.Request:
                     _sender.SendRequest(message.Data.Request);
                     break;
-                case MessageType.Piece:
+                case MessageType.Block:
                     var header = message.Data.Block;
                     var req = new BlockRequest(header.Index, header.Begin, (int)message.Body.Length);
                     var block = new BlockData(req, message.Body);

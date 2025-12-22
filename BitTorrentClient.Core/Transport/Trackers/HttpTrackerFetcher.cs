@@ -69,8 +69,8 @@ public sealed class HttpTrackerFetcher : ITrackerFetcher
             throw new TrackerHttpException((int)response.StatusCode);
         }
         return new(
-            Interval: content.Get<BNumber>("interval"),
-            MinInterval: content.Get<BNumber>("min interval"),
+            Interval: TimeSpan.FromSeconds(content.Get<BNumber>("interval")),
+            MinInterval: TimeSpan.FromSeconds(content.Get<BNumber>("min interval")),
             Complete: content.Get<BNumber>("complete"),
             Incomplete: content.Get<BNumber>("incomplete"),
             Peers: content.Get<BList<BDictionary>>("peers").Value

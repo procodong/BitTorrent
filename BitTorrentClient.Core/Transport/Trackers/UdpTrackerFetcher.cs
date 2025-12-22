@@ -31,7 +31,7 @@ public sealed class UdpTrackerFetcher : ITrackerFetcher
         var request = new TrackerRequest(update.InfoHash, update.ClientId, _port, update.DataTransfer.Upload, update.DataTransfer.Download, update.Left, update.TrackerEvent);
         var response = await ReadResponseAsync(() => SendAnnounceAsync(request, cancellationToken), cancellationToken);
         var data = UdpTrackerDecoder.ReadAnnounceResponse(new(response));
-        return new(data.Interval, default, data.Complete, data.Incomplete, data.Peers.Select(addr => new TcpPeerConnector(addr, _peerBufferSize)), default);
+        return new(TimeSpan.FromSeconds(data.Interval), default, data.Complete, data.Incomplete, data.Peers.Select(addr => new TcpPeerConnector(addr, _peerBufferSize)), default);
     }
 
     private async Task<int> SendAnnounceAsync(TrackerRequest request, CancellationToken cancellationToken = default)
