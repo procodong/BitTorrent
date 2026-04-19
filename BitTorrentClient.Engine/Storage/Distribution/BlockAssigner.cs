@@ -4,6 +4,7 @@ using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Core.Presentation.Torrent;
+using BitTorrentClient.Engine.Storage.Interface;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class BlockAssigner
@@ -13,13 +14,17 @@ public sealed class BlockAssigner
     private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
     private readonly List<int> _rarestPieces = [];
-    private int _requestedPiecesOffset;
+    private readonly IPieceSelectionStrategy _strategy;
+    private readonly int[] _pieceBuffer;
+    private int _piecePosition;
 
-    public BlockAssigner(DownloadData download, int segmentSize)
+    public BlockAssigner(DownloadData download, IPieceSelectionStrategy strategy, int segmentSize)
     {
+        _strategy = strategy;
         _segmentSize = segmentSize;
         _download = download;
         _requestedPieces = new(download.PieceCount);
+        _pieceBuffer = new int[1 << 6];
     }
 
     public void Cancel(Block block)
@@ -45,13 +50,15 @@ public sealed class BlockAssigner
         if (download.Position == download.Piece.Size)
         {
             _requestedPieces[download.Piece.Index] = true;
-            while (_requestedPieces[_requestedPiecesOffset])
-            {
-                _requestedPiecesOffset++;
-            }
+            
         }
         block = request;
         return true;
+    }
+
+    public void UpdatePieces(IEnumerable<LazyBitArray> peerPieces)
+    {
+        _strategy.SelectPieces(_requestedPieces, peerPieces, _pieceBuffer);
     }
 
     private int? SearchPiece(LazyBitArray ownedPieces)
@@ -76,7 +83,7 @@ public sealed class BlockAssigner
                 return rarePiece;
             }
         }
-        return FindNextPiece(Enumerable.Range(_requestedPiecesOffset, _download.PieceCount - _requestedPiecesOffset), ownedPieces);
+        return FindNextPiece(ownedPieces);
     }
 
     private bool CanBeRequested(int pieceIndex, LazyBitArray ownedPieces)
@@ -84,7 +91,7 @@ public sealed class BlockAssigner
         return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex] && pieceIndex > _requestedPiecesOffset;
     }
 
-    private PieceDownload? FindNextPiece(IEnumerable<int> pieces, LazyBitArray ownedPieces)
+    private PieceDownload? FindNextPiece(LazyBitArray ownedPieces)
     {
         var piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
         if (piece is null) return default;

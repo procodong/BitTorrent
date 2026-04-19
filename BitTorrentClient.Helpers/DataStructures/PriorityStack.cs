@@ -1,10 +1,16 @@
 ﻿using System.Collections;
 
 namespace BitTorrentClient.Helpers.DataStructures;
-public sealed class PriorityStack<T>(int size, IComparer<T> comparer) : IEnumerable<T>
+public sealed class PriorityStack<T> : IEnumerable<T>
 {
-    private readonly List<T> _stack = new(size);
-    private readonly IComparer<T> _comparer = comparer;
+    private readonly List<T> _stack;
+    private readonly IComparer<T> _comparer;
+
+    public PriorityStack(int size, IComparer<T> comparer)
+    {
+        _stack = new(size);
+        _comparer = comparer;
+    }
 
     public void Include(T item)
     {
