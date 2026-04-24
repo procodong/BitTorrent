@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using BitTorrentClient.Core.Transport.PeerWire.Connecting.Interface;
 using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
-using BitTorrentClient.Helpers.Parsing;
 
 namespace BitTorrentClient.Core.Transport.PeerWire.Connecting;
 public sealed class TcpPeerReceiver : IPeerReceiver

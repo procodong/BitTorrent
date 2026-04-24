@@ -1,19 +1,18 @@
 ﻿using System.Threading.Channels;
-using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Api.Interface;
 using BitTorrentClient.Api.PersistentState;
 using BitTorrentClient.Tui;
 using Microsoft.Extensions.Logging;
 using BitTorrentClient.Helpers.Utility;
 
 var fileProvider = new PersistentStateManager("BitTorrentClient");
-var config = await fileProvider.GetConfigAsync();
 var downloads = await fileProvider.GetStateAsync();
 
 await using var logFile = fileProvider.GetLog();
 var messageChannel = Channel.CreateBounded<(LogLevel, string)>(8);
 var logger = new ChannelLogger(messageChannel.Writer, logFile);
 
-await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger);
+await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), logger);
 
 var downloadHandles = new List<IDownloadHandle>();
 foreach (var download in downloads)

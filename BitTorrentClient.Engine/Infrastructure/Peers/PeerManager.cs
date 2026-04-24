@@ -5,6 +5,7 @@ using BitTorrentClient.Engine.Models.Peers;
 using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Core.Presentation.UdpTracker.Models;
+using BitTorrentClient.Engine.Storage.Interface;
 
 namespace BitTorrentClient.Engine.Infrastructure.Peers;
 public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
@@ -12,12 +13,16 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
     private readonly PeerCollection _peers;
     private readonly DownloadState _downloadState;
     private readonly DataStorage _storage;
+    private readonly IBlockAssigner _blockAssigner;
+    private readonly IPieceSelectionStrategy _pieceSelectionStrategy;
 
-    public PeerManager(PeerCollection peers, DownloadState downloadState, DataStorage storage)
+    public PeerManager(PeerCollection peers, DownloadState downloadState, DataStorage storage, IBlockAssigner blockAssigner, IPieceSelectionStrategy pieceSelectionStrategy)
     {
         _peers = peers;
         _downloadState = downloadState;
         _storage = storage;
+        _blockAssigner = blockAssigner;
+        _pieceSelectionStrategy = pieceSelectionStrategy;
     }
 
     public void ResetRecentDataTransfer()
@@ -32,7 +37,7 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
 
     public DownloadStatistics GetStatistics()
     {
-        return new(_downloadState.TransferRate, new(_downloadState.Download.Config.TargetDownload, _downloadState.Download.Config.TargetUpload), _peers.Count);
+        return new(_downloadState.TransferRate, _downloadState.Download.Settings.TargetDataTransferPerSecond, _peers.Count);
     }
 
     public IEnumerable<PeerStatistics> GetPeerStatistics()
@@ -43,6 +48,11 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
                 peer.State.RelationToMe,
                 peer.State.Relation
             ));
+    }
+
+    public void UpdatePieceSelection()
+    {
+        _blockAssigner.SupplyPieces((buf, pieces) => _pieceSelectionStrategy.SelectPieces(pieces, _peers.Select(p => p.State.OwnedPieces), buf));
     }
 
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
@@ -80,7 +90,7 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default)
+    public async Task NotifyPieceCompletionAsync(int piece, CancellationToken cancellationToken = default)
     {
         foreach (var peer in _peers)
         {

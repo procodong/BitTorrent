@@ -1,23 +1,36 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using BitTorrentClient.Api.Information;
-using BitTorrentClient.Api.PersistentState;
 using BitTorrentClient.Api.Services;
-using BitTorrentClient.Engine.Infrastructure.Downloads;
-using BitTorrentClient.Engine.Launchers;
-using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Core.Presentation.PeerWire;
+using BitTorrentClient.Core.Presentation.PeerWire.Models;
 using BitTorrentClient.Core.Transport.PeerWire.Connecting;
 using BitTorrentClient.Core.Transport.Trackers;
+using BitTorrentClient.Engine.Infrastructure.Downloads;
+using BitTorrentClient.Engine.Launchers;
+using BitTorrentClient.Engine.Models.Config;
 using Microsoft.Extensions.Logging;
 
-namespace BitTorrentClient.Api.Downloads;
+namespace BitTorrentClient.Api.Interface;
 
 public static class ClientLauncher
 {
-    public static IDownloadService LaunchClient(ClientIdentifier id, ConfigBuilder configBuilder, ILogger logger)
+    public static IDownloadService LaunchClient(ClientIdentifier id, ILogger logger)
     {
-        var config = configBuilder.Build(Config.Default);
+        var config = new NetworkingConfig
+        {
+            RequestSize = 1 << 14,
+            RequestQueueSize = 5,
+            MaxRequestSize = 1 << 17,
+            PieceSegmentSize = 1 << 17,
+            PeerBufferSize = 1 << 15,
+            PeerUpdateInterval = TimeSpan.FromSeconds(10),
+            KeepAliveInterval = TimeSpan.FromSeconds(90),
+            ReceiveTimeout = TimeSpan.FromMinutes(2),
+            TransferRateResetInterval = TimeSpan.FromSeconds(5),
+            PiecesBufferSize = 1 << 6
+        };
         var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
 
         var (port, socket) = FindPort();

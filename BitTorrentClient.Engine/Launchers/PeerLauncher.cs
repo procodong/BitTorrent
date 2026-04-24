@@ -1,7 +1,6 @@
 ﻿using System.Threading.Channels;
 using BitTorrentClient.Engine.Events.Handling;
 using BitTorrentClient.Engine.Events.Listening;
-using BitTorrentClient.Engine.Events.Listening.Interface;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
 using BitTorrentClient.Engine.Infrastructure.MessageWriting;
 using BitTorrentClient.Engine.Infrastructure.Peers;
@@ -25,8 +24,10 @@ public sealed class PeerLauncher : IPeerLauncher
     private readonly ILogger _logger;
     private readonly int _pieceCount;
     private readonly TimeSpan _keepAliveInterval;
+    private readonly int _requestQueueSize;
+    private readonly int _requestSize;
 
-    public PeerLauncher(SynchronizedBlockAssigner downloader, DownloadState state, ChannelWriter<ReadOnlyMemory<byte>?> peerRemovalWriter, int pieceCount, TimeSpan keepAliveInterval, BlockStorage storage, ILogger logger)
+    public PeerLauncher(SynchronizedBlockAssigner downloader, DownloadState state, ChannelWriter<ReadOnlyMemory<byte>?> peerRemovalWriter, int pieceCount, int requestQueueSize, int requestSize, TimeSpan keepAliveInterval, BlockStorage storage, ILogger logger)
     {
         _state = state;
         _downloader = downloader;
@@ -35,6 +36,8 @@ public sealed class PeerLauncher : IPeerLauncher
         _logger = logger;
         _pieceCount = pieceCount;
         _keepAliveInterval = keepAliveInterval;
+        _requestQueueSize = requestQueueSize;
+        _requestSize = requestSize;
     }
 
     public PeerHandle LaunchPeer(PeerWireStream stream)
@@ -51,7 +54,7 @@ public sealed class PeerLauncher : IPeerLauncher
         var writingEventHandler = new MessageWritingEventHandler(writer);
         var writingEventListener = new MessageWritingEventListener(writingEventHandler, messageChannel.Reader, cancellationCannel.Reader, new(_keepAliveInterval));
 
-        var distributor = new BlockDistributor(_downloader, _state, _storage);
+        var distributor = new BlockDistributor(_downloader, _state, _storage, _requestQueueSize, _requestSize);
         var peer = new Peer(state, distributor, sender);
         var eventHandler = new PeerEventHandler(peer, _state.Download.Data.PieceSize);
         var eventListener = new PeerEventListener(eventHandler, stream.Reader, haveChannel.Reader, relationChannel.Reader);

@@ -1,35 +1,34 @@
-﻿using BitTorrentClient.Engine.Infrastructure.Downloads;
-using BitTorrentClient.Engine.Models;
-using BitTorrentClient.Engine.Storage.Data;
+﻿using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Core.Presentation.Torrent;
 using BitTorrentClient.Engine.Storage.Interface;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
-public sealed class BlockAssigner
+public sealed class BlockAssigner : IBlockAssigner
 {
     private readonly int _segmentSize;
     private readonly DownloadData _download;
     private readonly List<BlockCursor> _pieceRegisters = [];
     private readonly ZeroCopyBitArray _requestedPieces;
-    private readonly List<int> _rarestPieces = [];
-    private readonly IPieceSelectionStrategy _strategy;
-    private readonly int[] _pieceBuffer;
-    private int _piecePosition;
+    private readonly PiecesCursor _cursor;
 
-    public BlockAssigner(DownloadData download, IPieceSelectionStrategy strategy, int segmentSize)
+    public BlockAssigner(DownloadData download, int segmentSize, PiecesCursor cursor)
     {
-        _strategy = strategy;
         _segmentSize = segmentSize;
         _download = download;
         _requestedPieces = new(download.PieceCount);
-        _pieceBuffer = new int[1 << 6];
+        _cursor = cursor;
     }
 
     public void Cancel(Block block)
     {
         _pieceRegisters.Add(new(block));
+    }
+
+    public void SupplyPieces(Func<Span<int>, ZeroCopyBitArray, int> action)
+    {
+        _cursor.SupplyPieces(buf => action(buf, _requestedPieces));
     }
 
     public bool TryAssignBlock(LazyBitArray ownedPieces, out Block block)
@@ -47,57 +46,22 @@ public sealed class BlockAssigner
         {
             _pieceRegisters.SwapRemove(index);
         }
-        if (download.Position == download.Piece.Size)
-        {
-            _requestedPieces[download.Piece.Index] = true;
-            
-        }
         block = request;
         return true;
-    }
-
-    public void UpdatePieces(IEnumerable<LazyBitArray> peerPieces)
-    {
-        _strategy.SelectPieces(_requestedPieces, peerPieces, _pieceBuffer);
     }
 
     private int? SearchPiece(LazyBitArray ownedPieces)
     {
         var index = _pieceRegisters.FindIndex(d => ownedPieces[d.Piece.Index]);
         if (index != -1) return index;
-        var creation = CreateDownload(ownedPieces);
-        if (creation is null) return default;
-        var i = _pieceRegisters.Count;
-        _pieceRegisters.Add(new(creation));
-        return i;
-    }
-
-    private PieceDownload? CreateDownload(LazyBitArray ownedPieces)
-    {
-        if (_rarestPieces.Count != 0)
-        {
-            var rarePiece = FindNextPiece(_rarestPieces, ownedPieces);
-            if (rarePiece is not null)
-            {
-                _rarestPieces.Remove(rarePiece.Index);
-                return rarePiece;
-            }
-        }
-        return FindNextPiece(ownedPieces);
-    }
-
-    private bool CanBeRequested(int pieceIndex, LazyBitArray ownedPieces)
-    {
-        return !_requestedPieces[pieceIndex] && ownedPieces[pieceIndex] && pieceIndex > _requestedPiecesOffset;
-    }
-
-    private PieceDownload? FindNextPiece(LazyBitArray ownedPieces)
-    {
-        var piece = pieces.Find(p => CanBeRequested(p, ownedPieces));
-        if (piece is null) return default;
-        var size = PieceSize(piece.Value);
+        if (!_cursor.TryGetNext(ownedPieces, out int piece)) return default;
+        _requestedPieces[piece] = true;
+        var size = PieceSize(piece);
         var hasher = new PieceHasher(_segmentSize, size.DivWithRemainder(_segmentSize));
-        return new(size, piece.Value, hasher);
+        var download = new PieceDownload(size, piece, hasher);
+        var i = _pieceRegisters.Count;
+        _pieceRegisters.Add(new(download));
+        return i;
     }
 
     private int PieceSize(int piece)

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using BitTorrentClient.Api.Information;
-using BitTorrentClient.Engine.Models;
 using BitTorrentClient.Core.Presentation.Torrent;
+using BitTorrentClient.Engine.Models.Config;
 
 namespace BitTorrentClient.Api.PersistentState;
 
@@ -13,21 +13,6 @@ public class PersistentStateManager
     {
         _fileProvider = new(applicationName);
     }
-
-    public async Task<ConfigBuilder> GetConfigAsync()
-    {
-        await using var configFile = _fileProvider.GetConfigFile();
-        if (configFile.Length == 0) return new();
-        var config = await JsonSerializer.DeserializeAsync<ConfigBuilder>(configFile);
-        return config ?? new();
-    }
-
-    public async Task SaveConfigAsync(Config config)
-    {
-        await using var configFile = _fileProvider.GetConfigFile();
-        await JsonSerializer.SerializeAsync(configFile, config);
-    }
-
     public StreamWriter GetLog()
     {
         var log = _fileProvider.GetLogFile();
@@ -43,9 +28,9 @@ public class PersistentStateManager
             await stateFile.WriteAsync("[]"u8.ToArray());
             return [];
         }
-        var state = await JsonSerializer.DeserializeAsync<DownloadData[]>(stateFile);
+        var state = await JsonSerializer.DeserializeAsync<JsonDownloadModel[]>(stateFile);
         if (state is null) return [];
-        return state.Select(x => new DownloadModel(x)).ToArray();
+        return state.Select(x => new DownloadModel(x.Data, x.Settings)).ToArray();
     }
 
     public async Task SaveStateAsync(IEnumerable<DownloadModel> state)
@@ -53,4 +38,10 @@ public class PersistentStateManager
         await using var stateFile = _fileProvider.GetStateFile();
         await JsonSerializer.SerializeAsync(stateFile, state.Select(v => v.Data));
     }
+}
+
+class JsonDownloadModel
+{
+    internal required DownloadData Data { get; set; }
+    internal required DownloadSettings Settings { get; set; }
 }

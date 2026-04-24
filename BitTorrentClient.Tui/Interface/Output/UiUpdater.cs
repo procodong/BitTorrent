@@ -1,5 +1,5 @@
 ﻿using System.Threading.Channels;
-using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Api.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 using Microsoft.Extensions.Logging;
 

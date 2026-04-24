@@ -19,6 +19,11 @@ public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposa
         _relationUpdateInterval = relationUpdateInterval;
     }
 
+    public async Task OnPieceSelectionUpdateAsync(CancellationToken cancellationToken = default)
+    {
+        _peerManager.UpdatePieceSelection();
+    }
+
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {
         return _peerManager.GetTrackerUpdate(trackerEvent);
@@ -38,10 +43,10 @@ public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposa
 
     public async Task OnPieceCompletionAsync(int piece, CancellationToken cancellationToken = default)
     {
-        await _peerManager.NotifyPieceCompletion(piece, cancellationToken);
+        await _peerManager.NotifyPieceCompletionAsync(piece, cancellationToken);
     }
 
-    public async Task OnStateChange(DownloadExecutionState change, CancellationToken cancellationToken = default)
+    public async Task OnStateChangeAsync(DownloadExecutionState change, CancellationToken cancellationToken = default)
     {
         if (change == DownloadExecutionState.Running)
         {
@@ -73,7 +78,7 @@ public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposa
         await _peerManager.UpdateRelationsAsync(relations, cancellationToken);
     }
 
-    public Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default)
+    public Task OnTrackerUpdateAsync(TrackerResponse response, CancellationToken cancellationToken = default)
     {
         _peerManager.Peers.Feed(response.Peers.ToList());
         return Task.CompletedTask;

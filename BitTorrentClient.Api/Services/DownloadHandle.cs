@@ -1,6 +1,6 @@
 using System.Threading.Channels;
-using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Api.Information;
+using BitTorrentClient.Api.Interface;
 using BitTorrentClient.Engine.Infrastructure.Downloads;
 using DownloadExecutionState = BitTorrentClient.Engine.Models.Downloads.DownloadExecutionState;
 
@@ -18,7 +18,7 @@ internal class DownloadHandle : IDownloadHandle
     }
 
     public DownloadUpdate State => new(_downloadState.Download.Data.Name, _downloadState.DataTransfer.Fetch(), _downloadState.TransferRate, Download.Data.Size, (Information.DownloadExecutionState)_downloadState.ExecutionState, Download.Data.InfoHash);
-    public DownloadModel Download => new(_downloadState.Download.Data);
+    public DownloadModel Download => new(_downloadState.Download.Data, _downloadState.Download.Settings);
 
     public async Task PauseAsync(CancellationToken cancellationToken = default)
     {

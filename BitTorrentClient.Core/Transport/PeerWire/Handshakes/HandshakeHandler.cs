@@ -7,9 +7,7 @@ using BitTorrentClient.Core.Transport.PeerWire.Handshakes.Interface;
 using BitTorrentClient.Core.Transport.PeerWire.Reading;
 using BitTorrentClient.Core.Transport.PeerWire.Sending;
 using BitTorrentClient.Helpers.DataStructures;
-using BitTorrentClient.Helpers.Extensions;
 using BitTorrentClient.Helpers.Parsing;
-using BitTorrentClient.Helpers.Streams;
 
 namespace BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 

@@ -1,5 +1,4 @@
 ﻿using BitTorrentClient.Engine.Events.Handling.Interface;
-using BitTorrentClient.Engine.Infrastructure.Peers.Exceptions;
 using BitTorrentClient.Engine.Infrastructure.Peers.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Core.Presentation.PeerWire.Models;

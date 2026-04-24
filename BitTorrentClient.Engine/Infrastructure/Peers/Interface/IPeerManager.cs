@@ -14,6 +14,7 @@ public interface IPeerManager
     Task PauseAsync(PauseType type, CancellationToken cancellationToken = default);
     Task ResumeAsync(CancellationToken cancellationToken = default);
     Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default);
-    Task NotifyPieceCompletion(int piece, CancellationToken cancellationToken = default);
+    Task NotifyPieceCompletionAsync(int piece, CancellationToken cancellationToken = default);
+    void UpdatePieceSelection();
     TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent);
 }

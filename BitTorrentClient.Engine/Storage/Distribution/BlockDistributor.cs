@@ -10,20 +10,22 @@ namespace BitTorrentClient.Engine.Storage.Distribution;
 public sealed class BlockDistributor : IBlockRequester
 {
     private readonly List<Block> _requests;
-    private readonly SynchronizedBlockAssigner _downloader;
+    private readonly IBlockAssigner _downloader;
     private readonly DownloadState _state;
     private readonly BlockStorage _storage;
+    private readonly int _requestSize;
     private BlockCursor _blockCursor;
 
-    public BlockDistributor(SynchronizedBlockAssigner downloader, DownloadState state, BlockStorage storage)
+    public BlockDistributor(IBlockAssigner downloader, DownloadState state, BlockStorage storage, int requestQueueSize, int requestSize)
     {
         _state = state;
-        _requests = new(state.Download.Config.RequestQueueSize);
+        _requests = new(requestQueueSize);
         _downloader = downloader;
         _storage = storage;
         _blockCursor = new(default);
+        _requestSize = requestSize;
     }
-
+    
     public void ClearRequests()
     {
         Block? currentBlock = default;
@@ -85,18 +87,18 @@ public sealed class BlockDistributor : IBlockRequester
 
     public bool TryRequestDownload(LazyBitArray pieces, out Block block)
     {
-        if (_requests.Count == _state.Download.Config.RequestQueueSize)
+        if (_requests.Count == _requests.Capacity)
         {
             block = default;
             return false;
         }
-        var request = _blockCursor.GetRequest(_state.Download.Config.RequestSize);
+        var request = _blockCursor.GetRequest(_requestSize);
         if (request.Length == 0)
         {
             if (_downloader.TryAssignBlock(pieces, out var newBlock))
             {
                 _blockCursor = new(newBlock);
-                request = _blockCursor.GetRequest(_state.Download.Config.RequestSize);
+                request = _blockCursor.GetRequest(_requestSize);
             }
             else
             {

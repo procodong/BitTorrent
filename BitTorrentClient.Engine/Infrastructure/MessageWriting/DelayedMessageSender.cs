@@ -69,11 +69,7 @@ public sealed class DelayedMessageSender : IDelayedMessageSender
 
     public Task SendBlockAsync(DelaySchedulingHandle delayer, CancellationToken cancellationToken = default)
     {
-        if (_queuedBlocks.Count != 0)
-        {
-            return SendBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken);
-        }
-        return Task.CompletedTask;
+        return _queuedBlocks.Count != 0 ? SendBlockAsync(_queuedBlocks.Pop(), delayer, cancellationToken) : Task.CompletedTask;
     }
 
     public bool TryCancelUpload(BlockRequest request)

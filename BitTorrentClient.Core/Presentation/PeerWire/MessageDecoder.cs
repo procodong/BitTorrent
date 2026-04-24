@@ -1,8 +1,6 @@
-﻿using BitTorrentClient.Helpers.Parsing;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using BitTorrentClient.Core.Presentation.PeerWire.Models;
 using System.Buffers;
-using System.Text;
 using BitTorrentClient.Helpers.Extensions;
 
 namespace BitTorrentClient.Core.Presentation.PeerWire;

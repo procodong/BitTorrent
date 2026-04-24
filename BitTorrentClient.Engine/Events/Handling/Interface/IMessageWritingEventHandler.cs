@@ -1,5 +1,4 @@
-﻿using BitTorrentClient.Engine.Infrastructure.MessageWriting.Interface;
-using BitTorrentClient.Engine.Models.Messages;
+﻿using BitTorrentClient.Engine.Models.Messages;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Core.Presentation.PeerWire.Models;
 

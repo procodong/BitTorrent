@@ -9,6 +9,8 @@ using BitTorrentClient.Engine.Storage.Data;
 using BitTorrentClient.Engine.Storage.Distribution;
 using BitTorrentClient.Core.Transport.PeerWire.Handshakes;
 using BitTorrentClient.Core.Transport.Trackers.Interface;
+using BitTorrentClient.Engine.Models.Config;
+using BitTorrentClient.Engine.Storage.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Engine.Launchers;
@@ -21,7 +23,7 @@ public sealed class DownloadLauncher : IDownloadLauncher
         _logger = logger;
     }
 
-    public PeerManagerHandle LaunchDownload(Download download, StorageStream storage, ITrackerFetcher tracker)
+    public PeerManagerHandle LaunchDownload(Download download, StorageStream storage, ITrackerFetcher tracker, NetworkingConfig config, IPieceSelectionStrategy pieceSelectionStrategy)
     {
         var options = new BoundedChannelOptions(8)
         {
@@ -34,17 +36,20 @@ public sealed class DownloadLauncher : IDownloadLauncher
 
         var downloadState = new DownloadState(download);
         var canceller = new CancellationTokenSource();
-        var blockAssigner = new BlockAssigner(download.Data, download.Config.PieceSegmentSize);
+        var piecesCursor = new PiecesCursor(config.PiecesBufferSize);
+        var blockAssigner = new BlockAssigner(download.Data, config.PieceSegmentSize, piecesCursor);
+        var synchronizedBlockAssigner = new SynchronizedBlockAssigner(blockAssigner);
         var dataStorage = new DataStorage(storage, stateChannel.Writer, canceller.Token);
         var blockStorage = new BlockStorage(downloadState.Download.Data, dataStorage, haveChannel.Writer);
-        var launcher = new PeerLauncher(new(blockAssigner), downloadState, peerRemovalChannel.Writer, download.Data.PieceCount, TimeSpan.FromMilliseconds(download.Config.KeepAliveInterval), blockStorage, _logger);
+        var launcher = new PeerLauncher(new(blockAssigner), downloadState, peerRemovalChannel.Writer, download.Data.PieceCount, config.RequestQueueSize, config.RequestSize, config.KeepAliveInterval, blockStorage, _logger);
         var spawner = new PeerConnector(downloadState.Download, downloadState.DownloadedPieces, peerRemovalChannel.Writer, peerAdditionChannel.Writer, _logger);
-        var peers = new PeerCollection(spawner, launcher, downloadState.Download.Config.MaxParallelPeers);
-        var peerManager = new PeerManager(peers, downloadState, dataStorage);
+        var peers = new PeerCollection(spawner, launcher, download.Settings.MaxParallelPeers);
+        var peerManager = new PeerManager(peers, downloadState, dataStorage, synchronizedBlockAssigner, pieceSelectionStrategy);
         var relationHandler = new PeerRelationHandler();
-        var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, downloadState.Download.Config.PeerUpdateInterval / downloadState.Download.Config.TransferRateResetInterval);
-        var updateInterval = new PeriodicTimer(TimeSpan.FromMilliseconds(downloadState.Download.Config.TransferRateResetInterval));
-        var eventListener = new PeerManagerEventListener(eventHandler, peerRemovalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, updateInterval, _logger);
+        var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, config.PeerUpdateInterval.Milliseconds / config.TransferRateResetInterval.Milliseconds);
+        var updateInterval = new PeriodicTimer(config.TransferRateResetInterval);
+        var pieceSelectionUpdateInterval = new PeriodicTimer(TimeSpan.FromSeconds((double)config.PiecesBufferSize * download.Data.PieceSize / download.Settings.TargetDataTransferPerSecond.Download));
+        var eventListener = new PeerManagerEventListener(eventHandler, peerRemovalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, updateInterval, pieceSelectionUpdateInterval, _logger);
         var task = LaunchDownload(eventListener, canceller.Token);
         return new PeerManagerHandle(downloadState, stateChannel.Writer, canceller, spawner, task);
     }

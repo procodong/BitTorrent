@@ -1,7 +1,6 @@
 ﻿using System.Threading.Channels;
 using BitTorrentClient.Engine.Events.Handling.Interface;
 using BitTorrentClient.Engine.Events.Listening.Interface;
-using BitTorrentClient.Engine.Infrastructure.MessageWriting;
 using BitTorrentClient.Engine.Models.Messages;
 using BitTorrentClient.Helpers.DataStructures;
 using BitTorrentClient.Core.Presentation.PeerWire.Models;

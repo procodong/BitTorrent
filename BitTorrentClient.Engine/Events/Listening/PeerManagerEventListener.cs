@@ -18,10 +18,11 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly PeriodicTimer _updateInterval;
+    private readonly PeriodicTimer _pieceSelectionUpdateInterval;
     private readonly IPeerManagerEventHandler _handler;
     private readonly ILogger _logger;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<ReadOnlyMemory<byte>?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, ILogger logger)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<ReadOnlyMemory<byte>?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, PeriodicTimer pieceSelectionUpdateInterval, ILogger logger)
     {
         _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
@@ -30,6 +31,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         _trackerFetcher = trackerFetcher;
         _updateInterval = updateInterval;
         _handler = handler;
+        _pieceSelectionUpdateInterval = pieceSelectionUpdateInterval;
         _logger = logger;
     }
 
@@ -42,6 +44,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         taskListener.AddTask(EventType.PieceCompletion, () => _pieceCompletionReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.StateUpdate, () => _stateReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
+        taskListener.AddTask(EventType.PieceSelectionUpdate, _pieceSelectionUpdateInterval.WaitForNextTickAsync(cancellationToken).AsTask());
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -81,7 +84,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
             case EventType.TrackerUpdate:
                 {
                     var response = ready.GetValue<TrackerResponse>();
-                    await _handler.OnTrackerUpdate(response, cancellationToken);
+                    await _handler.OnTrackerUpdateAsync(response, cancellationToken);
                     taskListener.AddTask(EventType.TrackerInterval, Task.Delay(response.Interval, cancellationToken)); 
                 }
                 break;
@@ -93,7 +96,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
             case EventType.StateUpdate:
                 {
                     var state = ready.GetValue<DownloadExecutionState>();
-                    await _handler.OnStateChange(state, cancellationToken);
+                    await _handler.OnStateChangeAsync(state, cancellationToken);
                 }
                 break;
             case EventType.PieceCompletion:
@@ -102,13 +105,18 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                     await _handler.OnPieceCompletionAsync(piece, cancellationToken);
                 }
                 break;
+            case EventType.PieceSelectionUpdate:
+                {
+                    await _handler.OnPieceSelectionUpdateAsync(cancellationToken);
+                } 
+                break;
         }
     }
 
     private async Task HandleError(Exception exception, CancellationToken cancellationToken)
     {
         _logger.LogError(exception, "Peer manager {}", exception);
-        await _handler.OnStateChange(DownloadExecutionState.PausedAutomatically, cancellationToken);
+        await _handler.OnStateChangeAsync(DownloadExecutionState.PausedAutomatically, cancellationToken);
         DownloadExecutionState state;
         do
         {
@@ -150,6 +158,7 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         TrackerUpdate,
         TrackerInterval,
         StateUpdate,
-        PieceCompletion
+        PieceCompletion,
+        PieceSelectionUpdate
     }
 }

@@ -14,11 +14,6 @@ internal class ClientFileProvider
         return GetFile("error.log");
     }
 
-    public FileStream GetConfigFile()
-    {
-        return GetFile("config.json");
-    }
-
     public FileStream GetStateFile()
     {
         return GetFile("state.json");

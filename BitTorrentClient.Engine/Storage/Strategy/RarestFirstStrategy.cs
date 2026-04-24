@@ -1,4 +1,3 @@
-using BitTorrentClient.Engine.Infrastructure.Peers;
 using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 

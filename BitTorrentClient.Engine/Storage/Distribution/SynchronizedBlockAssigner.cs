@@ -1,9 +1,9 @@
-using BitTorrentClient.Engine.Models;
+using BitTorrentClient.Engine.Storage.Interface;
 using BitTorrentClient.Helpers.DataStructures;
 
 namespace BitTorrentClient.Engine.Storage.Distribution;
 
-public class SynchronizedBlockAssigner
+public class SynchronizedBlockAssigner : IBlockAssigner
 {
     private readonly BlockAssigner _downloader;
     private readonly Lock _lock;
@@ -19,6 +19,14 @@ public class SynchronizedBlockAssigner
         using (_lock.EnterScope())
         {
             _downloader.Cancel(block);
+        }
+    }
+
+    public void SupplyPieces(Func<Span<int>, ZeroCopyBitArray, int> action)
+    {
+        using (_lock.EnterScope())
+        {
+            _downloader.SupplyPieces(action);
         }
     }
 

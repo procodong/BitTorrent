@@ -9,7 +9,8 @@ public interface IPeerManagerEventHandler
     Task OnPeerRemovalAsync(ReadOnlyMemory<byte>? peer, CancellationToken cancellationToken = default);
     Task OnPieceCompletionAsync(int piece, CancellationToken cancellationToken = default);
     Task OnTickAsync(CancellationToken cancellationToken = default);
-    Task OnTrackerUpdate(TrackerResponse response, CancellationToken cancellationToken = default);
-    Task OnStateChange(DownloadExecutionState change, CancellationToken cancellationToken = default);
+    Task OnTrackerUpdateAsync(TrackerResponse response, CancellationToken cancellationToken = default);
+    Task OnStateChangeAsync(DownloadExecutionState change, CancellationToken cancellationToken = default);
+    Task OnPieceSelectionUpdateAsync(CancellationToken cancellationToken = default);
     TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent);
 }

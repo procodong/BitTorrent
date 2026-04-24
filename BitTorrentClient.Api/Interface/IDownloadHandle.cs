@@ -1,6 +1,6 @@
 using BitTorrentClient.Api.Information;
 
-namespace BitTorrentClient.Api.Downloads;
+namespace BitTorrentClient.Api.Interface;
 
 public interface IDownloadHandle
 {

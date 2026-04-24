@@ -9,12 +9,12 @@ namespace BitTorrentClient.Core.Transport.PeerWire.Reading;
 public sealed class PeerWireReader : IPeerWireReader
 {
     private readonly PipeReader _reader;
-    private readonly int _bitifieldSize;
+    private readonly int _bitfieldSize;
 
     public PeerWireReader(PipeReader reader, int bitfieldSize)
     {
         _reader = reader;
-        _bitifieldSize = bitfieldSize;
+        _bitfieldSize = bitfieldSize;
     }
 
     public async Task<(MessageType, MessageData)> ReceiveAsync(CancellationToken cancellationToken = default)
@@ -22,7 +22,7 @@ public sealed class PeerWireReader : IPeerWireReader
         var data = await _reader.ReadAtLeastAsync(MessageDecoder.HeaderLen, cancellationToken);
         var reader = new SequenceReader<byte>(data.Buffer);
         var header = MessageDecoder.DecodeHeader(ref reader);
-        var expectedSize = MessageDecoder.GetExpectedMessageLength(header.Type, _bitifieldSize);
+        var expectedSize = MessageDecoder.GetExpectedMessageLength(header.Type, _bitfieldSize);
         if (header.Length != expectedSize)
         {
             throw new BadPacketException(header.Length, expectedSize, header.Type);
@@ -43,11 +43,6 @@ public sealed class PeerWireReader : IPeerWireReader
     {
         switch (type)
         {
-            case MessageType.Choke:
-            case MessageType.UnChoke:
-            case MessageType.Interested:
-            case MessageType.NotInterested:
-                return default;
             case MessageType.Have:
                 reader.TryReadBigEndian(out int piece);
                 return new() { PieceIndex = piece };

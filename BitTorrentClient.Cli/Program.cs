@@ -1,29 +1,30 @@
 ﻿
 using System.Threading.Channels;
-using BitTorrentClient.Api.Downloads;
 using BitTorrentClient.Api.Information;
+using BitTorrentClient.Api.Interface;
 using BitTorrentClient.Api.PersistentState;
-using BitTorrentClient.Cli;
 using BitTorrentClient.Helpers.Utility;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
 var fileProvider = new PersistentStateManager("BitTorrentClient");
 await using var logFile = fileProvider.GetLog();
-var config = await fileProvider.GetConfigAsync();
-var messageChannel = Channel.CreateBounded<(LogLevel, string)>(8);
+var messageChannel = Channel.CreateBounded<(LogLevel, string)>(new BoundedChannelOptions(32)
+{
+    FullMode = BoundedChannelFullMode.DropOldest,
+    SingleReader = true,
+    SingleWriter = false
+});
 var logger = new ChannelLogger(messageChannel.Writer, logFile);
-var logReader = new LogReader();
-_ = logReader.ReadLogs(messageChannel.Reader);
 
-await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), config, logger);
+await using var downloadService = ClientLauncher.LaunchClient(new(('B', 'T'), new('0', '1', '1', '1')), logger);
 
 if (args.Length != 2)
 {
     Console.WriteLine("Please provide the torrent file path and save path");
     return;
 }
-var download = await downloadService.AddDownloadAsync(new(args[0]), new(args[1]));
+var download = await downloadService.AddDownloadAsync(new(args[0]), new(args[1]), new());
 
 while (true)
 {
@@ -43,8 +44,11 @@ while (true)
                 task.Value = update.Progress;
             }
         });
-    Console.WriteLine(logReader.LatestMessage);
-    Console.WriteLine("Press enter to resume download");
+    await foreach (var message in messageChannel.Reader.ReadAllAsync())
+    {
+        AnsiConsole.WriteLine($"[{message.Item1}] {message.Item2}");
+    }
+    AnsiConsole.WriteLine("Press enter to resume download");
     await Console.In.ReadLineAsync();
     await download.ResumeAsync();
 }

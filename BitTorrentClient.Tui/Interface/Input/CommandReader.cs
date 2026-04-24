@@ -1,6 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
-using BitTorrentClient.Api.Downloads;
+using BitTorrentClient.Api.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BitTorrentClient.Tui.Interface.Input;
@@ -34,7 +34,11 @@ public sealed class CommandReader
         {
             new Argument<FileInfo>("torrent_file"),
             new Argument<DirectoryInfo>("target_directory"),
-            new Option<string>("--name", "-n")
+            new Option<string>("--name", "-n"),
+            new Option<int>("--limit-download", "-ld"),
+            new Option<int>("--limit-upload", "-lu"),
+            new Option<int>("--limit-peers", "-lp"),
+            new Option<string>("--order", "-o")
         };
         var removeCommand = new Command("remove")
         {
@@ -85,9 +89,29 @@ public sealed class CommandReader
             var torrent = parsed.CommandResult.GetRequiredValue((Argument<FileInfo>)_createCommand.Arguments[0]);
             var targetDirectory = parsed.CommandResult.GetRequiredValue((Argument<DirectoryInfo>)_createCommand.Arguments[1]);
             var name = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[0]);
+            var downloadLimit = parsed.CommandResult.GetValue((Option<int>)_createCommand.Options[1]);
+            var uploadLimit = parsed.CommandResult.GetValue((Option<int>)_createCommand.Options[2]);
+            var peerLimit = parsed.CommandResult.GetValue((Option<int>)_createCommand.Options[3]);
+            var order = parsed.CommandResult.GetValue((Option<string>)_createCommand.Options[4]);
+            var settings = new DownloadSettings
+            {
+                Name = name
+            };
+            if (downloadLimit != 0) settings.DownloadLimit = downloadLimit;
+            if (uploadLimit != 0) settings.UploadLimit = uploadLimit;
+            if (peerLimit != 0) settings.MaxParallelPeers = peerLimit;
+            switch (order)
+            {
+                case "sequential":
+                    settings.Strategy = PieceSelectionStrategy.Sequential;
+                    break;
+                case "rarest":
+                    settings.Strategy = PieceSelectionStrategy.RarestFirst;
+                    break;
+            }
             try
             {
-                var download = await _downloadService.AddDownloadAsync(torrent, targetDirectory, name);
+                var download = await _downloadService.AddDownloadAsync(torrent, targetDirectory, settings, cancellationToken);
                 _downloads.Add(download);
             }
             catch (Exception ex)
