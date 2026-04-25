@@ -10,6 +10,8 @@ public class PiecesCursor
     private int _position;
     private int _length;
 
+    public int Remaining => _length - _position;
+
     public PiecesCursor(int bufferSize)
     {
         _buffer = new int[bufferSize];

@@ -18,11 +18,10 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
     private readonly ChannelReader<DownloadExecutionState> _stateReader;
     private readonly ITrackerFetcher _trackerFetcher;
     private readonly PeriodicTimer _updateInterval;
-    private readonly PeriodicTimer _pieceSelectionUpdateInterval;
     private readonly IPeerManagerEventHandler _handler;
     private readonly ILogger _logger;
 
-    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<ReadOnlyMemory<byte>?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, PeriodicTimer pieceSelectionUpdateInterval, ILogger logger)
+    public PeerManagerEventListener(IPeerManagerEventHandler handler, ChannelReader<ReadOnlyMemory<byte>?> peerRemovalReader, ChannelReader<int> pieceCompletionReader, ChannelReader<DownloadExecutionState> stateReader, ChannelReader<PeerWireStream> peerReader, ITrackerFetcher trackerFetcher, PeriodicTimer updateInterval, ILogger logger)
     {
         _pieceCompletionReader = pieceCompletionReader;
         _peerRemovalReader = peerRemovalReader;
@@ -31,7 +30,6 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         _trackerFetcher = trackerFetcher;
         _updateInterval = updateInterval;
         _handler = handler;
-        _pieceSelectionUpdateInterval = pieceSelectionUpdateInterval;
         _logger = logger;
     }
 
@@ -44,7 +42,6 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         taskListener.AddTask(EventType.PieceCompletion, () => _pieceCompletionReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.StateUpdate, () => _stateReader.ReadAsync(cancellationToken).AsTask());
         taskListener.AddTask(EventType.TrackerUpdate, _trackerFetcher.FetchAsync(_handler.GetTrackerUpdate(TrackerEvent.Started), cancellationToken));
-        taskListener.AddTask(EventType.PieceSelectionUpdate, _pieceSelectionUpdateInterval.WaitForNextTickAsync(cancellationToken).AsTask());
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -105,11 +102,6 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
                     await _handler.OnPieceCompletionAsync(piece, cancellationToken);
                 }
                 break;
-            case EventType.PieceSelectionUpdate:
-                {
-                    await _handler.OnPieceSelectionUpdateAsync(cancellationToken);
-                } 
-                break;
         }
     }
 
@@ -158,7 +150,6 @@ public sealed class PeerManagerEventListener : IEventListener, IDisposable, IAsy
         TrackerUpdate,
         TrackerInterval,
         StateUpdate,
-        PieceCompletion,
-        PieceSelectionUpdate
+        PieceCompletion
     }
 }

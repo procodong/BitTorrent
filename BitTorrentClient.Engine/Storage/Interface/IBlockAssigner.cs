@@ -7,5 +7,6 @@ public interface IBlockAssigner
 {
     bool TryAssignBlock(LazyBitArray ownedPieces, out Block block);
     void Cancel(Block block);
-    public void SupplyPieces(Func<Span<int>, ZeroCopyBitArray, int> action);
+    void SupplyPieces(Func<Span<int>, ZeroCopyBitArray, int> action);
+    int RemainingSuppliedPieces { get; }
 }

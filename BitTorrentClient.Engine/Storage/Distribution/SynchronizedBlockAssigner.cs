@@ -14,6 +14,18 @@ public class SynchronizedBlockAssigner : IBlockAssigner
         _lock = new();
     }
 
+    public int RemainingSuppliedPieces
+    {
+        get
+        {
+            using (_lock.EnterScope())
+            {
+                return _downloader.RemainingSuppliedPieces;
+            }
+        }
+    }
+
+
     public void Cancel(Block block)
     {
         using (_lock.EnterScope())

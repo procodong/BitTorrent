@@ -37,10 +37,10 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
             bool success;
             do
             {
-                var callback = Channel.CreateBounded<bool>(4);
+                var callback = new TaskCompletionSource<bool>();
                 _failedWrites.Push(new(offset, array, callback));
                 await _downloadStateWriter.WriteAsync(DownloadExecutionState.PausedAutomatically, _cancellationToken);
-                success = await callback.Reader.ReadAsync(_cancellationToken);
+                success = await callback.Task;
             } while (!success);
         }
     }
@@ -52,7 +52,7 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
         for (var i = 0; i < count; i++)
         {
             var write = writes[i];
-            _ = _stream.GetStream(write.Offset).WriteAsync(write.Array.Data, _cancellationToken).AsTask().ContinueWith(t => write.Callback.WriteAsync(t.IsCompletedSuccessfully, _cancellationToken).AsTask(), _cancellationToken);
+            _ = _stream.GetStream(write.Offset).WriteAsync(write.Array.Data, _cancellationToken).AsTask().ContinueWith(t => write.Callback.SetResult(t.IsCompletedSuccessfully), _cancellationToken);
         }
     }
 
@@ -67,4 +67,4 @@ public sealed class DataStorage : IDisposable, IAsyncDisposable
     }
 }
 
-readonly record struct FailedWrite(long Offset, MaybeRentedArray<byte> Array, ChannelWriter<bool> Callback);
+readonly record struct FailedWrite(long Offset, MaybeRentedArray<byte> Array, TaskCompletionSource<bool> Callback);

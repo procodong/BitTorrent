@@ -16,5 +16,6 @@ public interface IPeerManager
     Task UpdateRelationsAsync(IEnumerable<DataTransferVector> relations, CancellationToken cancellationToken = default);
     Task NotifyPieceCompletionAsync(int piece, CancellationToken cancellationToken = default);
     void UpdatePieceSelection();
+    bool ShouldUpdatePieceSelection(TimeSpan interval);
     TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent);
 }

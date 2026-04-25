@@ -22,9 +22,9 @@ public sealed class DownloadCollection : IDownloadRepository
     private readonly TrackerFinder _trackerFinder;
     private readonly IDownloadLauncher _launcher;
 
-    public DownloadCollection(string clientId, NetworkingConfig config, TrackerFinder trackerFinder, IDownloadLauncher launcher)
+    public DownloadCollection(ReadOnlyMemory<byte> clientId, NetworkingConfig config, TrackerFinder trackerFinder, IDownloadLauncher launcher)
     {
-        _clientId = Encoding.ASCII.GetBytes(clientId);
+        _clientId = clientId;
         _config = config;
         _trackerFinder = trackerFinder;
         _launcher = launcher;
@@ -38,7 +38,8 @@ public sealed class DownloadCollection : IDownloadRepository
         IPieceSelectionStrategy pieceSelector = settings.Strategy switch
         {
             PieceSelectionStrategyType.RarestFirst => new RarestFirstStrategy(),
-            PieceSelectionStrategyType.Sequential => new SequentialPieceStrategy()
+            PieceSelectionStrategyType.Sequential => new SequentialPieceStrategy(),
+            _ => throw new InvalidOperationException("Invalid strategy")
         };
         var handle = _launcher.LaunchDownload(download, storage, tracker, _config, pieceSelector);
         _downloads.TryAdd(new(data.InfoHash), handle);

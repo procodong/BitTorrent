@@ -55,6 +55,11 @@ public sealed class PeerManager : IPeerManager, IDisposable, IAsyncDisposable
         _blockAssigner.SupplyPieces((buf, pieces) => _pieceSelectionStrategy.SelectPieces(pieces, _peers.Select(p => p.State.OwnedPieces), buf));
     }
 
+    public bool ShouldUpdatePieceSelection(TimeSpan interval)
+    {
+        return _blockAssigner.RemainingSuppliedPieces * _downloadState.Download.Data.PieceSize < _downloadState.TransferRate.Download * interval.TotalSeconds;
+    }
+
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {
         return new(_downloadState.Download.Data.InfoHash, _downloadState.Download.ClientId, _downloadState.DataTransfer.Fetch(), _downloadState.Download.Data.Size - _downloadState.DataTransfer.Downloaded, trackerEvent);

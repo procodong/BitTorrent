@@ -46,10 +46,9 @@ public sealed class DownloadLauncher : IDownloadLauncher
         var peers = new PeerCollection(spawner, launcher, download.Settings.MaxParallelPeers);
         var peerManager = new PeerManager(peers, downloadState, dataStorage, synchronizedBlockAssigner, pieceSelectionStrategy);
         var relationHandler = new PeerRelationHandler();
-        var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, config.PeerUpdateInterval.Milliseconds / config.TransferRateResetInterval.Milliseconds);
-        var updateInterval = new PeriodicTimer(config.TransferRateResetInterval);
-        var pieceSelectionUpdateInterval = new PeriodicTimer(TimeSpan.FromSeconds((double)config.PiecesBufferSize * download.Data.PieceSize / download.Settings.TargetDataTransferPerSecond.Download));
-        var eventListener = new PeerManagerEventListener(eventHandler, peerRemovalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, updateInterval, pieceSelectionUpdateInterval, _logger);
+        var eventHandler = new PeerManagerEventHandler(peerManager, relationHandler, config.TickInterval, config.PeerUpdateTickInterval, config.TransferRateResetTickInterval);
+        var updateInterval = new PeriodicTimer(config.TickInterval);
+        var eventListener = new PeerManagerEventListener(eventHandler, peerRemovalChannel.Reader, haveChannel.Reader, stateChannel.Reader, peerAdditionChannel.Reader, tracker, updateInterval, _logger);
         var task = LaunchDownload(eventListener, canceller.Token);
         return new PeerManagerHandle(downloadState, stateChannel.Writer, canceller, spawner, task);
     }

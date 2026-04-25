@@ -8,8 +8,9 @@ public class NetworkingConfig
     public int PieceSegmentSize { get; init; }
     public int PeerBufferSize { get; init; }
     public int PiecesBufferSize { get; init; }
+    public int PeerUpdateTickInterval { get; init; }
+    public int TransferRateResetTickInterval { get; init; }
+    public TimeSpan TickInterval { get; init; }
     public TimeSpan ReceiveTimeout { get; init; }
-    public TimeSpan PeerUpdateInterval { get; init; }
     public TimeSpan KeepAliveInterval { get; init; }
-    public TimeSpan TransferRateResetInterval { get; init; }
 }

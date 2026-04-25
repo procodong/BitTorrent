@@ -13,6 +13,8 @@ public sealed class BlockAssigner : IBlockAssigner
     private readonly ZeroCopyBitArray _requestedPieces;
     private readonly PiecesCursor _cursor;
 
+
+
     public BlockAssigner(DownloadData download, int segmentSize, PiecesCursor cursor)
     {
         _segmentSize = segmentSize;
@@ -30,6 +32,8 @@ public sealed class BlockAssigner : IBlockAssigner
     {
         _cursor.SupplyPieces(buf => action(buf, _requestedPieces));
     }
+    
+    public int RemainingSuppliedPieces => _cursor.Remaining;
 
     public bool TryAssignBlock(LazyBitArray ownedPieces, out Block block)
     {

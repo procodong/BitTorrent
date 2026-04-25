@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using BitTorrentClient.Api.Information;
 using BitTorrentClient.Api.Services;
 using BitTorrentClient.Core.Presentation.PeerWire;
@@ -25,10 +26,11 @@ public static class ClientLauncher
             MaxRequestSize = 1 << 17,
             PieceSegmentSize = 1 << 17,
             PeerBufferSize = 1 << 15,
-            PeerUpdateInterval = TimeSpan.FromSeconds(10),
+            TransferRateResetTickInterval = 1,
+            PeerUpdateTickInterval = 2,
+            TickInterval = TimeSpan.FromSeconds(5),
             KeepAliveInterval = TimeSpan.FromSeconds(90),
             ReceiveTimeout = TimeSpan.FromMinutes(2),
-            TransferRateResetInterval = TimeSpan.FromSeconds(5),
             PiecesBufferSize = 1 << 6
         };
         var clientId = PeerIdGenerator.GeneratePeerId(new string([id.ClientId.Item1, id.ClientId.Item2]), id.ClientVersion.ToString());
@@ -38,7 +40,7 @@ public static class ClientLauncher
         var trackerConnector = new TrackerConnector(httpClient, port, config.PeerBufferSize);
         var trackerFinder = new TrackerFinder(trackerConnector, logger);
         var downloadLauncher = new DownloadLauncher(logger);
-        var downloads = new DownloadCollection(clientId, config, trackerFinder, downloadLauncher);
+        var downloads = new DownloadCollection(Encoding.ASCII.GetBytes(clientId), config, trackerFinder, downloadLauncher);
         var peerReceiver = new TcpPeerReceiver(socket, config.PeerBufferSize);
 
         var canceller = new CancellationTokenSource();

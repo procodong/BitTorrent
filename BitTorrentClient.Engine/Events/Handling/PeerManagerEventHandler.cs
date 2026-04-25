@@ -9,21 +9,20 @@ public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposa
 {
     private readonly IPeerManager _peerManager;
     private readonly IPeerRelationHandler _relationHandler;
-    private readonly int _relationUpdateInterval;
+    private readonly TimeSpan _tickInterval;
     private int _tick;
+    private readonly int _relationUpdateInterval;
+    private readonly int _transferRateResetTickInterval;
 
-    public PeerManagerEventHandler(IPeerManager peerManager, IPeerRelationHandler relationHandler, int relationUpdateInterval)
+    public PeerManagerEventHandler(IPeerManager peerManager, IPeerRelationHandler relationHandler, TimeSpan tickInterval, int relationUpdateTickInterval, int transferRateResetTickInterval)
     {
         _peerManager = peerManager;
         _relationHandler = relationHandler;
-        _relationUpdateInterval = relationUpdateInterval;
+        _tickInterval = tickInterval;
+        _relationUpdateInterval = relationUpdateTickInterval;
+        _transferRateResetTickInterval = transferRateResetTickInterval;
     }
-
-    public async Task OnPieceSelectionUpdateAsync(CancellationToken cancellationToken = default)
-    {
-        _peerManager.UpdatePieceSelection();
-    }
-
+    
     public TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent)
     {
         return _peerManager.GetTrackerUpdate(trackerEvent);
@@ -60,11 +59,18 @@ public sealed class PeerManagerEventHandler : IPeerManagerEventHandler, IDisposa
 
     public async Task OnTickAsync(CancellationToken cancellationToken = default)
     {
+        if (_peerManager.ShouldUpdatePieceSelection(_tickInterval))
+        {
+            _peerManager.UpdatePieceSelection();
+        }
         if (_tick % _relationUpdateInterval == 0)
         {
             await UpdateRelationsAsync(cancellationToken);
         }
-        _peerManager.ResetRecentDataTransfer();
+        if (_tick % _transferRateResetTickInterval == 0)
+        { 
+            _peerManager.ResetRecentDataTransfer();
+        }
         unchecked
         {
             _tick++;

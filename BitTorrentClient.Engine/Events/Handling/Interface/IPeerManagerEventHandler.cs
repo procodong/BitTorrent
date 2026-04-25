@@ -11,6 +11,5 @@ public interface IPeerManagerEventHandler
     Task OnTickAsync(CancellationToken cancellationToken = default);
     Task OnTrackerUpdateAsync(TrackerResponse response, CancellationToken cancellationToken = default);
     Task OnStateChangeAsync(DownloadExecutionState change, CancellationToken cancellationToken = default);
-    Task OnPieceSelectionUpdateAsync(CancellationToken cancellationToken = default);
     TrackerUpdate GetTrackerUpdate(TrackerEvent trackerEvent);
 }
